@@ -1,0 +1,194 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Organisation (entreprise cliente)
+model Organization {
+  id          String      @id @default(cuid())
+  name        String
+  clerkOrgId  String      @unique @map("clerk_org_id")
+  shrinkPct   Float       @default(0.1) @map("shrink_pct") // Pourcentage de shrink par défaut (10%)
+  isDemo      Boolean     @default(false) @map("is_demo") // Indique si c'est une organisation de démo
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  restaurants Restaurant[]
+  products    Product[]
+  ingredients Ingredient[]
+
+  @@map("organizations")
+}
+
+// Restaurant (établissement)
+model Restaurant {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  name           String
+  address        String?
+  timezone       String       @default("Europe/Paris")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sales          Sale[]
+  inventory      Inventory[]
+  forecasts      Forecast[]
+  recommendations Recommendation[]
+  alerts         Alert[]
+
+  @@index([organizationId])
+  @@map("restaurants")
+}
+
+// Produit (produit vendu)
+model Product {
+  id             String            @id @default(cuid())
+  organizationId String            @map("organization_id")
+  name           String
+  category       String?
+  unitPrice      Float             @map("unit_price")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sales          Sale[]
+  productIngredients ProductIngredient[]
+  forecasts      Forecast[]
+
+  @@index([organizationId])
+  @@map("products")
+}
+
+// Vente
+model Sale {
+  id           String     @id @default(cuid())
+  restaurantId String     @map("restaurant_id")
+  productId    String     @map("product_id")
+  quantity     Int
+  amount       Float
+  saleDate     DateTime   @map("sale_date") // Date de la vente
+  saleHour     Int        @map("sale_hour") // Heure de la vente (0-23)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, saleDate])
+  @@index([productId])
+  @@index([saleDate])
+  @@map("sales")
+}
+
+// Ingrédient
+model Ingredient {
+  id             String            @id @default(cuid())
+  organizationId String            @map("organization_id")
+  name           String
+  unit           String            // "kg", "L", "unité", etc.
+  costPerUnit    Float             @map("cost_per_unit")
+  packSize       Float?            @map("pack_size") // Taille du pack fournisseur (optionnel)
+  supplierName   String?           @map("supplier_name") // Nom du fournisseur
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  productIngredients ProductIngredient[]
+  inventory      Inventory[]
+
+  @@index([organizationId])
+  @@map("ingredients")
+}
+
+// Recette (relation produit-ingrédient)
+model ProductIngredient {
+  id           String     @id @default(cuid())
+  productId    String     @map("product_id")
+  ingredientId String     @map("ingredient_id")
+  quantityNeeded Float    @map("quantity_needed") // Quantité d'ingrédient pour 1 produit
+
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+  @@map("product_ingredients")
+}
+
+// Stock (inventaire)
+model Inventory {
+  id            String     @id @default(cuid())
+  restaurantId String      @map("restaurant_id")
+  ingredientId String      @map("ingredient_id")
+  currentStock  Float      @map("current_stock")
+  minThreshold  Float      @map("min_threshold") // Seuil minimum
+  maxThreshold  Float?     @map("max_threshold") // Seuil maximum (optionnel)
+  lastUpdated   DateTime   @default(now()) @map("last_updated")
+
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, ingredientId])
+  @@index([restaurantId])
+  @@map("inventory")
+}
+
+// Prévision des ventes
+model Forecast {
+  id                String     @id @default(cuid())
+  restaurantId      String     @map("restaurant_id")
+  productId         String     @map("product_id")
+  forecastDate      DateTime   @map("forecast_date")
+  forecastedQuantity Float     @map("forecasted_quantity")
+  method            String     // "moving_average", "seasonality", etc.
+  confidence        Float?     // Niveau de confiance (0-1)
+  createdAt         DateTime   @default(now()) @map("created_at")
+
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  product           Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, forecastDate])
+  @@index([productId])
+  @@map("forecasts")
+}
+
+// Recommandation
+model Recommendation {
+  id           String     @id @default(cuid())
+  restaurantId String     @map("restaurant_id")
+  type         String     // "ORDER", "STAFFING"
+  data         Json       // Données structurées de la recommandation
+  priority     String     @default("medium") // "low", "medium", "high"
+  status       String     @default("pending") // "pending", "accepted", "dismissed"
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, type, status])
+  @@map("recommendations")
+}
+
+// Alerte
+model Alert {
+  id           String     @id @default(cuid())
+  restaurantId String     @map("restaurant_id")
+  type         String     // "OVERSTOCK", "SHORTAGE", "OVERSTAFFING", etc.
+  severity     String     // "low", "medium", "high", "critical"
+  message      String
+  resolved     Boolean    @default(false)
+  resolvedAt   DateTime?  @map("resolved_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, resolved])
+  @@index([severity])
+  @@map("alerts")
+}
