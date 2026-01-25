@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
-import { requireOrganization } from '@/lib/auth'
+import { getCurrentOrganization } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await requireOrganization()
+    const organization = await getCurrentOrganization()
+    if (!organization) {
+      return NextResponse.json([])
+    }
 
     const restaurants = await prisma.restaurant.findMany({
       where: { organizationId: organization.id },
@@ -34,7 +37,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await requireOrganization()
+    const organization = await getCurrentOrganization()
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organization required' },
+        { status: 400 }
+      )
+    }
 
     const body = await request.json()
     const { name, address, timezone } = body

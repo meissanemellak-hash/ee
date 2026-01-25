@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
-import { requireOrganization } from '@/lib/auth'
+import { getCurrentOrganization } from '@/lib/auth'
 import { generateOrderRecommendations, generateStaffingRecommendations } from '@/lib/services/recommender'
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await requireOrganization()
+    const organization = await getCurrentOrganization()
+    if (!organization) {
+      return NextResponse.json([])
+    }
 
     const { searchParams } = new URL(request.url)
     const restaurantId = searchParams.get('restaurantId')
@@ -66,7 +69,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await requireOrganization()
+    const organization = await getCurrentOrganization()
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organization required' },
+        { status: 400 }
+      )
+    }
 
     const body = await request.json()
     const { restaurantId, type, forecastDate } = body

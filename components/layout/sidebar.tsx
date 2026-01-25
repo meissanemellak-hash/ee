@@ -55,11 +55,6 @@ const navigation = [
     href: '/dashboard/settings',
     icon: Settings,
   },
-  {
-    name: 'Mode Démo',
-    href: '/dashboard/demo',
-    icon: FileText,
-  },
 ]
 
 export function Sidebar() {

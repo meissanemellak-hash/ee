@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button'
 import { formatDateTime } from '@/lib/utils'
 import Link from 'next/link'
 
+// Force dynamic rendering pour les pages avec authentification
+export const dynamic = 'force-dynamic'
+
 const severityColors = {
   low: 'bg-blue-100 text-blue-800',
   medium: 'bg-yellow-100 text-yellow-800',
@@ -27,10 +30,10 @@ export default async function AlertsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground mb-4">
-              Aucune organisation configurée. Utilisez le mode démo pour générer des données de test.
+              Aucune organisation configurée. Créez une organisation dans Clerk pour commencer.
             </p>
             <Button asChild>
-              <Link href="/dashboard/demo">Charger les données de démonstration</Link>
+              <Link href="/dashboard/restaurants/new">Créer votre premier restaurant</Link>
             </Button>
           </CardContent>
         </Card>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
-import { requireOrganization } from '@/lib/auth'
+import { getCurrentOrganization } from '@/lib/auth'
 
 export async function PATCH(
   request: NextRequest,
@@ -13,7 +13,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await requireOrganization()
+    const organization = await getCurrentOrganization()
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organization required' },
+        { status: 400 }
+      )
+    }
 
     const body = await request.json()
     const { status } = body
@@ -30,9 +36,7 @@ export async function PATCH(
       where: {
         id: params.id,
         restaurant: {
-          organization: {
-            // Vérification via requireOrganization
-          },
+          organizationId: organization.id,
         },
       },
     })

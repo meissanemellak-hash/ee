@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
-import { requireOrganization } from '@/lib/auth'
+import { getCurrentOrganization } from '@/lib/auth'
 import type { SalesAnalysis } from '@/types'
+
+// Force dynamic rendering pour les routes API avec authentification
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +14,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await requireOrganization()
+    const organization = await getCurrentOrganization()
+    if (!organization) {
+      return NextResponse.json({
+        totalSales: 0,
+        totalRevenue: 0,
+        averagePerDay: 0,
+        topProducts: [],
+        salesByHour: [],
+        salesByDay: [],
+      })
+    }
 
     const { searchParams } = new URL(request.url)
     const restaurantId = searchParams.get('restaurantId')

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
-import { requireOrganization } from '@/lib/auth'
+import { getCurrentOrganization } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
@@ -13,7 +13,13 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await requireOrganization()
+    const organization = await getCurrentOrganization()
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Restaurant not found' },
+        { status: 404 }
+      )
+    }
 
     const restaurant = await prisma.restaurant.findFirst({
       where: {
@@ -49,7 +55,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await requireOrganization()
+    const organization = await getCurrentOrganization()
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organization required' },
+        { status: 400 }
+      )
+    }
 
     const body = await request.json()
     const { name, address, timezone } = body
@@ -98,7 +110,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await requireOrganization()
+    const organization = await getCurrentOrganization()
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organization required' },
+        { status: 400 }
+      )
+    }
 
     // Vérifier que le restaurant appartient à l'organisation
     const existing = await prisma.restaurant.findFirst({

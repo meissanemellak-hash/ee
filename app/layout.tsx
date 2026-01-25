@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'AI Operations Manager - Chaînes de Fast-Casual',
   description: 'Optimisez les opérations de votre chaîne de restaurants',
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({
@@ -18,8 +21,11 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="fr">
-        <body className={inter.className}>
+      <html lang="fr" suppressHydrationWarning>
+        <head>
+          <link rel="preload" href="/favicon.ico" as="image" />
+        </head>
+        <body className={inter.className} suppressHydrationWarning>
           {children}
           <Toaster />
         </body>

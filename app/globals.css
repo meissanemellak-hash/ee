@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force le chargement des styles au démarrage */
+@layer base {
+  html {
+    visibility: visible;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

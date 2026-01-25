@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
+// Force dynamic rendering pour les pages avec authentification
+export const dynamic = 'force-dynamic'
+
 export default async function RestaurantsPage() {
   const organization = await getCurrentOrganization()
 
@@ -19,10 +22,10 @@ export default async function RestaurantsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground mb-4">
-              Aucune organisation configurée. Utilisez le mode démo pour générer des données de test.
+              Aucune organisation configurée. Créez une organisation dans Clerk pour commencer.
             </p>
             <Button asChild>
-              <Link href="/dashboard/demo">Charger les données de démonstration</Link>
+              <Link href="/dashboard/restaurants/new">Créer votre premier restaurant</Link>
             </Button>
           </CardContent>
         </Card>

@@ -5,6 +5,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/',
   '/api/webhooks(.*)',
+  '/dashboard/setup(.*)', // Permettre l'accès à la page setup
 ])
 
 export default clerkMiddleware(async (auth, req) => {
@@ -16,7 +17,7 @@ export default clerkMiddleware(async (auth, req) => {
     return
   }
   
-  // Ne pas protéger les routes publiques
+  // Ne pas protéger les routes publiques (y compris /dashboard/setup)
   if (!isPublicRoute(req)) {
     await auth().protect()
   }

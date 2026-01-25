@@ -1,11 +1,18 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { getCurrentOrganization } from '@/lib/auth'
+import { prisma } from '@/lib/db/prisma'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { calculateExecutiveDashboardMetrics } from '@/lib/services/dashboard-metrics'
+import { TrendingUp, TrendingDown, AlertTriangle, Package, CheckCircle2, ArrowRight } from 'lucide-react'
+import { ApplyRecommendationButton } from '@/components/dashboard/apply-recommendation-button'
+import { ReloadButton } from '@/components/dashboard/reload-button'
+
+// Force dynamic rendering pour les pages avec authentification
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const { userId } = auth()
@@ -14,119 +21,134 @@ export default async function DashboardPage() {
     redirect('/sign-in')
   }
 
-  const organization = await getCurrentOrganization()
+  // SOLUTION RADICALE ET DÉFINITIVE :
+  // Si getCurrentOrganization() retourne null (orgId pas dans les cookies),
+  // on vérifie les organisations de l'utilisateur dans Clerk et on synchronise la première
+  let organization = await getCurrentOrganization()
   
-  // Si l'organisation n'existe pas, afficher un message pour utiliser le mode démo
+  if (!organization) {
+    try {
+      // Vérifier les organisations de l'utilisateur dans Clerk
+      const client = await clerkClient()
+      const userMemberships = await client.users.getOrganizationMembershipList({ userId })
+      
+      if (userMemberships.data && userMemberships.data.length > 0) {
+        // Synchroniser la première organisation trouvée
+        const firstOrg = userMemberships.data[0].organization
+        const clerkOrgId = firstOrg.id
+        
+        // Vérifier si l'organisation existe déjà dans la DB
+        organization = await prisma.organization.findUnique({
+          where: { clerkOrgId },
+        })
+        
+        // Si elle n'existe pas, la créer
+        if (!organization) {
+          try {
+            organization = await prisma.organization.create({
+              data: {
+                name: firstOrg.name,
+                clerkOrgId,
+                shrinkPct: 0.1,
+              },
+            })
+            console.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk`)
+          } catch (dbError) {
+            // Si erreur de contrainte unique, récupérer l'organisation existante
+            if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+              organization = await prisma.organization.findUnique({
+                where: { clerkOrgId },
+              })
+            } else {
+              throw dbError
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing organization:', error)
+      // En cas d'erreur, afficher le message d'attente
+      // Le handler client fera la synchronisation
+    }
+  }
+  
+  // Si toujours pas d'organisation, afficher le message d'attente
+  // Le DashboardSyncHandler dans le layout gérera la synchronisation côté client
   if (!organization) {
     return (
       <div className="p-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            Bienvenue dans votre espace de gestion
+            Synchronisation de l&apos;organisation en cours...
           </p>
         </div>
-        
         <Card>
-          <CardHeader>
-            <CardTitle>Organisation non configurée</CardTitle>
-            <CardDescription>
-              Pour commencer, vous devez créer une organisation ou charger des données de démonstration.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Le mode démo vous permet de tester toutes les fonctionnalités avec des données réalistes :
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground mb-4">
+              L&apos;organisation est en cours de synchronisation. Veuillez patienter quelques instants.
             </p>
-            <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-              <li>3 restaurants</li>
-              <li>30 produits avec recettes</li>
-              <li>25 ingrédients</li>
-              <li>90 jours de ventes</li>
-              <li>Recommandations et alertes automatiques</li>
-            </ul>
-            <div className="pt-4">
-              <Link href="/dashboard/demo">
-                <Button>Charger les données de démonstration</Button>
-              </Link>
-            </div>
+            <ReloadButton />
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  // Récupérer les statistiques globales
-  const restaurants = await prisma.restaurant.findMany({
-    where: { organizationId: organization.id },
-  })
-
-  const totalSales = await prisma.sale.count({
-    where: {
-      restaurant: {
-        organizationId: organization.id,
-      },
-      saleDate: {
-        gte: new Date(new Date().setDate(new Date().getDate() - 30)),
-      },
-    },
-  })
-
-  const totalRevenue = await prisma.sale.aggregate({
-    where: {
-      restaurant: {
-        organizationId: organization.id,
-      },
-      saleDate: {
-        gte: new Date(new Date().setDate(new Date().getDate() - 30)),
-      },
-    },
-    _sum: {
-      amount: true,
-    },
-  })
-
-  const activeAlerts = await prisma.alert.count({
-    where: {
-      restaurant: {
-        organizationId: organization.id,
-      },
-      resolved: false,
-      severity: {
-        in: ['high', 'critical'],
-      },
-    },
-  })
-
-  const pendingRecommendations = await prisma.recommendation.count({
-    where: {
-      restaurant: {
-        organizationId: organization.id,
-      },
-      status: 'pending',
-    },
-  })
+  // Calculer les métriques du dashboard exécutif
+  const metrics = await calculateExecutiveDashboardMetrics(organization.id)
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Vue d&apos;ensemble de vos opérations
-        </p>
+    <div className="p-6 space-y-8">
+      {/* Zone 1 - Hero Metric */}
+      <div className="text-center space-y-4">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Économies générées ce mois-ci
+          </p>
+          <div className="mt-4">
+            <div className="text-6xl font-bold text-primary">
+              {formatCurrency(metrics.totalSavingsThisMonth)}
+            </div>
+            {metrics.savingsChangePercent !== null && (
+              <div className="mt-2 flex items-center justify-center gap-2">
+                {metrics.savingsChangePercent >= 0 ? (
+                  <>
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-green-600 font-medium">
+                      +{Math.abs(metrics.savingsChangePercent).toFixed(1)}% vs mois précédent
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <TrendingDown className="h-4 w-4 text-red-600" />
+                    <span className="text-sm text-red-600 font-medium">
+                      {metrics.savingsChangePercent.toFixed(1)}% vs mois précédent
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-4">
+            Basé sur recommandations appliquées
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Zone 2 - KPIs Exécutifs */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Restaurants
+              Recommandations appliquées
             </CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{restaurants.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Établissements actifs
+            <div className="text-2xl font-bold">{metrics.acceptedRecommendationsCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              → {formatCurrency(metrics.acceptedRecommendationsSavings)} économisés
             </p>
           </CardContent>
         </Card>
@@ -134,13 +156,16 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Ventes (30j)
+              Risque de rupture (7 jours)
             </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalSales.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              Transactions
+            <div className="text-2xl font-bold text-orange-600">
+              {formatCurrency(metrics.criticalAlertsRisk)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {metrics.criticalAlertsCount} restaurant{metrics.criticalAlertsCount > 1 ? 's' : ''} concerné{metrics.criticalAlertsCount > 1 ? 's' : ''}
             </p>
           </CardContent>
         </Card>
@@ -148,83 +173,126 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Chiffre d&apos;affaires
+              Gaspillage estimé
             </CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(totalRevenue._sum.amount || 0)}
+              {formatCurrency(metrics.estimatedWaste)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Sur les 30 derniers jours
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Alertes actives
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeAlerts}</div>
-            <p className="text-xs text-muted-foreground">
-              Nécessitent une attention
+            <p className="text-xs text-muted-foreground mt-1">
+              Produits frais surstockés ce mois-ci
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recommandations en attente</CardTitle>
-            <CardDescription>
-              Actions recommandées pour optimiser vos opérations
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingRecommendations}</div>
-            <p className="text-sm text-muted-foreground mt-2">
-              <a href="/dashboard/recommendations" className="text-primary hover:underline">
-                Voir toutes les recommandations →
-              </a>
+      {/* Zone 3 - Recommandations Actionnables */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold">Recommandations actionnables</h2>
+            <p className="text-sm text-muted-foreground">
+              Actions prioritaires pour optimiser vos opérations
             </p>
-          </CardContent>
-        </Card>
+          </div>
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/recommendations">
+              Voir toutes <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Restaurants</CardTitle>
-            <CardDescription>
-              Liste de vos établissements
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {restaurants.slice(0, 5).map((restaurant) => (
-                <div key={restaurant.id} className="flex justify-between items-center">
-                  <span className="font-medium">{restaurant.name}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {restaurant.address || 'Aucune adresse'}
-                  </span>
-                </div>
-              ))}
-              {restaurants.length > 5 && (
-                <p className="text-sm text-muted-foreground">
-                  +{restaurants.length - 5} autres restaurants
-                </p>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground mt-4">
-              <a href="/dashboard/restaurants" className="text-primary hover:underline">
-                Gérer les restaurants →
-              </a>
-            </p>
-          </CardContent>
-        </Card>
+        {metrics.topActionableRecommendations.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            {metrics.topActionableRecommendations.map((rec) => (
+              <Card key={rec.id} className="relative">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{rec.restaurantName}</CardTitle>
+                      <CardDescription className="mt-2">
+                        {rec.message}
+                      </CardDescription>
+                    </div>
+                    {rec.priority === 'high' && (
+                      <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">
+                        Priorité
+                      </span>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-600">
+                        ROI estimé : x{Math.round(rec.estimatedSavings / 500)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Économie : {formatCurrency(rec.estimatedSavings)}
+                      </p>
+                    </div>
+                    <ApplyRecommendationButton recommendationId={rec.id} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">
+                Aucune recommandation en attente. Tout est optimisé !
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Zone 4 - Alertes Critiques */}
+      {metrics.criticalAlerts.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Alertes critiques</h2>
+          <div className="space-y-3">
+            {metrics.criticalAlerts.map((alert) => (
+              <Card key={alert.id} className="border-l-4 border-l-red-500">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg">{alert.type}</CardTitle>
+                        <span className={`px-2 py-1 text-xs font-medium rounded ${
+                          alert.severity === 'critical' 
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {alert.severity}
+                        </span>
+                      </div>
+                      <CardDescription className="mt-2">
+                        {alert.restaurantName} • {alert.message}
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm font-medium text-red-600">
+                    Impact estimé : {formatCurrency(alert.estimatedImpact)}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="mt-4">
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/alerts">
+                Voir toutes les alertes <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

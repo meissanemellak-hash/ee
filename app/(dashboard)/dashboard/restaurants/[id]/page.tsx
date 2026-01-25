@@ -9,6 +9,9 @@ import { formatDate } from '@/lib/utils'
 import { Edit, Trash2, TrendingUp, Bell, Package } from 'lucide-react'
 import { DeleteRestaurantButton } from '@/components/restaurants/delete-restaurant-button'
 
+// Force dynamic rendering pour les pages avec authentification
+export const dynamic = 'force-dynamic'
+
 export default async function RestaurantDetailPage({
   params,
 }: {
@@ -23,7 +26,7 @@ export default async function RestaurantDetailPage({
   const organization = await getCurrentOrganization()
 
   if (!organization) {
-    redirect('/dashboard/demo')
+    redirect('/dashboard')
   }
 
   const restaurant = await prisma.restaurant.findFirst({
