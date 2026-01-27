@@ -72,9 +72,13 @@ async function calculateProductForecast(
     return existingForecast.forecastedQuantity * 7
   }
 
-  // Sinon, calculer la moyenne des ventes des 14 derniers jours et projeter sur 7 jours
+  // Sinon, calculer la moyenne des ventes des 14 derniers jours (incluant aujourd'hui) et projeter sur 7 jours
   const startDate = new Date(targetDate)
   startDate.setDate(startDate.getDate() - 14)
+  startDate.setHours(0, 0, 0, 0) // Début de journée
+  
+  const endDateForSales = new Date(targetDate)
+  endDateForSales.setHours(23, 59, 59, 999) // Fin de journée pour inclure les ventes d'aujourd'hui
 
   const sales = await prisma.sale.findMany({
     where: {
@@ -82,7 +86,7 @@ async function calculateProductForecast(
       productId,
       saleDate: {
         gte: startDate,
-        lt: targetDate,
+        lte: endDateForSales, // Inclure les ventes d'aujourd'hui
       },
     },
     select: {
@@ -206,6 +210,34 @@ export async function generateBOMOrderRecommendations(
   }
 
   if (forecasts.length === 0) {
+    // Vérifier pourquoi il n'y a pas de prévisions
+    const hasProducts = organization.products.length > 0
+    
+    const startDateCheck = new Date(targetDate)
+    startDateCheck.setDate(startDateCheck.getDate() - 14)
+    startDateCheck.setHours(0, 0, 0, 0)
+    const endDateCheck = new Date(targetDate)
+    endDateCheck.setHours(23, 59, 59, 999)
+    
+    const hasSales = await prisma.sale.count({
+      where: {
+        restaurantId,
+        saleDate: {
+          gte: startDateCheck,
+          lte: endDateCheck,
+        },
+      },
+    }) > 0
+    
+    // Vérifier si les produits ont des recettes
+    let productsWithRecipes = 0
+    for (const product of organization.products) {
+      const recipeCount = await prisma.productIngredient.count({
+        where: { productId: product.id },
+      })
+      if (recipeCount > 0) productsWithRecipes++
+    }
+    
     return {
       recommendations: [],
       details: {
@@ -220,6 +252,13 @@ export async function generateBOMOrderRecommendations(
           shrinkPct,
           forecastDays: days,
         },
+        reason: !hasProducts 
+          ? 'Aucun produit trouvé dans l\'organisation. Ajoutez des produits pour générer des recommandations.'
+          : !hasSales
+          ? 'Aucune vente historique trouvée sur les 14 derniers jours (incluant aujourd\'hui). Les recommandations nécessitent des données de ventes pour calculer les prévisions.'
+          : productsWithRecipes === 0
+          ? 'Aucun produit n\'a de recette (ingrédients) définie. Allez dans "Produits" → Modifier un produit → Section "Recette du produit" pour ajouter des ingrédients.'
+          : `Seulement ${productsWithRecipes} produit(s) sur ${organization.products.length} a/ont des recettes. Ajoutez des ingrédients aux autres produits pour générer plus de recommandations.`,
       },
       estimatedSavings: 0,
     }
@@ -243,6 +282,9 @@ export async function generateBOMOrderRecommendations(
   // 4. Calculer les quantités à commander avec shrink et packs
   const recommendations: OrderRecommendation[] = []
   const detailsIngredients: RecommendationDetails['ingredients'] = []
+  let totalNeededQuantity = 0
+  let totalCurrentStock = 0
+  let ingredientsWithSufficientStock = 0
 
   for (const [ingredientId, need] of Array.from(ingredientNeeds.entries())) {
     const inv = inventory.find((i) => i.ingredient.id === ingredientId)
@@ -250,6 +292,8 @@ export async function generateBOMOrderRecommendations(
 
     // Appliquer le shrink
     const neededWithShrink = need.neededQuantity * (1 + shrinkPct)
+    totalNeededQuantity += neededWithShrink
+    totalCurrentStock += currentStock
 
     // Calculer la quantité à commander (besoin - stock actuel)
     let quantityToOrder = Math.max(0, neededWithShrink - currentStock)
@@ -291,6 +335,31 @@ export async function generateBOMOrderRecommendations(
         numberOfPacks,
         supplierName: need.supplierName,
       })
+    } else {
+      // Compter les ingrédients avec stock suffisant
+      ingredientsWithSufficientStock++
+    }
+  }
+
+  // Si aucune recommandation générée mais qu'on a des besoins calculés, c'est que les stocks sont suffisants
+  if (recommendations.length === 0 && ingredientNeeds.size > 0) {
+    return {
+      recommendations: [],
+      details: {
+        restaurantId,
+        restaurantName: restaurant.name,
+        period: {
+          start: targetDate.toISOString().split('T')[0],
+          end: endDate.toISOString().split('T')[0],
+        },
+        ingredients: [],
+        assumptions: {
+          shrinkPct,
+          forecastDays: days,
+        },
+        reason: `Aucune commande nécessaire. Vos stocks actuels sont suffisants pour couvrir les besoins prévus pour les ${days} prochains jours. Besoin total: ${totalNeededQuantity.toFixed(2)}, Stock actuel: ${totalCurrentStock.toFixed(2)}.`,
+      },
+      estimatedSavings: 0,
     }
   }
 

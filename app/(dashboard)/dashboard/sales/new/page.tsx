@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ShoppingCart, ArrowLeft, Plus, Save } from 'lucide-react'
+import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -201,9 +202,9 @@ export default function NewSalePage() {
   if (!isLoaded || loadingData) {
     return (
       <div className="p-6 space-y-6">
-        <Card>
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
               {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement des données...'}
             </p>
@@ -215,17 +216,30 @@ export default function NewSalePage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Nouvelle vente</h1>
-        <p className="text-muted-foreground">
-          Enregistrez une nouvelle vente
-        </p>
+      {/* Header (Style Sequence) */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/sales">
+          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+            <Plus className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Nouvelle vente</h1>
+            <p className="text-muted-foreground">
+              Enregistrez une nouvelle vente
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle>Informations de la vente</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Informations de la vente</CardTitle>
+          <CardDescription className="mt-1">
             Remplissez les informations pour enregistrer une nouvelle vente
           </CardDescription>
         </CardHeader>
@@ -239,7 +253,7 @@ export default function NewSalePage() {
                 required
                 disabled={loading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900">
                   <SelectValue placeholder="Sélectionner un restaurant" />
                 </SelectTrigger>
                 <SelectContent>
@@ -260,7 +274,7 @@ export default function NewSalePage() {
                 required
                 disabled={loading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900">
                   <SelectValue placeholder="Sélectionner un produit" />
                 </SelectTrigger>
                 <SelectContent>
@@ -285,6 +299,7 @@ export default function NewSalePage() {
                   placeholder="1"
                   required
                   disabled={loading}
+                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
               </div>
 
@@ -300,6 +315,7 @@ export default function NewSalePage() {
                   placeholder="0.00"
                   required
                   disabled={loading}
+                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
                 <p className="text-xs text-muted-foreground">
                   Calculé automatiquement ou saisissez manuellement
@@ -317,6 +333,7 @@ export default function NewSalePage() {
                   onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
                   required
                   disabled={loading}
+                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
               </div>
 
@@ -332,20 +349,31 @@ export default function NewSalePage() {
                   placeholder="14"
                   required
                   disabled={loading}
+                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
               </div>
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {loading ? 'Enregistrement...' : 'Enregistrer la vente'}
+              <Button type="submit" disabled={loading} className="shadow-sm">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Enregistrer la vente
+                  </>
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
                 disabled={loading}
+                className="shadow-sm"
               >
                 Annuler
               </Button>

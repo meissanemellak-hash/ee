@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
-import { Edit, Trash2, TrendingUp, Bell, Package, Loader2 } from 'lucide-react'
+import { Edit, Trash2, TrendingUp, Bell, Package, Loader2, Warehouse, Store, MapPin } from 'lucide-react'
 import { DeleteRestaurantButton } from '@/components/restaurants/delete-restaurant-button'
 import { useToast } from '@/hooks/use-toast'
 
@@ -27,13 +27,13 @@ interface Restaurant {
   address: string | null
   timezone: string
   createdAt: string
-  _count: {
+  _count?: {
     sales: number
     alerts: number
     inventory: number
   }
-  recentSales: Sale[]
-  totalRevenue: number
+  recentSales?: Sale[]
+  totalRevenue?: number
 }
 
 export default function RestaurantDetailPage() {
@@ -128,15 +128,26 @@ export default function RestaurantDetailPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header (Style Sequence) */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold">{restaurant.name}</h1>
-          <p className="text-muted-foreground">
-            {restaurant.address || 'Aucune adresse'}
-          </p>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+              <Store className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">{restaurant.name}</h1>
+              {restaurant.address && (
+                <p className="text-muted-foreground flex items-center gap-1 mt-1">
+                  <MapPin className="h-4 w-4" />
+                  {restaurant.address}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
+          <Button variant="outline" asChild className="shadow-sm">
             <Link href={`/dashboard/restaurants/${restaurant.id}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
               Modifier
@@ -146,109 +157,124 @@ export default function RestaurantDetailPage() {
         </div>
       </div>
 
+      {/* KPIs (Style Sequence) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Ventes totales
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{restaurant._count.sales}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold">{restaurant._count?.sales || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2">
               Toutes périodes confondues
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Chiffre d&apos;affaires (7j)
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold text-green-600">
               {new Intl.NumberFormat('fr-FR', {
                 style: 'currency',
                 currency: 'EUR',
               }).format(restaurant.totalRevenue || 0)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-2">
               Sur les 7 derniers jours
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={`border shadow-sm ${
+          (restaurant._count?.alerts || 0) > 0 ? 'border-orange-200 dark:border-orange-900/30' : ''
+        }`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Alertes actives
             </CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground" />
+            <Bell className={`h-4 w-4 ${
+              (restaurant._count?.alerts || 0) > 0 ? 'text-orange-600' : 'text-muted-foreground'
+            }`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{restaurant._count.alerts}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className={`text-3xl font-bold ${
+              (restaurant._count?.alerts || 0) > 0 ? 'text-orange-600' : ''
+            }`}>
+              {restaurant._count?.alerts || 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
               Nécessitent une attention
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Articles en stock
             </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <Package className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{restaurant._count.inventory}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold">{restaurant._count?.inventory || 0}</div>
+            <p className="text-xs text-muted-foreground mt-2 mb-3">
               Ingrédients suivis
             </p>
+            <Button asChild variant="outline" size="sm" className="w-full shadow-sm">
+              <Link href={`/dashboard/restaurants/${restaurant.id}/inventory`}>
+                <Warehouse className="h-4 w-4 mr-2" />
+                Gérer l'inventaire
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border shadow-sm">
           <CardHeader>
-            <CardTitle>Informations</CardTitle>
+            <CardTitle className="text-lg font-semibold">Informations</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Fuseau horaire:</span>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-sm text-muted-foreground">Fuseau horaire</span>
               <span className="text-sm font-medium">{restaurant.timezone}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Créé le:</span>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm text-muted-foreground">Créé le</span>
               <span className="text-sm font-medium">{formatDate(new Date(restaurant.createdAt))}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader>
-            <CardTitle>Ventes récentes</CardTitle>
+            <CardTitle className="text-lg font-semibold">Ventes récentes</CardTitle>
             <CardDescription>
               Les 10 dernières ventes
             </CardDescription>
           </CardHeader>
           <CardContent>
             {restaurant.recentSales && restaurant.recentSales.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {restaurant.recentSales.map((sale) => (
-                  <div key={sale.id} className="flex justify-between items-center text-sm">
+                  <div key={sale.id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <div>
-                      <span className="font-medium">{sale.product.name}</span>
-                      <span className="text-muted-foreground ml-2">
+                      <span className="font-medium text-sm">{sale.product.name}</span>
+                      <span className="text-muted-foreground ml-2 text-sm">
                         x{sale.quantity}
                       </span>
                     </div>
-                    <span className="font-medium">
+                    <span className="font-semibold text-green-600 dark:text-green-400">
                       {new Intl.NumberFormat('fr-FR', {
                         style: 'currency',
                         currency: 'EUR',
@@ -258,9 +284,11 @@ export default function RestaurantDetailPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Aucune vente récente
-              </p>
+              <div className="py-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Aucune vente récente
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

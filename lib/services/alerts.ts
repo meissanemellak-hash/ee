@@ -168,27 +168,48 @@ export async function runAllAlerts(restaurantId: string) {
 
 /**
  * Crée des alertes de test pour un restaurant (utile pour le développement)
+ * Note: Pour les tests, on crée directement les alertes sans vérifier les doublons
  */
 export async function createTestAlerts(restaurantId: string) {
-  await createAlert({
-    restaurantId,
-    type: 'SHORTAGE',
-    severity: 'critical',
-    message: '⚠️ ALERTE DE TEST - Rupture de stock critique pour Fromage: 0 kg (seuil min: 10 kg)',
+  // Supprimer les anciennes alertes de test pour éviter les doublons
+  await prisma.alert.deleteMany({
+    where: {
+      restaurantId,
+      message: {
+        contains: 'ALERTE DE TEST',
+      },
+    },
   })
 
-  await createAlert({
-    restaurantId,
-    type: 'SHORTAGE',
-    severity: 'high',
-    message: '⚠️ ALERTE DE TEST - Stock faible pour Tomate: 5 kg (seuil min: 20 kg)',
+  // Créer 3 alertes de test avec des types différents pour éviter les conflits
+  await prisma.alert.create({
+    data: {
+      restaurantId,
+      type: 'SHORTAGE',
+      severity: 'critical',
+      message: '⚠️ ALERTE DE TEST - Rupture de stock critique pour Fromage: 0 kg (seuil min: 10 kg)',
+      resolved: false,
+    },
   })
 
-  await createAlert({
-    restaurantId,
-    type: 'OVERSTOCK',
-    severity: 'medium',
-    message: '⚠️ ALERTE DE TEST - Surstock détecté pour Pain: 500 unités (seuil max: 200 unités)',
+  await prisma.alert.create({
+    data: {
+      restaurantId,
+      type: 'SHORTAGE',
+      severity: 'high',
+      message: '⚠️ ALERTE DE TEST - Stock faible pour Tomate: 5 kg (seuil min: 20 kg)',
+      resolved: false,
+    },
+  })
+
+  await prisma.alert.create({
+    data: {
+      restaurantId,
+      type: 'OVERSTOCK',
+      severity: 'medium',
+      message: '⚠️ ALERTE DE TEST - Surstock détecté pour Pain: 500 unités (seuil max: 200 unités)',
+      resolved: false,
+    },
   })
 
   console.log(`[createTestAlerts] 3 alertes de test créées pour le restaurant ${restaurantId}`)

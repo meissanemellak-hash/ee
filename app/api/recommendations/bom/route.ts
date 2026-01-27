@@ -100,6 +100,13 @@ export async function POST(request: NextRequest) {
       days || 7
     )
 
+    // Log pour debug
+    console.log('[POST /api/recommendations/bom] Résultat:', {
+      recommendationsCount: result.recommendations.length,
+      hasDetails: !!result.details,
+      reason: (result.details as any)?.reason,
+    })
+
     // Sauvegarder la recommandation
     if (result.recommendations.length > 0) {
       // S'assurer que estimatedSavings est inclus dans les données sauvegardées
@@ -119,6 +126,10 @@ export async function POST(request: NextRequest) {
           status: 'pending',
         },
       })
+    } else {
+      // Si aucune recommandation, retourner un message explicatif
+      const reason = (result.details as any)?.reason || 'Aucune recommandation générée. Vérifiez que vous avez des produits avec des recettes et des ventes historiques.'
+      console.log('[POST /api/recommendations/bom] Aucune recommandation générée. Raison:', reason)
     }
 
     return NextResponse.json(result)

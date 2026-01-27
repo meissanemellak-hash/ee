@@ -113,10 +113,13 @@ function ActivateContent() {
   }, [orgId, isLoaded, userMemberships])
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="text-center space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-        <p className="text-muted-foreground">Activation de l&apos;organisation en cours...</p>
+        <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md mb-4">
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
+        </div>
+        <h2 className="text-lg font-semibold">Activation de l&apos;organisation en cours...</h2>
+        <p className="text-sm text-muted-foreground">Veuillez patienter</p>
       </div>
     </div>
   )
@@ -125,8 +128,12 @@ function ActivateContent() {
 export default function ActivatePage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+          </div>
+        </div>
       </div>
     }>
       <ActivateContent />

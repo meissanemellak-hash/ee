@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Plus, Trash2, Beaker } from 'lucide-react'
+import { Loader2, Plus, Trash2, Beaker, Package, ArrowLeft, Save } from 'lucide-react'
+import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -333,9 +334,9 @@ export default function EditProductPage() {
   if (loading) {
     return (
       <div className="p-6 space-y-6">
-        <Card>
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">Chargement du produit...</p>
           </CardContent>
         </Card>
@@ -349,18 +350,31 @@ export default function EditProductPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Modifier le produit</h1>
-        <p className="text-muted-foreground">
-          Modifiez les informations du produit
-        </p>
+      {/* Header (Style Sequence) */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/products">
+          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <Package className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Modifier le produit</h1>
+            <p className="text-muted-foreground">
+              Modifiez les informations et la recette du produit
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle>Informations du produit</CardTitle>
-          <CardDescription>
-            Modifiez les informations du produit
+          <CardTitle className="text-lg font-semibold">Informations du produit</CardTitle>
+          <CardDescription className="mt-1">
+            Modifiez les informations de base du produit
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -410,15 +424,25 @@ export default function EditProductPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
+              <Button type="submit" disabled={saving} className="shadow-sm">
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Enregistrer les modifications
+                  </>
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
                 disabled={saving}
+                className="shadow-sm"
               >
                 Annuler
               </Button>
@@ -427,129 +451,138 @@ export default function EditProductPage() {
         </CardContent>
       </Card>
 
-      {/* Section Recette */}
-      <Card>
+      {/* Section Recette (Style Sequence) */}
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Beaker className="h-5 w-5" />
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+              <Beaker className="h-4 w-4 text-white" />
+            </div>
             Recette du produit
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="mt-1">
             Définissez les ingrédients nécessaires pour fabriquer ce produit
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Liste des ingrédients actuels */}
+          {/* Liste des ingrédients actuels (Style Sequence) */}
           {loadingIngredients ? (
-            <div className="text-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+            <div className="text-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Chargement de la recette...</p>
             </div>
           ) : productIngredients.length > 0 ? (
-            <div className="space-y-2">
-              <Label>Ingrédients actuels</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Ingrédients actuels</Label>
               <div className="space-y-2">
                 {productIngredients.map((pi) => (
                   <div
                     key={pi.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   >
                     <div className="flex-1">
-                      <p className="font-medium">{pi.ingredient.name}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{pi.ingredient.name}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
                         {pi.quantityNeeded} {pi.ingredient.unit} par produit
                       </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400"
                       onClick={() => {
                         setIngredientToDelete(pi)
                         setDeleteDialogOpen(true)
                       }}
                       disabled={saving || addingIngredient}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 border rounded-lg">
-              <Beaker className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Aucun ingrédient dans la recette
+            <div className="text-center py-12 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+              <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+                <Beaker className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium mb-1">Aucun ingrédient dans la recette</p>
+              <p className="text-xs text-muted-foreground">
+                Ajoutez des ingrédients ci-dessous pour définir la recette
               </p>
             </div>
           )}
 
-          {/* Formulaire d'ajout d'ingrédient */}
+          {/* Formulaire d'ajout d'ingrédient (Style Sequence) */}
           {availableIngredients.length > 0 && (
-            <div className="space-y-4 pt-4 border-t">
-              <Label>Ajouter un ingrédient</Label>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label className="text-xs">Ingrédient</Label>
-                  <Select
-                    value={newIngredient.ingredientId}
-                    onValueChange={(value) =>
-                      setNewIngredient({ ...newIngredient, ingredientId: value })
-                    }
-                    disabled={addingIngredient}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un ingrédient" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableIngredients.map((ingredient) => (
-                        <SelectItem key={ingredient.id} value={ingredient.id}>
-                          {ingredient.name} ({ingredient.unit})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Quantité par produit</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={newIngredient.quantityNeeded}
-                    onChange={(e) =>
-                      setNewIngredient({ ...newIngredient, quantityNeeded: e.target.value })
-                    }
-                    placeholder="0.00"
-                    disabled={addingIngredient}
-                  />
-                </div>
-                <div className="space-y-2 flex items-end">
-                  <Button
-                    type="button"
-                    onClick={handleAddIngredient}
-                    disabled={addingIngredient || !newIngredient.ingredientId || !newIngredient.quantityNeeded}
-                    className="w-full"
-                  >
-                    {addingIngredient ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Ajout...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Ajouter
-                      </>
-                    )}
-                  </Button>
+            <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-800">
+              <div className="p-4 rounded-lg bg-purple-50/50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-900/30">
+                <Label className="text-sm font-semibold mb-3 block">Ajouter un ingrédient</Label>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Ingrédient</Label>
+                    <Select
+                      value={newIngredient.ingredientId}
+                      onValueChange={(value) =>
+                        setNewIngredient({ ...newIngredient, ingredientId: value })
+                      }
+                      disabled={addingIngredient}
+                    >
+                      <SelectTrigger className="bg-white dark:bg-gray-900">
+                        <SelectValue placeholder="Sélectionner un ingrédient" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableIngredients.map((ingredient) => (
+                          <SelectItem key={ingredient.id} value={ingredient.id}>
+                            {ingredient.name} ({ingredient.unit})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Quantité par produit</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newIngredient.quantityNeeded}
+                      onChange={(e) =>
+                        setNewIngredient({ ...newIngredient, quantityNeeded: e.target.value })
+                      }
+                      placeholder="0.00"
+                      disabled={addingIngredient}
+                      className="bg-white dark:bg-gray-900"
+                    />
+                  </div>
+                  <div className="space-y-2 flex items-end">
+                    <Button
+                      type="button"
+                      onClick={handleAddIngredient}
+                      disabled={addingIngredient || !newIngredient.ingredientId || !newIngredient.quantityNeeded}
+                      className="w-full shadow-sm"
+                    >
+                      {addingIngredient ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Ajout...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Ajouter
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {availableIngredients.length === 0 && productIngredients.length > 0 && (
-            <div className="text-center py-4">
+            <div className="text-center py-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
               <p className="text-sm text-muted-foreground">
                 Tous les ingrédients disponibles sont déjà dans la recette
               </p>
@@ -557,14 +590,19 @@ export default function EditProductPage() {
           )}
 
           {ingredients.length === 0 && (
-            <div className="text-center py-4 border rounded-lg bg-muted/50">
-              <p className="text-sm text-muted-foreground mb-2">
-                Aucun ingrédient disponible
+            <div className="text-center py-8 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+              <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+                <Beaker className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium mb-2">Aucun ingrédient disponible</p>
+              <p className="text-xs text-muted-foreground mb-4">
+                Créez d'abord des ingrédients pour pouvoir les ajouter à la recette
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => router.push('/dashboard/ingredients/new')}
+                className="shadow-sm"
               >
                 Créer un ingrédient
               </Button>

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Beaker, ArrowLeft, Plus, Save } from 'lucide-react'
+import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -146,17 +147,30 @@ export default function NewIngredientPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Nouvel ingrédient</h1>
-        <p className="text-muted-foreground">
-          Ajoutez un nouvel ingrédient à votre catalogue
-        </p>
+      {/* Header (Style Sequence) */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/ingredients">
+          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+            <Plus className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Nouvel ingrédient</h1>
+            <p className="text-muted-foreground">
+              Ajoutez un nouvel ingrédient à votre catalogue
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle>Informations de l'ingrédient</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Informations de l'ingrédient</CardTitle>
+          <CardDescription className="mt-1">
             Remplissez les informations pour créer un nouvel ingrédient
           </CardDescription>
         </CardHeader>
@@ -243,15 +257,25 @@ export default function NewIngredientPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {loading ? 'Création...' : 'Créer l\'ingrédient'}
+              <Button type="submit" disabled={loading} className="shadow-sm">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Créer l'ingrédient
+                  </>
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
                 disabled={loading}
+                className="shadow-sm"
               >
                 Annuler
               </Button>

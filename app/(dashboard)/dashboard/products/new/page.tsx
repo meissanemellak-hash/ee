@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Package, ArrowLeft, Plus, Save } from 'lucide-react'
+import Link from 'next/link'
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -122,17 +123,30 @@ export default function NewProductPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Nouveau produit</h1>
-        <p className="text-muted-foreground">
-          Ajoutez un nouveau produit à votre catalogue
-        </p>
+      {/* Header (Style Sequence) */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/products">
+          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <Plus className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Nouveau produit</h1>
+            <p className="text-muted-foreground">
+              Ajoutez un nouveau produit à votre catalogue
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle>Informations du produit</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Informations du produit</CardTitle>
+          <CardDescription className="mt-1">
             Remplissez les informations pour créer un nouveau produit
           </CardDescription>
         </CardHeader>
@@ -183,15 +197,25 @@ export default function NewProductPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {loading ? 'Création...' : 'Créer le produit'}
+              <Button type="submit" disabled={loading} className="shadow-sm">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Créer le produit
+                  </>
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
                 disabled={loading}
+                className="shadow-sm"
               >
                 Annuler
               </Button>

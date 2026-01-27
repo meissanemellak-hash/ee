@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useToast } from '@/hooks/use-toast'
+import { useForecasts, useGenerateForecasts, useDeleteForecast } from '@/lib/react-query/hooks/use-forecasts'
+import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
+import { ForecastListSkeleton } from '@/components/ui/skeletons/forecast-list-skeleton'
 
 interface Forecast {
   id: string
@@ -52,10 +54,6 @@ interface Restaurant {
 
 export default function ForecastsPage() {
   const { organization, isLoaded } = useOrganization()
-  const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
-  const [forecasts, setForecasts] = useState<Forecast[]>([])
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
   const [selectedMethod, setSelectedMethod] = useState<string>('moving_average')
   const [forecastDate, setForecastDate] = useState(() => {
@@ -67,193 +65,27 @@ export default function ForecastsPage() {
   const [endDate, setEndDate] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [forecastToDelete, setForecastToDelete] = useState<Forecast | null>(null)
-  const [deleting, setDeleting] = useState(false)
-  const { toast } = useToast()
 
-  useEffect(() => {
-    if (isLoaded && organization?.id) {
-      fetchRestaurants()
-      fetchForecasts()
-    } else if (isLoaded) {
-      setLoading(false)
-    }
-  }, [isLoaded, organization?.id])
+  // Charger les restaurants pour les filtres
+  const { data: restaurantsData } = useRestaurants(1, 100)
+  const restaurants = restaurantsData?.restaurants || []
 
-  useEffect(() => {
-    if (isLoaded && organization?.id) {
-      fetchForecasts()
-    }
-  }, [selectedRestaurant, startDate, endDate, isLoaded, organization?.id])
+  // Charger les prévisions avec filtres
+  const { data, isLoading, error } = useForecasts({
+    restaurantId: selectedRestaurant,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  })
 
-  const fetchRestaurants = async () => {
-    if (!organization?.id) return
+  const forecasts = data?.forecasts || []
+  const generateForecasts = useGenerateForecasts()
+  const deleteForecast = useDeleteForecast()
 
-    try {
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      const response = await fetch(`/api/restaurants?${queryParams.toString()}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        setRestaurants(data)
-      }
-    } catch (error) {
-      console.error('Error fetching restaurants:', error)
-    }
-  }
-
-  const fetchForecasts = async () => {
-    if (!isLoaded || !organization?.id) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      const params = new URLSearchParams()
-      params.append('clerkOrgId', organization.id)
-      
-      if (selectedRestaurant && selectedRestaurant !== 'all') {
-        params.append('restaurantId', selectedRestaurant)
-      }
-      
-      if (startDate) {
-        params.append('startDate', startDate)
-      }
-      
-      if (endDate) {
-        params.append('endDate', endDate)
-      }
-
-      const response = await fetch(`/api/forecasts?${params.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement des prévisions')
-      }
-
-      const data = await response.json()
-      setForecasts(data)
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Impossible de charger les prévisions',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleGenerate = async () => {
-    if (!organization?.id) {
-      toast({
-        title: 'Erreur',
-        description: 'Aucune organisation active. Veuillez sélectionner une organisation.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!selectedRestaurant || selectedRestaurant === 'all') {
-      toast({
-        title: 'Erreur',
-        description: 'Veuillez sélectionner un restaurant',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!forecastDate) {
-      toast({
-        title: 'Erreur',
-        description: 'Veuillez sélectionner une date',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setGenerating(true)
-
-    try {
-      const response = await fetch('/api/forecasts/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          restaurantId: selectedRestaurant,
-          forecastDate,
-          method: selectedMethod,
-          clerkOrgId: organization.id,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || error.details || 'Erreur lors de la génération')
-      }
-
-      const data = await response.json()
-      
-      toast({
-        title: 'Prévisions générées',
-        description: `${data.forecasts.length} prévision(s) générée(s) avec succès.`,
-      })
-
-      fetchForecasts()
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!forecastToDelete || !organization?.id) return
-
-    try {
-      setDeleting(true)
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      
-      const response = await fetch(`/api/forecasts/${forecastToDelete.id}?${queryParams.toString()}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la suppression')
-      }
-
-      toast({
-        title: 'Prévision supprimée',
-        description: 'La prévision a été supprimée avec succès.',
-      })
-
-      setDeleteDialogOpen(false)
-      setForecastToDelete(null)
-      fetchForecasts()
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Impossible de supprimer la prévision',
-        variant: 'destructive',
-      })
-    } finally {
-      setDeleting(false)
-    }
-  }
-
+  // Calculer les statistiques
   const totalForecasted = forecasts.reduce((sum, f) => sum + f.forecastedQuantity, 0)
   const avgConfidence = forecasts.length > 0
     ? forecasts.reduce((sum, f) => sum + (f.confidence || 0), 0) / forecasts.length
     : 0
-
-  // Vérifier si des filtres sont actifs
   const hasActiveFilters = selectedRestaurant !== 'all' || startDate || endDate
 
   const resetFilters = () => {
@@ -262,14 +94,40 @@ export default function ForecastsPage() {
     setEndDate('')
   }
 
-  if (!isLoaded || loading) {
+  const handleGenerate = async () => {
+    if (!selectedRestaurant || selectedRestaurant === 'all') {
+      return
+    }
+
+    if (!forecastDate) {
+      return
+    }
+
+    generateForecasts.mutate({
+      restaurantId: selectedRestaurant,
+      forecastDate,
+      method: selectedMethod,
+    })
+  }
+
+  const handleDelete = async () => {
+    if (!forecastToDelete) return
+    deleteForecast.mutate(forecastToDelete.id, {
+      onSuccess: () => {
+        setDeleteDialogOpen(false)
+        setForecastToDelete(null)
+      },
+    })
+  }
+
+  if (!isLoaded) {
     return (
       <div className="p-6 space-y-6">
-        <Card>
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
-              {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement des prévisions...'}
+              Chargement de votre organisation...
             </p>
           </CardContent>
         </Card>
@@ -279,26 +137,34 @@ export default function ForecastsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header (Style Sequence) */}
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold">Prévisions</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">Prévisions</h1>
+          <p className="text-muted-foreground mt-1">
             Prévisions de ventes et analyses prédictives
           </p>
         </div>
       </div>
 
-      {/* Génération de prévisions */}
-      <Card>
+      {/* Génération de prévisions (Style Sequence) */}
+      <Card className="border shadow-sm border-2 border-indigo-200 dark:border-indigo-900/30 bg-indigo-50/50 dark:bg-indigo-900/10">
         <CardHeader>
-          <CardTitle>Générer des prévisions</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            Générer des prévisions
+          </CardTitle>
+          <CardDescription className="mt-1">
             Créez des prévisions de ventes pour un restaurant et une date spécifiques
           </CardDescription>
-          <CardDescription className="text-xs text-muted-foreground mt-2">
-            💡 Les prévisions se basent sur l&apos;historique des ventes des jours précédant la date sélectionnée. 
-            Plus vous avez de ventes historiques, plus les prévisions seront précises.
-          </CardDescription>
+          <div className="mt-3 p-3 bg-indigo-100/50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-900/30">
+            <p className="text-xs text-indigo-800 dark:text-indigo-300">
+              💡 Les prévisions se basent sur l&apos;historique des ventes des jours précédant la date sélectionnée. 
+              Plus vous avez de ventes historiques, plus les prévisions seront précises.
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
@@ -308,7 +174,7 @@ export default function ForecastsPage() {
                 value={selectedRestaurant === 'all' ? '' : selectedRestaurant} 
                 onValueChange={(value) => setSelectedRestaurant(value || 'all')}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
                   <SelectValue placeholder="Sélectionner un restaurant" />
                 </SelectTrigger>
                 <SelectContent>
@@ -328,13 +194,14 @@ export default function ForecastsPage() {
                 value={forecastDate}
                 onChange={(e) => setForecastDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
+                className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
               />
             </div>
 
             <div className="space-y-2">
               <Label>Méthode</Label>
               <Select value={selectedMethod} onValueChange={setSelectedMethod}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -347,10 +214,10 @@ export default function ForecastsPage() {
             <div className="space-y-2 flex items-end">
               <Button 
                 onClick={handleGenerate} 
-                disabled={generating || !selectedRestaurant || selectedRestaurant === 'all'}
-                className="w-full"
+                disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all'}
+                className="w-full shadow-sm"
               >
-                {generating ? (
+                {generateForecasts.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Génération...
@@ -367,55 +234,55 @@ export default function ForecastsPage() {
         </CardContent>
       </Card>
 
-      {/* Statistiques */}
+      {/* Statistiques (Style Sequence) */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Prévisions totales</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Prévisions totales</CardTitle>
+            <TrendingUp className="h-4 w-4 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{forecasts.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold">{forecasts.length}</div>
+            <p className="text-xs text-muted-foreground mt-2">
               Prévisions enregistrées
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Quantité prévue</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Quantité prévue</CardTitle>
+            <Package className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalForecasted.toFixed(0)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-teal-600">{totalForecasted.toFixed(0)}</div>
+            <p className="text-xs text-muted-foreground mt-2">
               Unités prévues
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Confiance moyenne</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Confiance moyenne</CardTitle>
+            <Sparkles className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(avgConfidence * 100).toFixed(0)}%</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-purple-600">{(avgConfidence * 100).toFixed(0)}%</div>
+            <p className="text-xs text-muted-foreground mt-2">
               Niveau de confiance
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Liste des prévisions */}
-      <Card>
+      {/* Liste des prévisions (Style Sequence) */}
+      <Card className="border shadow-sm">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle>Liste des prévisions</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg font-semibold">Liste des prévisions</CardTitle>
+              <CardDescription className="mt-1">
                 {forecasts.length} prévision{forecasts.length > 1 ? 's' : ''} trouvée{forecasts.length > 1 ? 's' : ''}
                 {hasActiveFilters && (
                   <span className="ml-2 text-xs text-muted-foreground">
@@ -428,7 +295,7 @@ export default function ForecastsPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Restaurant</Label>
                 <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
-                  <SelectTrigger className="w-[160px] h-9 text-sm">
+                  <SelectTrigger className="w-[160px] h-9 text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
                     <SelectValue placeholder="Tous" />
                   </SelectTrigger>
                   <SelectContent>
@@ -447,7 +314,7 @@ export default function ForecastsPage() {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-[140px] h-9 text-sm"
+                  className="w-[140px] h-9 text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
               </div>
               <div className="space-y-1.5">
@@ -456,7 +323,7 @@ export default function ForecastsPage() {
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-[140px] h-9 text-sm"
+                  className="w-[140px] h-9 text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
               </div>
               {hasActiveFilters && (
@@ -464,7 +331,7 @@ export default function ForecastsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={resetFilters}
-                  className="h-9 text-xs"
+                  className="h-9 text-xs shadow-sm"
                 >
                   <X className="h-3 w-3 mr-1" />
                   Réinitialiser
@@ -474,51 +341,77 @@ export default function ForecastsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {forecasts.length === 0 ? (
+          {isLoading ? (
+            <ForecastListSkeleton />
+          ) : error ? (
             <div className="text-center py-12">
-              <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">Aucune prévision trouvée</p>
-              <p className="text-sm text-muted-foreground">
-                Utilisez le formulaire ci-dessus pour générer des prévisions
+              <p className="text-red-600 dark:text-red-400">
+                Erreur lors du chargement des prévisions. Veuillez réessayer.
+              </p>
+            </div>
+          ) : forecasts.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+                <TrendingUp className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Aucune prévision trouvée</h3>
+              <p className="text-muted-foreground mb-2">
+                {hasActiveFilters
+                  ? 'Aucune prévision ne correspond à vos critères de recherche.'
+                  : 'Utilisez le formulaire ci-dessus pour générer des prévisions'}
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {forecasts.map((forecast) => (
                 <div
                   key={forecast.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                  className="flex items-center justify-between p-4 rounded-lg border bg-gray-50/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <p className="font-medium">{forecast.product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {forecast.restaurant.name} • {formatDate(new Date(forecast.forecastDate))}
-                        </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{forecast.product.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Store className="h-3 w-3" />
+                            <span className="truncate">{forecast.restaurant.name}</span>
+                          </div>
+                          <span className="text-muted-foreground">•</span>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            <span>{formatDate(new Date(forecast.forecastDate))}</span>
+                          </div>
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Méthode: {forecast.method === 'moving_average' ? 'Moyenne mobile (7 derniers jours avant cette date)' : 'Saisonnalité (même jour de la semaine sur 4 semaines)'} • 
+                          Méthode: {forecast.method === 'moving_average' ? 'Moyenne mobile' : 'Saisonnalité'} • 
                           Confiance: {forecast.confidence ? `${(forecast.confidence * 100).toFixed(0)}%` : 'N/A'}
                         </p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 ml-4">
                     <div className="text-right">
-                      <p className="font-medium">{forecast.forecastedQuantity.toFixed(0)} unités</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                        {forecast.forecastedQuantity.toFixed(0)} unités
+                      </p>
+                      <p className="text-xs text-muted-foreground">
                         {formatCurrency(forecast.forecastedQuantity * forecast.product.unitPrice)}
                       </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => {
                         setForecastToDelete(forecast)
                         setDeleteDialogOpen(true)
                       }}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -537,13 +430,13 @@ export default function ForecastsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteForecast.isPending}>Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={deleteForecast.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? (
+              {deleteForecast.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Suppression...

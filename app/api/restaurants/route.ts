@@ -62,6 +62,53 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
+    // Support de la pagination (optionnel pour compatibilité)
+    const pageParam = searchParams.get('page')
+    const limitParam = searchParams.get('limit')
+    const usePagination = pageParam !== null || limitParam !== null
+
+    if (usePagination) {
+      const page = parseInt(pageParam || '1')
+      const limit = parseInt(limitParam || '50')
+      const skip = (page - 1) * limit
+
+      // Requête optimisée avec select uniquement pour les champs nécessaires
+      const [restaurants, total] = await Promise.all([
+        prisma.restaurant.findMany({
+          where: { organizationId: organization.id },
+          orderBy: { name: 'asc' },
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            timezone: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: {
+                sales: true,
+                alerts: true,
+              },
+            },
+          },
+        }),
+        prisma.restaurant.count({
+          where: { organizationId: organization.id },
+        }),
+      ])
+
+      return NextResponse.json({
+        restaurants,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      })
+    }
+
+    // Format simple (compatibilité avec l'ancien code)
     const restaurants = await prisma.restaurant.findMany({
       where: { organizationId: organization.id },
       orderBy: { name: 'asc' },

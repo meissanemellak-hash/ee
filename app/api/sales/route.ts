@@ -80,7 +80,9 @@ export async function GET(request: NextRequest) {
     const productId = searchParams.get('productId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 100
+    const pageParam = searchParams.get('page')
+    const limitParam = searchParams.get('limit')
+    const usePagination = pageParam !== null || limitParam !== null
 
     // Construire la clause where
     const where: any = {
@@ -107,6 +109,58 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (usePagination) {
+      const page = parseInt(pageParam || '1')
+      const limit = parseInt(limitParam || '50')
+      const skip = (page - 1) * limit
+
+      const [sales, total] = await Promise.all([
+        prisma.sale.findMany({
+          where,
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            restaurantId: true,
+            productId: true,
+            quantity: true,
+            amount: true,
+            saleDate: true,
+            saleHour: true,
+            createdAt: true,
+            restaurant: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+                unitPrice: true,
+              },
+            },
+          },
+          orderBy: {
+            saleDate: 'desc',
+          },
+        }),
+        prisma.sale.count({ where }),
+      ])
+
+      return NextResponse.json({
+        sales,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      })
+    }
+
+    // Format simple (compatibilité avec l'ancien code)
+    const limit = limitParam ? parseInt(limitParam) : 100
     const sales = await prisma.sale.findMany({
       where,
       include: {

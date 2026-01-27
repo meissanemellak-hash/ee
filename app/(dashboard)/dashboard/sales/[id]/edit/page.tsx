@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ArrowLeft, ShoppingCart, Save, Link } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -252,9 +252,9 @@ export default function EditSalePage() {
   if (!isLoaded || loading || loadingData) {
     return (
       <div className="p-6 space-y-6">
-        <Card>
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
               {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement de la vente...'}
             </p>
@@ -270,17 +270,30 @@ export default function EditSalePage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Modifier la vente</h1>
-        <p className="text-muted-foreground">
-          Modifiez les informations de la vente
-        </p>
+      {/* Header (Style Sequence) */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/sales" className="hover:opacity-80 transition-opacity">
+          <Button variant="ghost" size="icon" className="h-9 w-9">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
+              <ShoppingCart className="h-5 w-5 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">Modifier la vente</h1>
+          </div>
+          <p className="text-muted-foreground">
+            Modifiez les informations de la vente
+          </p>
+        </div>
       </div>
 
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle>Informations de la vente</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Informations de la vente</CardTitle>
+          <CardDescription className="mt-1">
             Modifiez les informations ci-dessous
           </CardDescription>
         </CardHeader>
@@ -294,7 +307,7 @@ export default function EditSalePage() {
                 required
                 disabled={saving}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
                   <SelectValue placeholder="Sélectionner un restaurant" />
                 </SelectTrigger>
                 <SelectContent>
@@ -315,7 +328,7 @@ export default function EditSalePage() {
                 required
                 disabled={saving}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
                   <SelectValue placeholder="Sélectionner un produit" />
                 </SelectTrigger>
                 <SelectContent>
@@ -340,6 +353,7 @@ export default function EditSalePage() {
                   placeholder="1"
                   required
                   disabled={saving}
+                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
               </div>
 
@@ -355,6 +369,7 @@ export default function EditSalePage() {
                   placeholder="0.00"
                   required
                   disabled={saving}
+                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
                 <p className="text-xs text-muted-foreground">
                   Calculé automatiquement ou saisissez manuellement
@@ -372,6 +387,7 @@ export default function EditSalePage() {
                   onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
                   required
                   disabled={saving}
+                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
               </div>
 
@@ -387,20 +403,31 @@ export default function EditSalePage() {
                   placeholder="14"
                   required
                   disabled={saving}
+                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
                 />
               </div>
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {saving ? 'Modification...' : 'Enregistrer les modifications'}
+              <Button type="submit" disabled={saving} className="shadow-sm">
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Modification...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Enregistrer les modifications
+                  </>
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
                 disabled={saving}
+                className="shadow-sm"
               >
                 Annuler
               </Button>

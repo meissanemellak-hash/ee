@@ -107,7 +107,7 @@ export default function SalesAnalyzePage() {
     }
   }
 
-  // Fonction pour générer un graphique en barres simple
+  // Fonction pour générer un graphique en barres simple (Style Sequence)
   const BarChart = ({ data, dataKey, labelKey, maxValue }: { 
     data: any[], 
     dataKey: string, 
@@ -119,19 +119,19 @@ export default function SalesAnalyzePage() {
     }
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {data.map((item, index) => {
           const value = item[dataKey]
           const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0
           return (
-            <div key={index} className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="font-medium">{item[labelKey]}</span>
-                <span className="text-muted-foreground">{formatCurrency(value)}</span>
+            <div key={index} className="space-y-2 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-sm">{item[labelKey]}h</span>
+                <span className="font-bold text-teal-600 dark:text-teal-400 text-sm">{formatCurrency(value)}</span>
               </div>
-              <div className="w-full bg-muted rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
-                  className="bg-primary h-2 rounded-full transition-all"
+                  className="bg-gradient-to-r from-teal-500 to-emerald-600 h-2 rounded-full transition-all"
                   style={{ width: `${percentage}%` }}
                 />
               </div>
@@ -145,9 +145,9 @@ export default function SalesAnalyzePage() {
   if (!isLoaded || loading) {
     return (
       <div className="p-6 space-y-6">
-        <Card>
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
               {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement de l\'analyse...'}
             </p>
@@ -160,9 +160,15 @@ export default function SalesAnalyzePage() {
   if (!analysis) {
     return (
       <div className="p-6 space-y-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Aucune donnée disponible</p>
+        <Card className="border shadow-sm">
+          <CardContent className="py-16 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+              <BarChart3 className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Aucune donnée disponible</h3>
+            <p className="text-muted-foreground">
+              Aucune vente trouvée pour la période sélectionnée.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -177,26 +183,30 @@ export default function SalesAnalyzePage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header (Style Sequence) */}
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold">Analyse des ventes</h1>
-          <p className="text-muted-foreground">
-            Visualisez et analysez vos données de ventes
+          <h1 className="text-3xl font-bold tracking-tight">Analyse des ventes</h1>
+          <p className="text-muted-foreground mt-1">
+            Visualisez et analysez vos données de ventes en détail
           </p>
         </div>
       </div>
 
-      {/* Filtres */}
-      <Card>
+      {/* Filtres (Style Sequence) */}
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle>Filtres</CardTitle>
+          <CardTitle className="text-lg font-semibold">Filtres</CardTitle>
+          <CardDescription className="mt-1">
+            Filtrez l'analyse par restaurant et période
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Restaurant</Label>
               <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <SelectValue placeholder="Tous les restaurants" />
                 </SelectTrigger>
                 <SelectContent>
@@ -216,6 +226,7 @@ export default function SalesAnalyzePage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
               />
             </div>
 
@@ -225,63 +236,64 @@ export default function SalesAnalyzePage() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Statistiques globales */}
+      {/* Statistiques globales (Style Sequence) */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventes totales</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ventes totales</CardTitle>
+            <Package className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analysis.totalSales}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold">{analysis.totalSales}</div>
+            <p className="text-xs text-muted-foreground mt-2">
               Unités vendues
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chiffre d&apos;affaires</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Chiffre d&apos;affaires</CardTitle>
+            <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(analysis.totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-green-600">{formatCurrency(analysis.totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground mt-2">
               Revenus totaux
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Moyenne par jour</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Moyenne par jour</CardTitle>
+            <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analysis.averagePerDay.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-blue-600">{analysis.averagePerDay.toFixed(1)}</div>
+            <p className="text-xs text-muted-foreground mt-2">
               Unités/jour
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Période</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Période</CardTitle>
+            <Calendar className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold text-amber-600">
               {Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-2">
               Jours
             </p>
           </CardContent>
@@ -289,11 +301,11 @@ export default function SalesAnalyzePage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Top produits */}
-        <Card>
+        {/* Top produits (Style Sequence) */}
+        <Card className="border shadow-sm">
           <CardHeader>
-            <CardTitle>Top produits</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg font-semibold">Top produits</CardTitle>
+            <CardDescription className="mt-1">
               Produits les plus vendus par revenus
             </CardDescription>
           </CardHeader>
@@ -306,18 +318,26 @@ export default function SalesAnalyzePage() {
                   const maxProductRevenue = Math.max(...analysis.topProducts.map(p => p.revenue), 1)
                   const percentage = (product.revenue / maxProductRevenue) * 100
                   return (
-                    <div key={product.productId} className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">
-                          #{index + 1} {product.productName}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {formatCurrency(product.revenue)} ({product.quantity} unités)
-                        </span>
+                    <div key={product.productId} className="space-y-2 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-muted-foreground">#{index + 1}</span>
+                          <span className="font-semibold text-sm">
+                            {product.productName}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-green-600 dark:text-green-400 text-sm">
+                            {formatCurrency(product.revenue)}
+                          </span>
+                          <p className="text-xs text-muted-foreground">
+                            {product.quantity} unités
+                          </p>
+                        </div>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div
-                          className="bg-primary h-2 rounded-full transition-all"
+                          className="bg-gradient-to-r from-teal-500 to-emerald-600 h-2 rounded-full transition-all"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
@@ -329,11 +349,11 @@ export default function SalesAnalyzePage() {
           </CardContent>
         </Card>
 
-        {/* Ventes par heure */}
-        <Card>
+        {/* Ventes par heure (Style Sequence) */}
+        <Card className="border shadow-sm">
           <CardHeader>
-            <CardTitle>Ventes par heure</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg font-semibold">Ventes par heure</CardTitle>
+            <CardDescription className="mt-1">
               Répartition des ventes sur la journée
             </CardDescription>
           </CardHeader>
@@ -348,11 +368,11 @@ export default function SalesAnalyzePage() {
         </Card>
       </div>
 
-      {/* Ventes par jour */}
-      <Card>
+      {/* Ventes par jour (Style Sequence) */}
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle>Ventes par jour</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Ventes par jour</CardTitle>
+          <CardDescription className="mt-1">
             Évolution des ventes sur la période sélectionnée
           </CardDescription>
         </CardHeader>
@@ -360,20 +380,25 @@ export default function SalesAnalyzePage() {
           {analysis.salesByDay.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">Aucune donnée</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {analysis.salesByDay.map((day) => {
                 const percentage = (day.revenue / maxRevenue) * 100
                 return (
-                  <div key={day.date} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">{formatDate(new Date(day.date))}</span>
-                      <span className="text-muted-foreground">
-                        {formatCurrency(day.revenue)} ({day.quantity} unités)
-                      </span>
+                  <div key={day.date} className="space-y-2 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-sm">{formatDate(new Date(day.date))}</span>
+                      <div className="text-right">
+                        <span className="font-bold text-teal-600 dark:text-teal-400 text-sm">
+                          {formatCurrency(day.revenue)}
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          {day.quantity} unités
+                        </p>
+                      </div>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                       <div
-                        className="bg-primary h-2 rounded-full transition-all"
+                        className="bg-gradient-to-r from-teal-500 to-emerald-600 h-2 rounded-full transition-all"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>

@@ -103,9 +103,12 @@ export async function GET(request: NextRequest) {
     
     console.log('[GET /api/products] Organisation trouvée:', organization.name, organization.id)
 
-    // Récupérer les paramètres de recherche et filtres (searchParams déjà défini plus haut)
+    // Récupérer les paramètres de recherche et filtres
     const search = searchParams.get('search') || ''
     const category = searchParams.get('category') || ''
+    const pageParam = searchParams.get('page')
+    const limitParam = searchParams.get('limit')
+    const usePagination = pageParam !== null || limitParam !== null
     
     // Construire la requête avec filtres
     const where: any = {
@@ -123,6 +126,58 @@ export async function GET(request: NextRequest) {
       where.category = category
     }
 
+    // Récupérer les catégories uniques pour les filtres
+    const categoriesResult = await prisma.product.findMany({
+      where: { organizationId: organization.id },
+      select: { category: true },
+      distinct: ['category'],
+    })
+    const categories = categoriesResult
+      .map(c => c.category)
+      .filter((c): c is string => c !== null && c !== '')
+
+    if (usePagination) {
+      const page = parseInt(pageParam || '1')
+      const limit = parseInt(limitParam || '50')
+      const skip = (page - 1) * limit
+
+      const [products, total] = await Promise.all([
+        prisma.product.findMany({
+          where,
+          orderBy: [
+            { category: 'asc' },
+            { name: 'asc' },
+          ],
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            unitPrice: true,
+            createdAt: true,
+            _count: {
+              select: {
+                sales: true,
+                productIngredients: true,
+              },
+            },
+          },
+        }),
+        prisma.product.count({ where }),
+      ])
+
+      return NextResponse.json({
+        products,
+        categories,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      })
+    }
+
+    // Format simple (compatibilité avec l'ancien code)
     const products = await prisma.product.findMany({
       where,
       orderBy: [
@@ -139,18 +194,9 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Récupérer les catégories uniques pour les filtres
-    const categories = await prisma.product.findMany({
-      where: { organizationId: organization.id },
-      select: { category: true },
-      distinct: ['category'],
-    })
-
     return NextResponse.json({
       products,
-      categories: categories
-        .map(c => c.category)
-        .filter((c): c is string => c !== null && c !== ''),
+      categories,
     })
   } catch (error) {
     console.error('Error fetching products:', error)

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ArrowLeft, Building2, Save, Link } from 'lucide-react'
 
 export default function EditRestaurantPage() {
   const router = useRouter()
@@ -131,9 +131,9 @@ export default function EditRestaurantPage() {
   if (!isLoaded || loadingData) {
     return (
       <div className="p-6 space-y-6">
-        <Card>
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
               {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement du restaurant...'}
             </p>
@@ -145,17 +145,30 @@ export default function EditRestaurantPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Modifier le restaurant</h1>
-        <p className="text-muted-foreground">
-          Modifiez les informations de {formData.name}
-        </p>
+      {/* Header (Style Sequence) */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/restaurants" className="hover:opacity-80 transition-opacity">
+          <Button variant="ghost" size="icon" className="h-9 w-9">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow-md">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">Modifier le restaurant</h1>
+          </div>
+          <p className="text-muted-foreground">
+            Modifiez les informations de {formData.name}
+          </p>
+        </div>
       </div>
 
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle>Informations du restaurant</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Informations du restaurant</CardTitle>
+          <CardDescription className="mt-1">
             Modifiez les informations ci-dessous
           </CardDescription>
         </CardHeader>
@@ -169,6 +182,7 @@ export default function EditRestaurantPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Restaurant Paris Centre"
                 required
+                className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
               />
             </div>
 
@@ -179,6 +193,7 @@ export default function EditRestaurantPage() {
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 placeholder="123 Rue de la Paix, 75001 Paris"
+                className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
               />
             </div>
 
@@ -189,6 +204,7 @@ export default function EditRestaurantPage() {
                 value={formData.timezone}
                 onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
                 placeholder="Europe/Paris"
+                className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
               />
               <p className="text-xs text-muted-foreground">
                 Format IANA (ex: Europe/Paris, America/New_York)
@@ -196,15 +212,25 @@ export default function EditRestaurantPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {loading ? 'Modification...' : 'Enregistrer les modifications'}
+              <Button type="submit" disabled={loading} className="shadow-sm">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Modification...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Enregistrer les modifications
+                  </>
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
                 disabled={loading}
+                className="shadow-sm"
               >
                 Annuler
               </Button>

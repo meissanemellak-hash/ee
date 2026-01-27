@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Beaker, ArrowLeft, Save } from 'lucide-react'
+import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -166,9 +167,9 @@ export default function EditIngredientPage() {
   if (loading) {
     return (
       <div className="p-6 space-y-6">
-        <Card>
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">Chargement de l'ingrédient...</p>
           </CardContent>
         </Card>
@@ -182,17 +183,30 @@ export default function EditIngredientPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Modifier l'ingrédient</h1>
-        <p className="text-muted-foreground">
-          Modifiez les informations de l'ingrédient
-        </p>
+      {/* Header (Style Sequence) */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/ingredients">
+          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+            <Beaker className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Modifier l'ingrédient</h1>
+            <p className="text-muted-foreground">
+              Modifiez les informations de l'ingrédient
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle>Informations de l'ingrédient</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Informations de l'ingrédient</CardTitle>
+          <CardDescription className="mt-1">
             Modifiez les informations de l'ingrédient
           </CardDescription>
         </CardHeader>
@@ -279,15 +293,25 @@ export default function EditIngredientPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
+              <Button type="submit" disabled={saving} className="shadow-sm">
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Enregistrer les modifications
+                  </>
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
                 disabled={saving}
+                className="shadow-sm"
               >
                 Annuler
               </Button>

@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
 import { Loader2, Lightbulb, TrendingUp, Package, CheckCircle2, XCircle, RefreshCw, Filter } from 'lucide-react'
 import {
   Select,
@@ -15,17 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+import { useRecommendations, useGenerateBOMRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
+import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
+import { RecommendationListSkeleton } from '@/components/ui/skeletons/recommendation-list-skeleton'
 
 interface Recommendation {
   id: string
@@ -41,261 +32,95 @@ interface Recommendation {
   }
 }
 
-interface RecommendationDetails {
-  estimatedSavings?: number
-  ingredients?: Array<{
-    quantityToOrder: number
-  }>
-}
-
-interface RecommendationDetails {
-  restaurantId: string
-  restaurantName: string
-  period: {
-    start: string
-    end: string
-  }
-  ingredients: Array<{
-    ingredientId: string
-    ingredientName: string
-    neededQuantity: number
-    currentStock: number
-    quantityToOrder: number
-    packSize: number | null
-    numberOfPacks: number | null
-    supplierName: string | null
-  }>
-  assumptions: {
-    shrinkPct: number
-    forecastDays: number
-  }
-}
-
 export default function RecommendationsPage() {
   const { organization, isLoaded } = useOrganization()
-  const { toast } = useToast()
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
-  const [restaurants, setRestaurants] = useState<Array<{ id: string; name: string }>>([])
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
   const [selectedType, setSelectedType] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('pending')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  // Charger les restaurants
-  useEffect(() => {
-    if (isLoaded && organization?.id) {
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      fetch(`/api/restaurants?${queryParams.toString()}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setRestaurants(data)
-          }
-        })
-        .catch((error) => {
-          console.error('Error fetching restaurants:', error)
-        })
-    } else if (isLoaded) {
-      setLoading(false)
-    }
-  }, [isLoaded, organization?.id])
+  // Charger les restaurants pour les filtres
+  const { data: restaurantsData } = useRestaurants(1, 100)
+  const restaurants = restaurantsData?.restaurants || []
 
-  // Charger les recommandations
-  const loadRecommendations = async () => {
-    if (!isLoaded || !organization?.id) {
-      setLoading(false)
-      return
-    }
+  // Charger les recommandations avec filtres
+  const { data: recommendations = [], isLoading, error, refetch } = useRecommendations({
+    restaurantId: selectedRestaurant,
+    type: selectedType,
+    status: selectedStatus,
+  })
 
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      params.append('clerkOrgId', organization.id)
-      if (selectedRestaurant !== 'all') params.append('restaurantId', selectedRestaurant)
-      if (selectedType !== 'all') params.append('type', selectedType)
-      if (selectedStatus !== 'all') params.append('status', selectedStatus)
+  const generateRecommendations = useGenerateBOMRecommendations()
+  const updateStatus = useUpdateRecommendationStatus()
 
-      const response = await fetch(`/api/recommendations?${params.toString()}`)
-      const data = await response.json()
-      // S'assurer que data est toujours un tableau
-      setRecommendations(Array.isArray(data) ? data : [])
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de charger les recommandations',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (isLoaded && organization?.id) {
-      loadRecommendations()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRestaurant, selectedType, selectedStatus, isLoaded, organization?.id])
-
-  const handleGenerate = async (restaurantId?: string) => {
-    if (!restaurantId) {
-      toast({
-        title: 'Erreur',
-        description: 'Veuillez sélectionner un restaurant',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!organization?.id) {
-      toast({
-        title: 'Erreur',
-        description: 'Aucune organisation active',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setGenerating(true)
-    try {
-      const response = await fetch('/api/recommendations/bom', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          restaurantId,
-          shrinkPct: 0.1,
-          days: 7,
-          clerkOrgId: organization.id,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la génération')
-      }
-
-      const result = await response.json()
-
-      toast({
-        title: 'Recommandations générées',
-        description: `${Array.isArray(result.recommendations) ? result.recommendations.length : 0} recommandations créées. Économies estimées: ${formatCurrency(result.estimatedSavings || 0)}`,
-      })
-
-      loadRecommendations()
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const handleUpdateStatus = async (id: string, status: string) => {
-    if (!organization?.id) {
-      toast({
-        title: 'Erreur',
-        description: 'Aucune organisation active.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    try {
-      const response = await fetch(`/api/recommendations/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          status,
-          clerkOrgId: organization.id,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la mise à jour')
-      }
-
-      toast({
-        title: 'Recommandation mise à jour',
-        description: status === 'accepted' 
-          ? 'Recommandation acceptée. Redirection vers le dashboard...'
-          : 'Statut changé en rejeté',
-      })
-
-      // Rafraîchir les données de la page actuelle
-      loadRecommendations()
-      
-      // Si la recommandation est acceptée, rediriger vers le dashboard
-      // pour voir immédiatement les économies mises à jour
-      if (status === 'accepted') {
-        // Attendre un court délai pour que le toast s'affiche
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 1000)
-      }
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  // S'assurer que recommendations est toujours un tableau
+  // Calculer les statistiques
   const safeRecommendations = Array.isArray(recommendations) ? recommendations : []
-
+  
   const calculateTotalSavings = () => {
-    // Pour les recommandations BOM, extraire les économies depuis les détails
     const pendingRecs = safeRecommendations.filter((r) => r.status === 'pending')
     
     return pendingRecs.reduce((total, rec) => {
       const data = rec.data as RecommendationDetails
       
-      // Si estimatedSavings est disponible, l'utiliser
       if (data?.estimatedSavings) {
         return total + data.estimatedSavings
       }
       
-      // Sinon, estimation basée sur les ingrédients
       if (data?.ingredients && Array.isArray(data.ingredients)) {
         const estimatedSavings = data.ingredients.reduce((acc: number, ing: any) => {
           const quantityToOrder = ing.quantityToOrder || 0
-          // Estimation : 100€ par ingrédient avec quantité > 0
           return acc + (quantityToOrder > 0 ? 100 : 0)
         }, 0)
         return total + estimatedSavings
       }
       
-      // Par défaut, estimation conservatrice
       return total + 500
     }, 0)
   }
   
-  const filteredRecommendations = safeRecommendations.filter((rec) => {
-    if (selectedRestaurant !== 'all' && rec.restaurantId !== selectedRestaurant) return false
-    if (selectedType !== 'all' && rec.type !== selectedType) return false
-    if (selectedStatus !== 'all' && rec.status !== selectedStatus) return false
-    return true
-  })
+  const filteredRecommendations = useMemo(() => {
+    return safeRecommendations.filter((rec) => {
+      if (selectedRestaurant !== 'all' && rec.restaurantId !== selectedRestaurant) return false
+      if (selectedType !== 'all' && rec.type !== selectedType) return false
+      if (selectedStatus !== 'all' && rec.status !== selectedStatus) return false
+      return true
+    })
+  }, [safeRecommendations, selectedRestaurant, selectedType, selectedStatus])
 
-  if (!isLoaded || loading) {
+  const handleGenerate = (restaurantId?: string) => {
+    if (!restaurantId || restaurantId === 'all') return
+    
+    generateRecommendations.mutate({
+      restaurantId,
+      shrinkPct: 0.1,
+      days: 7,
+    })
+  }
+
+  const handleUpdateStatus = (id: string, status: string) => {
+    updateStatus.mutate(
+      { id, status },
+      {
+        onSuccess: () => {
+          if (status === 'accepted') {
+            setTimeout(() => {
+              router.push('/dashboard')
+            }, 1000)
+          }
+        },
+      }
+    )
+  }
+
+  if (!isLoaded) {
     return (
       <div className="p-6 space-y-6">
-        <Card>
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
-              {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement des recommandations...'}
+              Chargement de votre organisation...
             </p>
           </CardContent>
         </Card>
@@ -305,91 +130,96 @@ export default function RecommendationsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header (Style Sequence) */}
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold">Recommandations</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">Recommandations</h1>
+          <p className="text-muted-foreground mt-1">
             Recommandations actionnables pour optimiser vos opérations
           </p>
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => loadRecommendations()}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="shadow-sm"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Actualiser
           </Button>
         </div>
       </div>
 
-      {/* Statistiques */}
+      {/* Statistiques (Style Sequence) */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Recommandations en attente
             </CardTitle>
-            <Lightbulb className="h-4 w-4 text-muted-foreground" />
+            <Lightbulb className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold">
               {safeRecommendations.filter((r) => r.status === 'pending').length}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-2">
               Nécessitent une action
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Économies estimées
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold text-green-600">
               {formatCurrency(calculateTotalSavings())}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-2">
               Sur les recommandations en attente
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Total recommandations
             </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <Package className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{safeRecommendations.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-teal-600">{safeRecommendations.length}</div>
+            <p className="text-xs text-muted-foreground mt-2">
               Toutes périodes confondues
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filtres */}
-      <Card>
+      {/* Filtres (Style Sequence) */}
+      <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Filter className="h-5 w-5" />
             Filtres
           </CardTitle>
+          <CardDescription className="mt-1">
+            Filtrez les recommandations par restaurant, type ou statut
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <label className="text-sm font-medium">Restaurant</label>
               <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
                   <SelectValue placeholder="Tous les restaurants" />
                 </SelectTrigger>
                 <SelectContent>
@@ -406,7 +236,7 @@ export default function RecommendationsPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Type</label>
               <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
                   <SelectValue placeholder="Tous les types" />
                 </SelectTrigger>
                 <SelectContent>
@@ -420,7 +250,7 @@ export default function RecommendationsPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Statut</label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
                   <SelectValue placeholder="Tous les statuts" />
                 </SelectTrigger>
                 <SelectContent>
@@ -435,11 +265,16 @@ export default function RecommendationsPage() {
         </CardContent>
       </Card>
 
-      {/* Génération de recommandations */}
-      <Card>
+      {/* Génération de recommandations (Style Sequence) */}
+      <Card className="border shadow-sm border-2 border-amber-200 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10">
         <CardHeader>
-          <CardTitle>Générer de nouvelles recommandations</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+              <Lightbulb className="h-4 w-4 text-white" />
+            </div>
+            Générer de nouvelles recommandations
+          </CardTitle>
+          <CardDescription className="mt-1">
             Créez des recommandations BOM pour un restaurant spécifique
           </CardDescription>
         </CardHeader>
@@ -449,7 +284,7 @@ export default function RecommendationsPage() {
               value={selectedRestaurant === 'all' ? '' : selectedRestaurant}
               onValueChange={(value) => setSelectedRestaurant(value || 'all')}
             >
-              <SelectTrigger className="flex-1">
+              <SelectTrigger className="flex-1 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
                 <SelectValue placeholder="Sélectionner un restaurant" />
               </SelectTrigger>
               <SelectContent>
@@ -462,9 +297,10 @@ export default function RecommendationsPage() {
             </Select>
             <Button
               onClick={() => handleGenerate(selectedRestaurant !== 'all' ? selectedRestaurant : undefined)}
-              disabled={generating || selectedRestaurant === 'all'}
+              disabled={generateRecommendations.isPending || selectedRestaurant === 'all'}
+              className="shadow-sm"
             >
-              {generating ? (
+              {generateRecommendations.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Génération...
@@ -480,17 +316,26 @@ export default function RecommendationsPage() {
         </CardContent>
       </Card>
 
-      {/* Liste des recommandations */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : filteredRecommendations.length === 0 ? (
-        <Card>
+      {/* Liste des recommandations (Style Sequence) */}
+      {isLoading ? (
+        <RecommendationListSkeleton />
+      ) : error ? (
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
-            <Lightbulb className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-red-600 dark:text-red-400">
+              Erreur lors du chargement des recommandations. Veuillez réessayer.
+            </p>
+          </CardContent>
+        </Card>
+      ) : filteredRecommendations.length === 0 ? (
+        <Card className="border shadow-sm">
+          <CardContent className="py-16 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+              <Lightbulb className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Aucune recommandation trouvée</h3>
             <p className="text-muted-foreground">
-              Aucune recommandation trouvée avec ces filtres.
+              Aucune recommandation ne correspond à vos critères de recherche.
             </p>
           </CardContent>
         </Card>
@@ -501,17 +346,25 @@ export default function RecommendationsPage() {
             const isExpanded = expandedId === recommendation.id
 
             return (
-              <Card key={recommendation.id}>
+              <Card key={recommendation.id} className="border shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
-                        {recommendation.type === 'ORDER' ? (
-                          <Package className="h-5 w-5" />
-                        ) : (
-                          <TrendingUp className="h-5 w-5" />
-                        )}
-                        {recommendation.type === 'ORDER' ? 'Recommandation de commande' : 'Recommandation de staffing'}
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          recommendation.type === 'ORDER' 
+                            ? 'bg-gradient-to-br from-teal-500 to-emerald-600' 
+                            : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                        }`}>
+                          {recommendation.type === 'ORDER' ? (
+                            <Package className="h-4 w-4 text-white" />
+                          ) : (
+                            <TrendingUp className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <span className="truncate">
+                          {recommendation.type === 'ORDER' ? 'Recommandation de commande' : 'Recommandation de staffing'}
+                        </span>
                       </CardTitle>
                       <CardDescription className="mt-1">
                         {recommendation.restaurant.name} •{' '}
@@ -523,25 +376,25 @@ export default function RecommendationsPage() {
                         )}
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
                       <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
                           recommendation.priority === 'high'
-                            ? 'bg-red-100 text-red-800'
+                            ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
                             : recommendation.priority === 'medium'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-blue-100 text-blue-800'
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
+                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
                         }`}
                       >
                         {recommendation.priority}
                       </span>
                       <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
                           recommendation.status === 'accepted'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
                             : recommendation.status === 'dismissed'
-                            ? 'bg-gray-100 text-gray-800'
-                            : 'bg-orange-100 text-orange-800'
+                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-700'
+                            : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
                         }`}
                       >
                         {recommendation.status === 'accepted'
@@ -641,6 +494,7 @@ export default function RecommendationsPage() {
                             <Button
                               size="sm"
                               onClick={() => handleUpdateStatus(recommendation.id, 'accepted')}
+                              className="shadow-sm"
                             >
                               <CheckCircle2 className="h-4 w-4 mr-2" />
                               Accepter
@@ -649,6 +503,7 @@ export default function RecommendationsPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleUpdateStatus(recommendation.id, 'dismissed')}
+                              className="shadow-sm"
                             >
                               <XCircle className="h-4 w-4 mr-2" />
                               Rejeter
@@ -660,6 +515,7 @@ export default function RecommendationsPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateStatus(recommendation.id, 'pending')}
+                            className="shadow-sm"
                           >
                             Remettre en attente
                           </Button>
