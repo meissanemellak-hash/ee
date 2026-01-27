@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useOrganization } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
@@ -28,14 +29,26 @@ export function DeleteRestaurantButton({
 }: DeleteRestaurantButtonProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { organization } = useOrganization()
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
 
   const handleDelete = async () => {
+    if (!organization?.id) {
+      toast({
+        title: 'Erreur',
+        description: 'Aucune organisation active. Veuillez sélectionner une organisation.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setLoading(true)
 
     try {
-      const response = await fetch(`/api/restaurants/${restaurantId}`, {
+      const queryParams = new URLSearchParams()
+      queryParams.append('clerkOrgId', organization.id)
+      const response = await fetch(`/api/restaurants/${restaurantId}?${queryParams.toString()}`, {
         method: 'DELETE',
       })
 

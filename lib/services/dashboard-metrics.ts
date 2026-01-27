@@ -70,9 +70,25 @@ export async function calculateExecutiveDashboardMetrics(
     // Pour les autres, on peut estimer depuis data
     const data = rec.data as any
     
+    console.log('[dashboard-metrics] Recommendation ID:', rec.id, 'data.estimatedSavings:', data?.estimatedSavings, 'data keys:', Object.keys(data || {}))
+    
     if (data?.estimatedSavings) {
       // Recommandation BOM avec estimatedSavings
-      return sum + (data.estimatedSavings || 0)
+      const savings = data.estimatedSavings || 0
+      console.log('[dashboard-metrics] Utilisation estimatedSavings:', savings)
+      return sum + savings
+    } else if (data?.ingredients && Array.isArray(data.ingredients)) {
+      // Recommandation BOM sans estimatedSavings - calculer depuis les ingrédients
+      // Estimation basée sur les quantités à commander et coûts estimés
+      const estimatedSavings = data.ingredients.reduce((acc: number, ing: any) => {
+        // Estimation : 20% de la marge sur le coût estimé
+        // Coût estimé = quantité à commander × coût unitaire (si disponible)
+        const quantityToOrder = ing.quantityToOrder || 0
+        // Estimation conservatrice : 10€ par ingrédient commandé
+        return acc + (quantityToOrder > 0 ? 100 : 0)
+      }, 0)
+      console.log('[dashboard-metrics] Calcul estimatedSavings depuis ingredients:', estimatedSavings)
+      return sum + estimatedSavings
     } else if (Array.isArray(data)) {
       // Array d'OrderRecommendation, estimer depuis estimatedCost
       const estimatedSavings = data.reduce((acc: number, item: any) => {

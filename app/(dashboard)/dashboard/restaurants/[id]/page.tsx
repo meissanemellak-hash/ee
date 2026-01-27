@@ -1,76 +1,130 @@
-import { notFound, redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
-import { Edit, Trash2, TrendingUp, Bell, Package } from 'lucide-react'
+import { Edit, Trash2, TrendingUp, Bell, Package, Loader2 } from 'lucide-react'
 import { DeleteRestaurantButton } from '@/components/restaurants/delete-restaurant-button'
+import { useToast } from '@/hooks/use-toast'
 
-// Force dynamic rendering pour les pages avec authentification
-export const dynamic = 'force-dynamic'
+interface Sale {
+  id: string
+  amount: number
+  quantity: number
+  saleDate: string
+  product: {
+    name: string
+  }
+}
 
-export default async function RestaurantDetailPage({
-  params,
-}: {
-  params: { id: string }
-}) {
-  const { userId } = auth()
-  
-  if (!userId) {
-    redirect('/sign-in')
+interface Restaurant {
+  id: string
+  name: string
+  address: string | null
+  timezone: string
+  createdAt: string
+  _count: {
+    sales: number
+    alerts: number
+    inventory: number
+  }
+  recentSales: Sale[]
+  totalRevenue: number
+}
+
+export default function RestaurantDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const { toast } = useToast()
+  const { organization, isLoaded } = useOrganization()
+  const [loading, setLoading] = useState(true)
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (params.id && isLoaded && organization?.id) {
+      fetchRestaurant()
+    } else if (isLoaded && !organization?.id) {
+      setError('Aucune organisation active. Veuillez sélectionner une organisation.')
+      setLoading(false)
+    }
+  }, [params.id, isLoaded, organization?.id])
+
+  const fetchRestaurant = async () => {
+    if (!organization?.id) return
+
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const queryParams = new URLSearchParams()
+      queryParams.append('clerkOrgId', organization.id)
+      
+      const response = await fetch(`/api/restaurants/${params.id}?${queryParams.toString()}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError('Restaurant introuvable')
+          toast({
+            title: 'Restaurant introuvable',
+            description: 'Le restaurant que vous recherchez n\'existe pas.',
+            variant: 'destructive',
+          })
+          return
+        }
+        throw new Error('Erreur lors du chargement du restaurant')
+      }
+
+      const data = await response.json()
+      setRestaurant(data)
+    } catch (error) {
+      console.error('Error fetching restaurant:', error)
+      setError(error instanceof Error ? error.message : 'Impossible de charger les données')
+      toast({
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Impossible de charger les données',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const organization = await getCurrentOrganization()
-
-  if (!organization) {
-    redirect('/dashboard')
+  if (!isLoaded || loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement du restaurant...'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
-  const restaurant = await prisma.restaurant.findFirst({
-    where: {
-      id: params.id,
-      organizationId: organization.id,
-    },
-    include: {
-      _count: {
-        select: {
-          sales: true,
-          alerts: {
-            where: {
-              resolved: false,
-            },
-          },
-          inventory: true,
-        },
-      },
-    },
-  })
-
-  if (!restaurant) {
-    notFound()
+  if (error || !restaurant) {
+    return (
+      <div className="p-6 space-y-6">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground mb-4">
+              {error || 'Restaurant introuvable. Veuillez rafraîchir la page.'}
+            </p>
+            <Button asChild>
+              <Link href="/dashboard/restaurants">Retour aux restaurants</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
-
-  // Statistiques récentes
-  const recentSales = await prisma.sale.findMany({
-    where: {
-      restaurantId: restaurant.id,
-      saleDate: {
-        gte: new Date(new Date().setDate(new Date().getDate() - 7)),
-      },
-    },
-    include: {
-      product: true,
-    },
-    orderBy: {
-      saleDate: 'desc',
-    },
-    take: 10,
-  })
-
-  const totalRevenue = recentSales.reduce((sum, sale) => sum + sale.amount, 0)
 
   return (
     <div className="p-6 space-y-6">
@@ -120,7 +174,7 @@ export default async function RestaurantDetailPage({
               {new Intl.NumberFormat('fr-FR', {
                 style: 'currency',
                 currency: 'EUR',
-              }).format(totalRevenue)}
+              }).format(restaurant.totalRevenue || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Sur les 7 derniers jours
@@ -171,7 +225,7 @@ export default async function RestaurantDetailPage({
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Créé le:</span>
-              <span className="text-sm font-medium">{formatDate(restaurant.createdAt)}</span>
+              <span className="text-sm font-medium">{formatDate(new Date(restaurant.createdAt))}</span>
             </div>
           </CardContent>
         </Card>
@@ -184,9 +238,9 @@ export default async function RestaurantDetailPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {recentSales.length > 0 ? (
+            {restaurant.recentSales && restaurant.recentSales.length > 0 ? (
               <div className="space-y-2">
-                {recentSales.map((sale) => (
+                {restaurant.recentSales.map((sale) => (
                   <div key={sale.id} className="flex justify-between items-center text-sm">
                     <div>
                       <span className="font-medium">{sale.product.name}</span>

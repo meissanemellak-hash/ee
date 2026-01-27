@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { saleSchema } from '@/lib/validations/sales'
+import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * GET /api/sales/[id]
+ * Récupère une vente spécifique
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -53,7 +59,7 @@ export async function GET(
             }
           }
         } catch (error) {
-          console.error('[GET /api/restaurants/[id]] Erreur synchronisation:', error)
+          console.error('[GET /api/sales/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -62,60 +68,46 @@ export async function GET(
 
     if (!organization) {
       return NextResponse.json(
-        { error: 'Restaurant not found' },
+        { error: 'Sale not found' },
         { status: 404 }
       )
     }
 
-    const restaurant = await prisma.restaurant.findFirst({
+    const sale = await prisma.sale.findFirst({
       where: {
         id: params.id,
-        organizationId: organization.id,
+        restaurant: {
+          organizationId: organization.id,
+        },
       },
       include: {
-        _count: {
+        restaurant: {
           select: {
-            sales: true,
-            alerts: true,
-            inventory: true,
+            id: true,
+            name: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            unitPrice: true,
           },
         },
       },
     })
 
-    if (!restaurant) {
+    if (!sale) {
       return NextResponse.json(
-        { error: 'Restaurant not found' },
+        { error: 'Sale not found' },
         { status: 404 }
       )
     }
 
-    // Récupérer les ventes récentes (7 derniers jours)
-    const recentSales = await prisma.sale.findMany({
-      where: {
-        restaurantId: restaurant.id,
-        saleDate: {
-          gte: new Date(new Date().setDate(new Date().getDate() - 7)),
-        },
-      },
-      include: {
-        product: true,
-      },
-      orderBy: {
-        saleDate: 'desc',
-      },
-      take: 10,
-    })
-
-    const totalRevenue = recentSales.reduce((sum, sale) => sum + sale.amount, 0)
-
-    return NextResponse.json({
-      ...restaurant,
-      recentSales,
-      totalRevenue,
-    })
+    return NextResponse.json(sale)
   } catch (error) {
-    console.error('Error fetching restaurant:', error)
+    console.error('Error fetching sale:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -123,6 +115,10 @@ export async function GET(
   }
 }
 
+/**
+ * PATCH /api/sales/[id]
+ * Met à jour une vente
+ */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -134,10 +130,10 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { name, address, timezone, clerkOrgId } = body
+    const { clerkOrgId, ...updateData } = body
     const orgIdToUse = authOrgId || clerkOrgId
 
-    console.log('[PATCH /api/restaurants/[id]] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    console.log('[PATCH /api/sales/[id]] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -173,7 +169,7 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/restaurants/[id]] Erreur synchronisation:', error)
+          console.error('[PATCH /api/sales/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -181,7 +177,7 @@ export async function PATCH(
     }
 
     if (!organization) {
-      console.error('[PATCH /api/restaurants/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+      console.error('[PATCH /api/sales/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
       return NextResponse.json(
         { 
           error: 'Organization not found',
@@ -193,33 +189,104 @@ export async function PATCH(
       )
     }
 
-    // Vérifier que le restaurant appartient à l'organisation
-    const existing = await prisma.restaurant.findFirst({
+    // Vérifier que la vente existe et appartient à l'organisation
+    const existing = await prisma.sale.findFirst({
       where: {
         id: params.id,
-        organizationId: organization.id,
+        restaurant: {
+          organizationId: organization.id,
+        },
       },
     })
 
     if (!existing) {
       return NextResponse.json(
-        { error: 'Restaurant not found' },
+        { error: 'Sale not found' },
         { status: 404 }
       )
     }
 
-    const restaurant = await prisma.restaurant.update({
-      where: { id: params.id },
-      data: {
-        name: name || existing.name,
-        address: address !== undefined ? address : existing.address,
-        timezone: timezone || existing.timezone,
-      },
-    })
+    // Valider les données si présentes
+    if (Object.keys(updateData).length > 0) {
+      const validatedData = saleSchema.partial().parse(updateData)
 
-    return NextResponse.json(restaurant)
+      // Vérifier restaurant si modifié
+      if (validatedData.restaurantId) {
+        const restaurant = await prisma.restaurant.findFirst({
+          where: {
+            id: validatedData.restaurantId,
+            organizationId: organization.id,
+          },
+        })
+
+        if (!restaurant) {
+          return NextResponse.json(
+            { error: 'Restaurant not found or does not belong to your organization' },
+            { status: 404 }
+          )
+        }
+      }
+
+      // Vérifier produit si modifié
+      if (validatedData.productId) {
+        const product = await prisma.product.findFirst({
+          where: {
+            id: validatedData.productId,
+            organizationId: organization.id,
+          },
+        })
+
+        if (!product) {
+          return NextResponse.json(
+            { error: 'Product not found or does not belong to your organization' },
+            { status: 404 }
+          )
+        }
+      }
+
+      // Convertir saleDate en Date si c'est une string
+      if (validatedData.saleDate) {
+        validatedData.saleDate = typeof validatedData.saleDate === 'string' 
+          ? new Date(validatedData.saleDate) 
+          : validatedData.saleDate
+      }
+
+      // Mettre à jour la vente
+      const sale = await prisma.sale.update({
+        where: { id: params.id },
+        data: validatedData,
+        include: {
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          product: {
+            select: {
+              id: true,
+              name: true,
+              category: true,
+              unitPrice: true,
+            },
+          },
+        },
+      })
+
+      return NextResponse.json(sale)
+    }
+
+    return NextResponse.json(existing)
   } catch (error) {
-    console.error('Error updating restaurant:', error)
+    console.error('Error updating sale:', error)
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.errors },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -227,6 +294,10 @@ export async function PATCH(
   }
 }
 
+/**
+ * DELETE /api/sales/[id]
+ * Supprime une vente
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -275,7 +346,7 @@ export async function DELETE(
             }
           }
         } catch (error) {
-          console.error('[DELETE /api/restaurants/[id]] Erreur synchronisation:', error)
+          console.error('[DELETE /api/sales/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -283,7 +354,7 @@ export async function DELETE(
     }
 
     if (!organization) {
-      console.error('[PATCH /api/restaurants/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+      console.error('[DELETE /api/sales/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
       return NextResponse.json(
         { 
           error: 'Organization not found',
@@ -295,29 +366,30 @@ export async function DELETE(
       )
     }
 
-    // Vérifier que le restaurant appartient à l'organisation
-    const existing = await prisma.restaurant.findFirst({
+    // Vérifier que la vente existe et appartient à l'organisation
+    const sale = await prisma.sale.findFirst({
       where: {
         id: params.id,
-        organizationId: organization.id,
+        restaurant: {
+          organizationId: organization.id,
+        },
       },
     })
 
-    if (!existing) {
+    if (!sale) {
       return NextResponse.json(
-        { error: 'Restaurant not found' },
+        { error: 'Sale not found' },
         { status: 404 }
       )
     }
 
-    // Supprimer le restaurant (cascade supprimera les données associées)
-    await prisma.restaurant.delete({
+    await prisma.sale.delete({
       where: { id: params.id },
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ message: 'Sale deleted successfully' })
   } catch (error) {
-    console.error('Error deleting restaurant:', error)
+    console.error('Error deleting sale:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

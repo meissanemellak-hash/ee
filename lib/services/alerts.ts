@@ -48,6 +48,13 @@ export async function checkInventoryAlerts(restaurantId: string) {
     },
   })
 
+  console.log(`[checkInventoryAlerts] Restaurant ${restaurantId}: ${inventory.length} entrées d'inventaire trouvées`)
+
+  if (inventory.length === 0) {
+    console.log(`[checkInventoryAlerts] Aucun inventaire configuré pour le restaurant ${restaurantId}. Les alertes nécessitent un inventaire avec des seuils min/max.`)
+    return
+  }
+
   for (const inv of inventory) {
     // Alerte surstock
     if (inv.maxThreshold && inv.currentStock > inv.maxThreshold) {
@@ -81,14 +88,20 @@ export async function checkInventoryAlerts(restaurantId: string) {
 export async function checkForecastAlerts(restaurantId: string) {
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(0, 0, 0, 0)
+  
+  const tomorrowEnd = new Date(tomorrow)
+  tomorrowEnd.setHours(23, 59, 59, 999)
+
+  console.log(`[checkForecastAlerts] Restaurant ${restaurantId}: Recherche des prévisions pour ${tomorrow.toISOString()}`)
 
   // Récupérer les prévisions pour demain
   const forecasts = await prisma.forecast.findMany({
     where: {
       restaurantId,
       forecastDate: {
-        gte: new Date(tomorrow.setHours(0, 0, 0, 0)),
-        lt: new Date(tomorrow.setHours(23, 59, 59, 999)),
+        gte: tomorrow,
+        lte: tomorrowEnd,
       },
     },
     include: {
@@ -108,8 +121,15 @@ export async function checkForecastAlerts(restaurantId: string) {
     where: { restaurantId },
   })
 
+  console.log(`[checkForecastAlerts] Restaurant ${restaurantId}: ${forecasts.length} prévisions trouvées`)
+
   // Pour chaque prévision, vérifier si on a assez de stock
   for (const forecast of forecasts) {
+    if (!forecast.product || !forecast.product.productIngredients) {
+      console.log(`[checkForecastAlerts] Prévision ${forecast.id} sans produit ou recette, ignorée`)
+      continue
+    }
+
     for (const productIngredient of forecast.product.productIngredients) {
       const inv = inventory.find(
         i => i.ingredientId === productIngredient.ingredientId
@@ -140,6 +160,36 @@ export async function checkForecastAlerts(restaurantId: string) {
  * Exécute toutes les vérifications d'alertes pour un restaurant
  */
 export async function runAllAlerts(restaurantId: string) {
+  console.log(`[runAllAlerts] Début de la vérification des alertes pour le restaurant ${restaurantId}`)
   await checkInventoryAlerts(restaurantId)
   await checkForecastAlerts(restaurantId)
+  console.log(`[runAllAlerts] Fin de la vérification des alertes pour le restaurant ${restaurantId}`)
+}
+
+/**
+ * Crée des alertes de test pour un restaurant (utile pour le développement)
+ */
+export async function createTestAlerts(restaurantId: string) {
+  await createAlert({
+    restaurantId,
+    type: 'SHORTAGE',
+    severity: 'critical',
+    message: '⚠️ ALERTE DE TEST - Rupture de stock critique pour Fromage: 0 kg (seuil min: 10 kg)',
+  })
+
+  await createAlert({
+    restaurantId,
+    type: 'SHORTAGE',
+    severity: 'high',
+    message: '⚠️ ALERTE DE TEST - Stock faible pour Tomate: 5 kg (seuil min: 20 kg)',
+  })
+
+  await createAlert({
+    restaurantId,
+    type: 'OVERSTOCK',
+    severity: 'medium',
+    message: '⚠️ ALERTE DE TEST - Surstock détecté pour Pain: 500 unités (seuil max: 200 unités)',
+  })
+
+  console.log(`[createTestAlerts] 3 alertes de test créées pour le restaurant ${restaurantId}`)
 }

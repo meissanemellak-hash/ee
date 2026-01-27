@@ -16,8 +16,15 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { clerkOrgId } = body
+    const { resolved, clerkOrgId } = body
     const orgIdToUse = authOrgId || clerkOrgId
+
+    if (typeof resolved !== 'boolean') {
+      return NextResponse.json(
+        { error: 'resolved is required and must be a boolean' },
+        { status: 400 }
+      )
+    }
 
     let organization: any = null
 
@@ -53,7 +60,7 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/recommendations/[id]] Erreur synchronisation:', error)
+          console.error('[PATCH /api/alerts/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -70,17 +77,8 @@ export async function PATCH(
       )
     }
 
-    const { status } = body
-
-    if (!status || !['pending', 'accepted', 'dismissed'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status. Must be pending, accepted, or dismissed' },
-        { status: 400 }
-      )
-    }
-
-    // Vérifier que la recommandation appartient à l'organisation
-    const recommendation = await prisma.recommendation.findFirst({
+    // Vérifier que l'alerte appartient à l'organisation
+    const alert = await prisma.alert.findFirst({
       where: {
         id: params.id,
         restaurant: {
@@ -89,21 +87,27 @@ export async function PATCH(
       },
     })
 
-    if (!recommendation) {
+    if (!alert) {
       return NextResponse.json(
-        { error: 'Recommendation not found' },
+        { error: 'Alert not found or does not belong to your organization' },
         { status: 404 }
       )
     }
 
-    const updated = await prisma.recommendation.update({
+    const updated = await prisma.alert.update({
       where: { id: params.id },
-      data: { status },
+      data: {
+        resolved,
+        resolvedAt: resolved ? new Date() : null,
+      },
+      include: {
+        restaurant: true,
+      },
     })
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error('Error updating recommendation:', error)
+    console.error('Error updating alert:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

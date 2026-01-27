@@ -4,17 +4,60 @@ import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import type { SalesAnalysis } from '@/types'
 
-// Force dynamic rendering pour les routes API avec authentification
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = auth()
+    const { userId, orgId: authOrgId } = auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await getCurrentOrganization()
+    const searchParams = request.nextUrl.searchParams
+    const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
+    const orgIdToUse = authOrgId || clerkOrgIdFromQuery
+
+    let organization: any = null
+
+    if (orgIdToUse) {
+      organization = await prisma.organization.findUnique({
+        where: { clerkOrgId: orgIdToUse },
+      })
+      
+      if (!organization) {
+        try {
+          const { clerkClient } = await import('@clerk/nextjs/server')
+          const client = await clerkClient()
+          const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
+          
+          const userMemberships = await client.users.getOrganizationMembershipList({ userId })
+          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          
+          if (isMember) {
+            try {
+              organization = await prisma.organization.create({
+                data: {
+                  name: clerkOrg.name,
+                  clerkOrgId: orgIdToUse,
+                  shrinkPct: 0.1,
+                },
+              })
+            } catch (dbError) {
+              if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+                organization = await prisma.organization.findUnique({
+                  where: { clerkOrgId: orgIdToUse },
+                })
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[GET /api/sales/analyze] Erreur synchronisation:', error)
+        }
+      }
+    } else {
+      organization = await getCurrentOrganization()
+    }
+
     if (!organization) {
       return NextResponse.json({
         totalSales: 0,
@@ -26,7 +69,6 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const { searchParams } = new URL(request.url)
     const restaurantId = searchParams.get('restaurantId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')

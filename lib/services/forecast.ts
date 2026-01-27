@@ -10,15 +10,23 @@ interface ForecastInput {
 
 /**
  * Calcule une prévision basée sur la moyenne mobile
+ * Calcule la moyenne quotidienne des ventes sur les X derniers jours AVANT la date cible
  */
 async function calculateMovingAverage(
   restaurantId: string,
   productId: string,
-  days: number = 7
+  days: number = 7,
+  targetDate?: Date
 ): Promise<number> {
-  const endDate = new Date()
-  const startDate = new Date()
-  startDate.setDate(startDate.getDate() - days)
+  // Si une date cible est fournie, calculer les jours AVANT cette date
+  // Sinon, utiliser aujourd'hui comme référence
+  const referenceDate = targetDate ? new Date(targetDate) : new Date()
+  referenceDate.setDate(referenceDate.getDate() - 1) // Exclure la date cible elle-même
+  referenceDate.setHours(23, 59, 59, 999)
+  
+  const startDate = new Date(referenceDate)
+  startDate.setDate(startDate.getDate() - days + 1) // +1 pour inclure le premier jour
+  startDate.setHours(0, 0, 0, 0)
 
   const sales = await prisma.sale.findMany({
     where: {
@@ -26,11 +34,12 @@ async function calculateMovingAverage(
       productId,
       saleDate: {
         gte: startDate,
-        lte: endDate,
+        lte: referenceDate,
       },
     },
     select: {
       quantity: true,
+      saleDate: true,
     },
   })
 
@@ -38,8 +47,21 @@ async function calculateMovingAverage(
     return 0
   }
 
-  const totalQuantity = sales.reduce((sum, sale) => sum + sale.quantity, 0)
-  return totalQuantity / sales.length
+  // Grouper les ventes par jour et calculer la quantité totale par jour
+  const salesByDay = new Map<string, number>()
+  
+  for (const sale of sales) {
+    const dateKey = sale.saleDate.toISOString().split('T')[0] // Format: YYYY-MM-DD
+    const currentTotal = salesByDay.get(dateKey) || 0
+    salesByDay.set(dateKey, currentTotal + sale.quantity)
+  }
+
+  // Calculer la moyenne des quantités quotidiennes
+  const dailyQuantities = Array.from(salesByDay.values())
+  const totalDailyQuantity = dailyQuantities.reduce((sum, qty) => sum + qty, 0)
+  const averageDailyQuantity = totalDailyQuantity / dailyQuantities.length
+
+  return averageDailyQuantity
 }
 
 /**
@@ -81,14 +103,24 @@ async function calculateSeasonality(
 
   if (sameDaySales.length === 0) {
     // Fallback sur moyenne mobile si pas assez de données
-    return calculateMovingAverage(restaurantId, productId)
+    return calculateMovingAverage(restaurantId, productId, 7, targetDate)
   }
 
-  const totalQuantity = sameDaySales.reduce(
-    (sum, sale) => sum + sale.quantity,
-    0
-  )
-  return totalQuantity / sameDaySales.length
+  // Grouper les ventes par jour et calculer la quantité totale par jour
+  const salesByDay = new Map<string, number>()
+  
+  for (const sale of sameDaySales) {
+    const dateKey = sale.saleDate.toISOString().split('T')[0] // Format: YYYY-MM-DD
+    const currentTotal = salesByDay.get(dateKey) || 0
+    salesByDay.set(dateKey, currentTotal + sale.quantity)
+  }
+
+  // Calculer la moyenne des quantités quotidiennes pour ce jour de la semaine
+  const dailyQuantities = Array.from(salesByDay.values())
+  const totalDailyQuantity = dailyQuantities.reduce((sum, qty) => sum + qty, 0)
+  const averageDailyQuantity = totalDailyQuantity / dailyQuantities.length
+
+  return averageDailyQuantity
 }
 
 /**
@@ -113,7 +145,9 @@ export async function generateForecast(input: ForecastInput) {
     default:
       forecastedQuantity = await calculateMovingAverage(
         restaurantId,
-        productId
+        productId,
+        7, // 7 jours
+        forecastDate // Passer la date cible pour calculer les jours AVANT
       )
       confidence = 0.7
       break
@@ -175,15 +209,20 @@ export async function generateForecastsForRestaurant(
   forecastDate: Date,
   method?: ForecastMethod
 ) {
+  // Récupérer le restaurant pour obtenir l'organizationId
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: { organizationId: true },
+  })
+
+  if (!restaurant) {
+    throw new Error('Restaurant not found')
+  }
+
+  // Récupérer tous les produits de l'organisation
   const products = await prisma.product.findMany({
     where: {
-      organization: {
-        restaurants: {
-          some: {
-            id: restaurantId,
-          },
-        },
-      },
+      organizationId: restaurant.organizationId,
     },
   })
 

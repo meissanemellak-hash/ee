@@ -5,9 +5,13 @@ import { getCurrentOrganization } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function PATCH(
+/**
+ * DELETE /api/products/[id]/ingredients/[ingredientId]
+ * Supprime un ingrédient d'un produit
+ */
+export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string; ingredientId: string } }
 ) {
   try {
     const { userId, orgId: authOrgId } = auth()
@@ -15,9 +19,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { clerkOrgId } = body
-    const orgIdToUse = authOrgId || clerkOrgId
+    const searchParams = request.nextUrl.searchParams
+    const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
+    const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
     let organization: any = null
 
@@ -53,7 +57,7 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/recommendations/[id]] Erreur synchronisation:', error)
+          console.error('[DELETE /api/products/[id]/ingredients/[ingredientId]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -70,40 +74,46 @@ export async function PATCH(
       )
     }
 
-    const { status } = body
-
-    if (!status || !['pending', 'accepted', 'dismissed'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status. Must be pending, accepted, or dismissed' },
-        { status: 400 }
-      )
-    }
-
-    // Vérifier que la recommandation appartient à l'organisation
-    const recommendation = await prisma.recommendation.findFirst({
+    // Vérifier que le produit appartient à l'organisation
+    const product = await prisma.product.findFirst({
       where: {
         id: params.id,
-        restaurant: {
-          organizationId: organization.id,
-        },
+        organizationId: organization.id,
       },
     })
 
-    if (!recommendation) {
+    if (!product) {
       return NextResponse.json(
-        { error: 'Recommendation not found' },
+        { error: 'Product not found' },
         { status: 404 }
       )
     }
 
-    const updated = await prisma.recommendation.update({
-      where: { id: params.id },
-      data: { status },
+    // Vérifier que la relation existe
+    const productIngredient = await prisma.productIngredient.findUnique({
+      where: {
+        productId_ingredientId: {
+          productId: params.id,
+          ingredientId: params.ingredientId,
+        },
+      },
     })
 
-    return NextResponse.json(updated)
+    if (!productIngredient) {
+      return NextResponse.json(
+        { error: 'Product ingredient not found' },
+        { status: 404 }
+      )
+    }
+
+    // Supprimer la relation
+    await prisma.productIngredient.delete({
+      where: { id: productIngredient.id },
+    })
+
+    return NextResponse.json({ message: 'Product ingredient deleted successfully' })
   } catch (error) {
-    console.error('Error updating recommendation:', error)
+    console.error('Error deleting product ingredient:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

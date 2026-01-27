@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
   Store,
+  Package,
+  Beaker,
   TrendingUp,
   BarChart3,
   Lightbulb,
@@ -24,6 +26,16 @@ const navigation = [
     name: 'Restaurants',
     href: '/dashboard/restaurants',
     icon: Store,
+  },
+  {
+    name: 'Produits',
+    href: '/dashboard/products',
+    icon: Package,
+  },
+  {
+    name: 'Ingrédients',
+    href: '/dashboard/ingredients',
+    icon: Beaker,
   },
   {
     name: 'Ventes & Analyse',

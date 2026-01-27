@@ -37,6 +37,7 @@ interface RecommendationDetails {
     shrinkPct: number
     forecastDays: number
   }
+  estimatedSavings?: number
 }
 
 /**
@@ -313,6 +314,7 @@ export async function generateBOMOrderRecommendations(
       shrinkPct,
       forecastDays: days,
     },
+    estimatedSavings, // Inclure les économies estimées dans les détails
   }
 
   return {

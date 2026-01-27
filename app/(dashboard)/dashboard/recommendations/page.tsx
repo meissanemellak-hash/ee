@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useOrganization } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
@@ -40,6 +42,13 @@ interface Recommendation {
 }
 
 interface RecommendationDetails {
+  estimatedSavings?: number
+  ingredients?: Array<{
+    quantityToOrder: number
+  }>
+}
+
+interface RecommendationDetails {
   restaurantId: string
   restaurantName: string
   period: {
@@ -63,7 +72,9 @@ interface RecommendationDetails {
 }
 
 export default function RecommendationsPage() {
+  const { organization, isLoaded } = useOrganization()
   const { toast } = useToast()
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
@@ -75,20 +86,35 @@ export default function RecommendationsPage() {
 
   // Charger les restaurants
   useEffect(() => {
-    fetch('/api/restaurants')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setRestaurants(data)
-        }
-      })
-  }, [])
+    if (isLoaded && organization?.id) {
+      const queryParams = new URLSearchParams()
+      queryParams.append('clerkOrgId', organization.id)
+      fetch(`/api/restaurants?${queryParams.toString()}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setRestaurants(data)
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching restaurants:', error)
+        })
+    } else if (isLoaded) {
+      setLoading(false)
+    }
+  }, [isLoaded, organization?.id])
 
   // Charger les recommandations
   const loadRecommendations = async () => {
+    if (!isLoaded || !organization?.id) {
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     try {
       const params = new URLSearchParams()
+      params.append('clerkOrgId', organization.id)
       if (selectedRestaurant !== 'all') params.append('restaurantId', selectedRestaurant)
       if (selectedType !== 'all') params.append('type', selectedType)
       if (selectedStatus !== 'all') params.append('status', selectedStatus)
@@ -109,15 +135,26 @@ export default function RecommendationsPage() {
   }
 
   useEffect(() => {
-    loadRecommendations()
+    if (isLoaded && organization?.id) {
+      loadRecommendations()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRestaurant, selectedType, selectedStatus])
+  }, [selectedRestaurant, selectedType, selectedStatus, isLoaded, organization?.id])
 
   const handleGenerate = async (restaurantId?: string) => {
     if (!restaurantId) {
       toast({
         title: 'Erreur',
         description: 'Veuillez sélectionner un restaurant',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!organization?.id) {
+      toast({
+        title: 'Erreur',
+        description: 'Aucune organisation active',
         variant: 'destructive',
       })
       return
@@ -134,6 +171,7 @@ export default function RecommendationsPage() {
           restaurantId,
           shrinkPct: 0.1,
           days: 7,
+          clerkOrgId: organization.id,
         }),
       })
 
@@ -161,13 +199,25 @@ export default function RecommendationsPage() {
   }
 
   const handleUpdateStatus = async (id: string, status: string) => {
+    if (!organization?.id) {
+      toast({
+        title: 'Erreur',
+        description: 'Aucune organisation active.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     try {
       const response = await fetch(`/api/recommendations/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ 
+          status,
+          clerkOrgId: organization.id,
+        }),
       })
 
       if (!response.ok) {
@@ -176,10 +226,22 @@ export default function RecommendationsPage() {
 
       toast({
         title: 'Recommandation mise à jour',
-        description: `Statut changé en ${status === 'accepted' ? 'accepté' : 'rejeté'}`,
+        description: status === 'accepted' 
+          ? 'Recommandation acceptée. Redirection vers le dashboard...'
+          : 'Statut changé en rejeté',
       })
 
+      // Rafraîchir les données de la page actuelle
       loadRecommendations()
+      
+      // Si la recommandation est acceptée, rediriger vers le dashboard
+      // pour voir immédiatement les économies mises à jour
+      if (status === 'accepted') {
+        // Attendre un court délai pour que le toast s'affiche
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 1000)
+      }
     } catch (error) {
       toast({
         title: 'Erreur',
@@ -194,9 +256,29 @@ export default function RecommendationsPage() {
 
   const calculateTotalSavings = () => {
     // Pour les recommandations BOM, extraire les économies depuis les détails
-    // Pour l'instant, on utilise une estimation basée sur le nombre de recommandations
     const pendingRecs = safeRecommendations.filter((r) => r.status === 'pending')
-    return pendingRecs.length * 500 // Estimation simplifiée
+    
+    return pendingRecs.reduce((total, rec) => {
+      const data = rec.data as RecommendationDetails
+      
+      // Si estimatedSavings est disponible, l'utiliser
+      if (data?.estimatedSavings) {
+        return total + data.estimatedSavings
+      }
+      
+      // Sinon, estimation basée sur les ingrédients
+      if (data?.ingredients && Array.isArray(data.ingredients)) {
+        const estimatedSavings = data.ingredients.reduce((acc: number, ing: any) => {
+          const quantityToOrder = ing.quantityToOrder || 0
+          // Estimation : 100€ par ingrédient avec quantité > 0
+          return acc + (quantityToOrder > 0 ? 100 : 0)
+        }, 0)
+        return total + estimatedSavings
+      }
+      
+      // Par défaut, estimation conservatrice
+      return total + 500
+    }, 0)
   }
   
   const filteredRecommendations = safeRecommendations.filter((rec) => {
@@ -205,6 +287,21 @@ export default function RecommendationsPage() {
     if (selectedStatus !== 'all' && rec.status !== selectedStatus) return false
     return true
   })
+
+  if (!isLoaded || loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement des recommandations...'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">

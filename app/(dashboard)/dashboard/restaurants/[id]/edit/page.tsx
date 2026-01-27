@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { Loader2 } from 'lucide-react'
 
 export default function EditRestaurantPage() {
   const router = useRouter()
   const params = useParams()
   const { toast } = useToast()
+  const { organization, isLoaded } = useOrganization()
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [formData, setFormData] = useState({
@@ -21,38 +24,64 @@ export default function EditRestaurantPage() {
   })
 
   useEffect(() => {
-    // Charger les données du restaurant
-    fetch(`/api/restaurants/${params.id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
+    if (params.id && isLoaded && organization?.id) {
+      fetchRestaurant()
+    }
+  }, [params.id, isLoaded, organization?.id])
+
+  const fetchRestaurant = async () => {
+    if (!organization?.id) return
+
+    try {
+      setLoadingData(true)
+      const queryParams = new URLSearchParams()
+      queryParams.append('clerkOrgId', organization.id)
+      
+      const response = await fetch(`/api/restaurants/${params.id}?${queryParams.toString()}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
           toast({
-            title: 'Erreur',
-            description: data.error,
+            title: 'Restaurant introuvable',
+            description: 'Le restaurant que vous recherchez n\'existe pas.',
             variant: 'destructive',
           })
           router.push('/dashboard/restaurants')
           return
         }
-        setFormData({
-          name: data.name || '',
-          address: data.address || '',
-          timezone: data.timezone || 'Europe/Paris',
-        })
-        setLoadingData(false)
+        throw new Error('Erreur lors du chargement du restaurant')
+      }
+
+      const data = await response.json()
+      setFormData({
+        name: data.name || '',
+        address: data.address || '',
+        timezone: data.timezone || 'Europe/Paris',
       })
-      .catch((error) => {
-        toast({
-          title: 'Erreur',
-          description: 'Impossible de charger les données',
-          variant: 'destructive',
-        })
-        router.push('/dashboard/restaurants')
+    } catch (error) {
+      toast({
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Impossible de charger les données',
+        variant: 'destructive',
       })
-  }, [params.id, router, toast])
+      router.push('/dashboard/restaurants')
+    } finally {
+      setLoadingData(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!organization?.id) {
+      toast({
+        title: 'Erreur',
+        description: 'Aucune organisation active. Veuillez sélectionner une organisation.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -61,12 +90,22 @@ export default function EditRestaurantPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          clerkOrgId: organization.id, // Passer l'orgId depuis le client
+        }),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la modification')
+        const errorMessage = error.details || error.error || 'Erreur lors de la modification'
+        
+        // Si c'est un problème de synchronisation, proposer de rafraîchir
+        if (errorMessage.includes('synchronisée') || errorMessage.includes('Organization not found')) {
+          throw new Error(`${errorMessage} Veuillez rafraîchir la page et réessayer.`)
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const restaurant = await response.json()
@@ -76,7 +115,8 @@ export default function EditRestaurantPage() {
         description: `${restaurant.name} a été modifié avec succès.`,
       })
 
-      router.push(`/dashboard/restaurants/${restaurant.id}`)
+      // Rediriger vers la liste au lieu de la page de détails pour éviter les problèmes
+      router.push('/dashboard/restaurants')
     } catch (error) {
       toast({
         title: 'Erreur',
@@ -88,13 +128,17 @@ export default function EditRestaurantPage() {
     }
   }
 
-  if (loadingData) {
+  if (!isLoaded || loadingData) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3"></div>
-          <div className="h-64 bg-muted rounded"></div>
-        </div>
+      <div className="p-6 space-y-6">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement du restaurant...'}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -153,6 +197,7 @@ export default function EditRestaurantPage() {
 
             <div className="flex gap-4 pt-4">
               <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {loading ? 'Modification...' : 'Enregistrer les modifications'}
               </Button>
               <Button

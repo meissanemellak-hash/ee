@@ -2,33 +2,92 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
-import { runAllAlerts } from '@/lib/services/alerts'
+import { runAllAlerts, createTestAlerts } from '@/lib/services/alerts'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = auth()
+    const { userId, orgId: authOrgId } = auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await getCurrentOrganization()
+    const { searchParams } = new URL(request.url)
+    const clerkOrgId = searchParams.get('clerkOrgId')
+    const restaurantId = searchParams.get('restaurantId')
+    const resolved = searchParams.get('resolved')
+    const type = searchParams.get('type')
+    const severity = searchParams.get('severity')
+    
+    const orgIdToUse = authOrgId || clerkOrgId
+
+    let organization: any = null
+
+    if (orgIdToUse) {
+      organization = await prisma.organization.findUnique({
+        where: { clerkOrgId: orgIdToUse },
+      })
+      
+      if (!organization) {
+        try {
+          const { clerkClient } = await import('@clerk/nextjs/server')
+          const client = await clerkClient()
+          const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
+          
+          const userMemberships = await client.users.getOrganizationMembershipList({ userId })
+          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          
+          if (isMember) {
+            try {
+              organization = await prisma.organization.create({
+                data: {
+                  name: clerkOrg.name,
+                  clerkOrgId: orgIdToUse,
+                  shrinkPct: 0.1,
+                },
+              })
+            } catch (dbError) {
+              if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+                organization = await prisma.organization.findUnique({
+                  where: { clerkOrgId: orgIdToUse },
+                })
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[GET /api/alerts] Erreur synchronisation:', error)
+        }
+      }
+    } else {
+      organization = await getCurrentOrganization()
+    }
+
     if (!organization) {
       return NextResponse.json([])
     }
-
-    const { searchParams } = new URL(request.url)
-    const restaurantId = searchParams.get('restaurantId')
-    const resolved = searchParams.get('resolved') === 'true'
 
     const where: any = {
       restaurant: {
         organizationId: organization.id,
       },
-      resolved,
+    }
+
+    // Filtre résolu/non résolu
+    if (resolved !== null && resolved !== undefined) {
+      where.resolved = resolved === 'true'
     }
 
     if (restaurantId) {
       where.restaurantId = restaurantId
+    }
+
+    if (type) {
+      where.type = type
+    }
+
+    if (severity) {
+      where.severity = severity
     }
 
     const alerts = await prisma.alert.findMany({
@@ -55,21 +114,64 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = auth()
+    const { userId, orgId: authOrgId } = auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await getCurrentOrganization()
+    const body = await request.json()
+    const { restaurantId, clerkOrgId, createTest } = body
+    const orgIdToUse = authOrgId || clerkOrgId
+
+    console.log('[POST /api/alerts] Début - userId:', userId, 'restaurantId:', restaurantId, 'createTest:', createTest, 'orgIdToUse:', orgIdToUse)
+
+    let organization: any = null
+
+    if (orgIdToUse) {
+      organization = await prisma.organization.findUnique({
+        where: { clerkOrgId: orgIdToUse },
+      })
+      
+      if (!organization) {
+        try {
+          const { clerkClient } = await import('@clerk/nextjs/server')
+          const client = await clerkClient()
+          const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
+          
+          const userMemberships = await client.users.getOrganizationMembershipList({ userId })
+          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          
+          if (isMember) {
+            try {
+              organization = await prisma.organization.create({
+                data: {
+                  name: clerkOrg.name,
+                  clerkOrgId: orgIdToUse,
+                  shrinkPct: 0.1,
+                },
+              })
+            } catch (dbError) {
+              if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+                organization = await prisma.organization.findUnique({
+                  where: { clerkOrgId: orgIdToUse },
+                })
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[POST /api/alerts] Erreur synchronisation:', error)
+        }
+      }
+    } else {
+      organization = await getCurrentOrganization()
+    }
+
     if (!organization) {
       return NextResponse.json(
         { error: 'Organization required' },
         { status: 400 }
       )
     }
-
-    const body = await request.json()
-    const { restaurantId } = body
 
     if (!restaurantId) {
       return NextResponse.json(
@@ -78,13 +180,75 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    await runAllAlerts(restaurantId)
+    // Vérifier que le restaurant appartient à l'organisation
+    const restaurant = await prisma.restaurant.findFirst({
+      where: {
+        id: restaurantId,
+        organizationId: organization.id,
+      },
+    })
 
-    return NextResponse.json({ success: true })
+    if (!restaurant) {
+      console.error('[POST /api/alerts] Restaurant non trouvé:', restaurantId, 'pour organisation:', organization.id)
+      return NextResponse.json(
+        { error: 'Restaurant not found or does not belong to your organization' },
+        { status: 404 }
+      )
+    }
+
+    console.log('[POST /api/alerts] Restaurant trouvé:', restaurant.name, 'createTest:', createTest)
+
+    // Si createTest est true, créer des alertes de test
+    if (createTest === true) {
+      try {
+        await createTestAlerts(restaurantId)
+        return NextResponse.json({ 
+          success: true,
+          alertsCreated: 3,
+          message: '3 alertes de test créées avec succès'
+        })
+      } catch (testError) {
+        console.error('[POST /api/alerts] Erreur lors de la création des alertes de test:', testError)
+        return NextResponse.json(
+          { 
+            error: 'Erreur lors de la création des alertes de test',
+            details: testError instanceof Error ? testError.message : 'Erreur inconnue'
+          },
+          { status: 500 }
+        )
+      }
+    }
+
+    try {
+      await runAllAlerts(restaurantId)
+    } catch (alertError) {
+      console.error('[POST /api/alerts] Erreur lors de la génération des alertes:', alertError)
+      // Ne pas échouer complètement, on continue pour compter les alertes existantes
+    }
+
+    // Compter les alertes créées pour ce restaurant
+    const alertsCount = await prisma.alert.count({
+      where: {
+        restaurantId,
+        resolved: false,
+      },
+    })
+
+    return NextResponse.json({ 
+      success: true,
+      alertsCreated: alertsCount,
+      message: alertsCount > 0 
+        ? `${alertsCount} alerte(s) active(s) trouvée(s)`
+        : 'Aucune alerte générée. Vérifiez que vous avez configuré un inventaire avec des seuils min/max, ou utilisez "Générer des alertes de test" pour tester le système.'
+    })
   } catch (error) {
-    console.error('Error running alerts:', error)
+    console.error('[POST /api/alerts] Erreur complète:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Erreur inconnue',
+        stack: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     )
   }
@@ -92,21 +256,14 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId } = auth()
+    const { userId, orgId: authOrgId } = auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await getCurrentOrganization()
-    if (!organization) {
-      return NextResponse.json(
-        { error: 'Organization required' },
-        { status: 400 }
-      )
-    }
-
     const body = await request.json()
-    const { alertId, resolved } = body
+    const { alertId, resolved, clerkOrgId } = body
+    const orgIdToUse = authOrgId || clerkOrgId
 
     if (!alertId || typeof resolved !== 'boolean') {
       return NextResponse.json(
@@ -115,7 +272,72 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const alert = await prisma.alert.update({
+    let organization: any = null
+
+    if (orgIdToUse) {
+      organization = await prisma.organization.findUnique({
+        where: { clerkOrgId: orgIdToUse },
+      })
+      
+      if (!organization) {
+        try {
+          const { clerkClient } = await import('@clerk/nextjs/server')
+          const client = await clerkClient()
+          const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
+          
+          const userMemberships = await client.users.getOrganizationMembershipList({ userId })
+          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          
+          if (isMember) {
+            try {
+              organization = await prisma.organization.create({
+                data: {
+                  name: clerkOrg.name,
+                  clerkOrgId: orgIdToUse,
+                  shrinkPct: 0.1,
+                },
+              })
+            } catch (dbError) {
+              if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+                organization = await prisma.organization.findUnique({
+                  where: { clerkOrgId: orgIdToUse },
+                })
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[PATCH /api/alerts] Erreur synchronisation:', error)
+        }
+      }
+    } else {
+      organization = await getCurrentOrganization()
+    }
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: 'Organization required' },
+        { status: 400 }
+      )
+    }
+
+    // Vérifier que l'alerte appartient à l'organisation
+    const alert = await prisma.alert.findFirst({
+      where: {
+        id: alertId,
+        restaurant: {
+          organizationId: organization.id,
+        },
+      },
+    })
+
+    if (!alert) {
+      return NextResponse.json(
+        { error: 'Alert not found or does not belong to your organization' },
+        { status: 404 }
+      )
+    }
+
+    const updated = await prisma.alert.update({
       where: { id: alertId },
       data: {
         resolved,
@@ -123,7 +345,7 @@ export async function PATCH(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(alert)
+    return NextResponse.json(updated)
   } catch (error) {
     console.error('Error updating alert:', error)
     return NextResponse.json(

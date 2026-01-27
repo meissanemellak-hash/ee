@@ -2,22 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
-import { generateForecastsForRestaurant } from '@/lib/services/forecast'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: NextRequest) {
+/**
+ * GET /api/forecasts
+ * Liste toutes les prévisions de l'organisation avec filtres optionnels
+ */
+export async function GET(request: NextRequest) {
   try {
     const { userId, orgId: authOrgId } = auth()
+    
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { restaurantId, forecastDate, method, clerkOrgId } = body
-    const orgIdToUse = authOrgId || clerkOrgId
+    const searchParams = request.nextUrl.searchParams
+    const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
+    const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    console.log('[POST /api/forecasts/generate] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    console.log('[GET /api/forecasts] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -27,7 +31,7 @@ export async function POST(request: NextRequest) {
       })
       
       if (!organization) {
-        console.log('[POST /api/forecasts/generate] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
+        console.log('[GET /api/forecasts] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/forecasts/generate] Erreur synchronisation:', error)
+          console.error('[GET /api/forecasts] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -64,46 +68,73 @@ export async function POST(request: NextRequest) {
 
     if (!organization) {
       return NextResponse.json(
-        { 
-          error: 'Organization not found',
-          details: 'L\'organisation n\'a pas pu être trouvée. Veuillez rafraîchir la page.'
-        },
+        { error: 'Organization not found' },
         { status: 404 }
       )
     }
 
-    if (!restaurantId || !forecastDate) {
-      return NextResponse.json(
-        { error: 'restaurantId and forecastDate are required' },
-        { status: 400 }
-      )
+    // Récupérer les paramètres de filtrage
+    const restaurantId = searchParams.get('restaurantId')
+    const productId = searchParams.get('productId')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    const method = searchParams.get('method')
+
+    // Construire la clause where
+    const where: any = {
+      restaurant: {
+        organizationId: organization.id,
+      },
     }
 
-    // Vérifier que le restaurant appartient à l'organisation
-    const restaurant = await prisma.restaurant.findFirst({
-      where: {
-        id: restaurantId,
-        organizationId: organization.id,
+    if (restaurantId) {
+      where.restaurantId = restaurantId
+    }
+
+    if (productId) {
+      where.productId = productId
+    }
+
+    if (startDate || endDate) {
+      where.forecastDate = {}
+      if (startDate) {
+        where.forecastDate.gte = new Date(startDate)
+      }
+      if (endDate) {
+        where.forecastDate.lte = new Date(endDate)
+      }
+    }
+
+    if (method) {
+      where.method = method
+    }
+
+    const forecasts = await prisma.forecast.findMany({
+      where,
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            unitPrice: true,
+          },
+        },
+      },
+      orderBy: {
+        forecastDate: 'desc',
       },
     })
 
-    if (!restaurant) {
-      return NextResponse.json(
-        { error: 'Restaurant not found or does not belong to your organization' },
-        { status: 404 }
-      )
-    }
-
-    const date = new Date(forecastDate)
-    const forecasts = await generateForecastsForRestaurant(
-      restaurantId,
-      date,
-      method
-    )
-
-    return NextResponse.json({ success: true, forecasts })
+    return NextResponse.json(forecasts)
   } catch (error) {
-    console.error('Error generating forecasts:', error)
+    console.error('Error fetching forecasts:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

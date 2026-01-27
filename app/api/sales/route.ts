@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
-import { generateOrderRecommendations, generateStaffingRecommendations } from '@/lib/services/recommender'
+import { saleSchema } from '@/lib/validations/sales'
+import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * GET /api/sales
+ * Liste toutes les ventes de l'organisation avec filtres optionnels
+ */
 export async function GET(request: NextRequest) {
   try {
     const { userId, orgId: authOrgId } = auth()
+    
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -17,6 +23,8 @@ export async function GET(request: NextRequest) {
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
+    console.log('[GET /api/sales] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
+
     let organization: any = null
 
     if (orgIdToUse) {
@@ -25,6 +33,7 @@ export async function GET(request: NextRequest) {
       })
       
       if (!organization) {
+        console.log('[GET /api/sales] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
@@ -42,6 +51,7 @@ export async function GET(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
+              console.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -51,7 +61,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/recommendations] Erreur synchronisation:', error)
+          console.error('[GET /api/sales] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -59,47 +69,71 @@ export async function GET(request: NextRequest) {
     }
 
     if (!organization) {
-      return NextResponse.json([])
+      return NextResponse.json(
+        { error: 'Organization not found' },
+        { status: 404 }
+      )
     }
 
+    // Récupérer les paramètres de filtrage
     const restaurantId = searchParams.get('restaurantId')
-    const type = searchParams.get('type') // 'ORDER' | 'STAFFING' | null (all)
+    const productId = searchParams.get('productId')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 100
 
+    // Construire la clause where
     const where: any = {
       restaurant: {
         organizationId: organization.id,
       },
     }
 
-    // Si aucun filtre de statut n'est spécifié, on filtre par défaut sur 'pending'
-    if (!searchParams.get('status') || searchParams.get('status') === 'pending') {
-      where.status = 'pending'
-    } else if (searchParams.get('status') !== 'all') {
-      where.status = searchParams.get('status')
-    }
-
-    if (restaurantId && restaurantId !== 'all') {
+    if (restaurantId) {
       where.restaurantId = restaurantId
     }
 
-    if (type && type !== 'all') {
-      where.type = type
+    if (productId) {
+      where.productId = productId
     }
 
-    const recommendations = await prisma.recommendation.findMany({
+    if (startDate || endDate) {
+      where.saleDate = {}
+      if (startDate) {
+        where.saleDate.gte = new Date(startDate)
+      }
+      if (endDate) {
+        where.saleDate.lte = new Date(endDate)
+      }
+    }
+
+    const sales = await prisma.sale.findMany({
       where,
       include: {
-        restaurant: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            unitPrice: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc',
+        saleDate: 'desc',
       },
-      take: 50,
+      take: limit,
     })
 
-    return NextResponse.json(recommendations)
+    return NextResponse.json(sales)
   } catch (error) {
-    console.error('Error fetching recommendations:', error)
+    console.error('Error fetching sales:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -107,18 +141,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * POST /api/sales
+ * Crée une nouvelle vente
+ */
 export async function POST(request: NextRequest) {
   try {
     const { userId, orgId: authOrgId } = auth()
+    
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    const { clerkOrgId, ...restBody } = body
-    const orgIdToUse = authOrgId || clerkOrgId
+    const validatedData = saleSchema.parse(body)
+    const orgIdToUse = authOrgId || body.clerkOrgId
 
-    console.log('[POST /api/recommendations] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    console.log('[POST /api/sales] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', body.clerkOrgId, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -128,6 +167,7 @@ export async function POST(request: NextRequest) {
       })
       
       if (!organization) {
+        console.log('[POST /api/sales] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
@@ -145,6 +185,7 @@ export async function POST(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
+              console.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -154,7 +195,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/recommendations] Erreur synchronisation:', error)
+          console.error('[POST /api/sales] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -171,32 +212,80 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { restaurantId, type, forecastDate } = restBody
+    // Vérifier que le restaurant appartient à l'organisation
+    const restaurant = await prisma.restaurant.findFirst({
+      where: {
+        id: validatedData.restaurantId,
+        organizationId: organization.id,
+      },
+    })
 
-    if (!restaurantId || !type) {
+    if (!restaurant) {
       return NextResponse.json(
-        { error: 'restaurantId and type are required' },
-        { status: 400 }
+        { error: 'Restaurant not found or does not belong to your organization' },
+        { status: 404 }
       )
     }
 
-    const date = forecastDate ? new Date(forecastDate) : new Date()
+    // Vérifier que le produit appartient à l'organisation
+    const product = await prisma.product.findFirst({
+      where: {
+        id: validatedData.productId,
+        organizationId: organization.id,
+      },
+    })
 
-    let recommendations
-    if (type === 'ORDER') {
-      recommendations = await generateOrderRecommendations(restaurantId, date)
-    } else if (type === 'STAFFING') {
-      recommendations = await generateStaffingRecommendations(restaurantId, date)
-    } else {
+    if (!product) {
       return NextResponse.json(
-        { error: 'Invalid type. Must be ORDER or STAFFING' },
-        { status: 400 }
+        { error: 'Product not found or does not belong to your organization' },
+        { status: 404 }
       )
     }
 
-    return NextResponse.json({ success: true, recommendations })
+    // Convertir saleDate en Date si c'est une string
+    const saleDate = typeof validatedData.saleDate === 'string' 
+      ? new Date(validatedData.saleDate) 
+      : validatedData.saleDate
+
+    // Créer la vente
+    const sale = await prisma.sale.create({
+      data: {
+        restaurantId: validatedData.restaurantId,
+        productId: validatedData.productId,
+        quantity: validatedData.quantity,
+        amount: validatedData.amount,
+        saleDate,
+        saleHour: validatedData.saleHour,
+      },
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            unitPrice: true,
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(sale, { status: 201 })
   } catch (error) {
-    console.error('Error generating recommendations:', error)
+    console.error('Error creating sale:', error)
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.errors },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

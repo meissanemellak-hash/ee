@@ -2,11 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
-import { generateOrderRecommendations, generateStaffingRecommendations } from '@/lib/services/recommender'
+import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+const productIngredientSchema = z.object({
+  ingredientId: z.string(),
+  quantityNeeded: z.number().positive(),
+})
+
+/**
+ * GET /api/products/[id]/ingredients
+ * Récupère tous les ingrédients d'un produit (recette)
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const { userId, orgId: authOrgId } = auth()
     if (!userId) {
@@ -51,7 +63,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/recommendations] Erreur synchronisation:', error)
+          console.error('[GET /api/products/[id]/ingredients] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -59,47 +71,52 @@ export async function GET(request: NextRequest) {
     }
 
     if (!organization) {
-      return NextResponse.json([])
+      return NextResponse.json(
+        { error: 'Organization not found' },
+        { status: 404 }
+      )
     }
 
-    const restaurantId = searchParams.get('restaurantId')
-    const type = searchParams.get('type') // 'ORDER' | 'STAFFING' | null (all)
-
-    const where: any = {
-      restaurant: {
+    // Vérifier que le produit appartient à l'organisation
+    const product = await prisma.product.findFirst({
+      where: {
+        id: params.id,
         organizationId: organization.id,
       },
-    }
-
-    // Si aucun filtre de statut n'est spécifié, on filtre par défaut sur 'pending'
-    if (!searchParams.get('status') || searchParams.get('status') === 'pending') {
-      where.status = 'pending'
-    } else if (searchParams.get('status') !== 'all') {
-      where.status = searchParams.get('status')
-    }
-
-    if (restaurantId && restaurantId !== 'all') {
-      where.restaurantId = restaurantId
-    }
-
-    if (type && type !== 'all') {
-      where.type = type
-    }
-
-    const recommendations = await prisma.recommendation.findMany({
-      where,
-      include: {
-        restaurant: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 50,
     })
 
-    return NextResponse.json(recommendations)
+    if (!product) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      )
+    }
+
+    // Récupérer les ingrédients du produit
+    const productIngredients = await prisma.productIngredient.findMany({
+      where: {
+        productId: params.id,
+      },
+      include: {
+        ingredient: {
+          select: {
+            id: true,
+            name: true,
+            unit: true,
+            costPerUnit: true,
+          },
+        },
+      },
+      orderBy: {
+        ingredient: {
+          name: 'asc',
+        },
+      },
+    })
+
+    return NextResponse.json(productIngredients)
   } catch (error) {
-    console.error('Error fetching recommendations:', error)
+    console.error('Error fetching product ingredients:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -107,7 +124,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/products/[id]/ingredients
+ * Ajoute un ingrédient à un produit
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const { userId, orgId: authOrgId } = auth()
     if (!userId) {
@@ -118,7 +142,7 @@ export async function POST(request: NextRequest) {
     const { clerkOrgId, ...restBody } = body
     const orgIdToUse = authOrgId || clerkOrgId
 
-    console.log('[POST /api/recommendations] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    const validatedData = productIngredientSchema.parse(restBody)
 
     let organization: any = null
 
@@ -154,7 +178,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/recommendations] Erreur synchronisation:', error)
+          console.error('[POST /api/products/[id]/ingredients] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -171,32 +195,98 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { restaurantId, type, forecastDate } = restBody
+    // Vérifier que le produit appartient à l'organisation
+    const product = await prisma.product.findFirst({
+      where: {
+        id: params.id,
+        organizationId: organization.id,
+      },
+    })
 
-    if (!restaurantId || !type) {
+    if (!product) {
       return NextResponse.json(
-        { error: 'restaurantId and type are required' },
-        { status: 400 }
+        { error: 'Product not found' },
+        { status: 404 }
       )
     }
 
-    const date = forecastDate ? new Date(forecastDate) : new Date()
+    // Vérifier que l'ingrédient appartient à l'organisation
+    const ingredient = await prisma.ingredient.findFirst({
+      where: {
+        id: validatedData.ingredientId,
+        organizationId: organization.id,
+      },
+    })
 
-    let recommendations
-    if (type === 'ORDER') {
-      recommendations = await generateOrderRecommendations(restaurantId, date)
-    } else if (type === 'STAFFING') {
-      recommendations = await generateStaffingRecommendations(restaurantId, date)
-    } else {
+    if (!ingredient) {
       return NextResponse.json(
-        { error: 'Invalid type. Must be ORDER or STAFFING' },
-        { status: 400 }
+        { error: 'Ingredient not found or does not belong to your organization' },
+        { status: 404 }
       )
     }
 
-    return NextResponse.json({ success: true, recommendations })
+    // Vérifier si la relation existe déjà
+    const existing = await prisma.productIngredient.findUnique({
+      where: {
+        productId_ingredientId: {
+          productId: params.id,
+          ingredientId: validatedData.ingredientId,
+        },
+      },
+    })
+
+    if (existing) {
+      // Mettre à jour la quantité
+      const updated = await prisma.productIngredient.update({
+        where: { id: existing.id },
+        data: {
+          quantityNeeded: validatedData.quantityNeeded,
+        },
+        include: {
+          ingredient: {
+            select: {
+              id: true,
+              name: true,
+              unit: true,
+              costPerUnit: true,
+            },
+          },
+        },
+      })
+
+      return NextResponse.json(updated)
+    }
+
+    // Créer la relation
+    const productIngredient = await prisma.productIngredient.create({
+      data: {
+        productId: params.id,
+        ingredientId: validatedData.ingredientId,
+        quantityNeeded: validatedData.quantityNeeded,
+      },
+      include: {
+        ingredient: {
+          select: {
+            id: true,
+            name: true,
+            unit: true,
+            costPerUnit: true,
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(productIngredient, { status: 201 })
   } catch (error) {
-    console.error('Error generating recommendations:', error)
+    console.error('Error adding product ingredient:', error)
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.errors },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

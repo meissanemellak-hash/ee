@@ -2,19 +2,33 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
+// Schéma de validation pour la modification
+const productSchema = z.object({
+  name: z.string().min(1, 'Le nom est requis'),
+  category: z.string().optional().nullable(),
+  unitPrice: z.number().positive('Le prix doit être positif'),
+})
+
+/**
+ * GET /api/products/[id]
+ * Récupère un produit par son ID
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const { userId, orgId: authOrgId } = auth()
+    
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Accepter clerkOrgId depuis les paramètres de requête
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
@@ -53,21 +67,18 @@ export async function GET(
             }
           }
         } catch (error) {
-          console.error('[GET /api/restaurants/[id]] Erreur synchronisation:', error)
+          console.error('[GET /api/products/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
       organization = await getCurrentOrganization()
     }
-
+    
     if (!organization) {
-      return NextResponse.json(
-        { error: 'Restaurant not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    const restaurant = await prisma.restaurant.findFirst({
+    const product = await prisma.product.findFirst({
       where: {
         id: params.id,
         organizationId: organization.id,
@@ -76,68 +87,44 @@ export async function GET(
         _count: {
           select: {
             sales: true,
-            alerts: true,
-            inventory: true,
+            productIngredients: true,
           },
         },
       },
     })
 
-    if (!restaurant) {
-      return NextResponse.json(
-        { error: 'Restaurant not found' },
-        { status: 404 }
-      )
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    // Récupérer les ventes récentes (7 derniers jours)
-    const recentSales = await prisma.sale.findMany({
-      where: {
-        restaurantId: restaurant.id,
-        saleDate: {
-          gte: new Date(new Date().setDate(new Date().getDate() - 7)),
-        },
-      },
-      include: {
-        product: true,
-      },
-      orderBy: {
-        saleDate: 'desc',
-      },
-      take: 10,
-    })
-
-    const totalRevenue = recentSales.reduce((sum, sale) => sum + sale.amount, 0)
-
-    return NextResponse.json({
-      ...restaurant,
-      recentSales,
-      totalRevenue,
-    })
+    return NextResponse.json({ product })
   } catch (error) {
-    console.error('Error fetching restaurant:', error)
+    console.error('Error fetching product:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error fetching product', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
 }
 
+/**
+ * PATCH /api/products/[id]
+ * Modifie un produit
+ */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const { userId, orgId: authOrgId } = auth()
+    
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    const { name, address, timezone, clerkOrgId } = body
-    const orgIdToUse = authOrgId || clerkOrgId
-
-    console.log('[PATCH /api/restaurants/[id]] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    const clerkOrgIdFromBody = (body as any).clerkOrgId
+    const orgIdToUse = authOrgId || clerkOrgIdFromBody
 
     let organization: any = null
 
@@ -173,66 +160,95 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/restaurants/[id]] Erreur synchronisation:', error)
+          console.error('[PATCH /api/products/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
       organization = await getCurrentOrganization()
     }
-
+    
     if (!organization) {
-      console.error('[PATCH /api/restaurants/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
-      return NextResponse.json(
-        { 
-          error: 'Organization not found',
-          details: orgIdToUse 
-            ? 'L\'organisation existe dans Clerk mais n\'a pas pu être synchronisée dans la base de données. Veuillez rafraîchir la page.'
-            : 'Aucune organisation active. Veuillez sélectionner une organisation.'
-        },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Vérifier que le restaurant appartient à l'organisation
-    const existing = await prisma.restaurant.findFirst({
+    // Vérifier que le produit existe et appartient à l'organisation
+    const existingProduct = await prisma.product.findFirst({
       where: {
         id: params.id,
         organizationId: organization.id,
       },
     })
 
-    if (!existing) {
-      return NextResponse.json(
-        { error: 'Restaurant not found' },
-        { status: 404 }
-      )
+    if (!existingProduct) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    const restaurant = await prisma.restaurant.update({
+    // Retirer clerkOrgId du body avant validation
+    const { clerkOrgId, ...bodyWithoutOrgId } = body as any
+    const bodyToValidate = bodyWithoutOrgId
+    
+    // Valider les données
+    const validatedData = productSchema.parse(bodyToValidate)
+
+    // Vérifier si un autre produit avec le même nom existe déjà
+    if (validatedData.name !== existingProduct.name) {
+      const duplicateProduct = await prisma.product.findFirst({
+        where: {
+          organizationId: organization.id,
+          name: validatedData.name,
+          id: { not: params.id },
+        },
+      })
+
+      if (duplicateProduct) {
+        return NextResponse.json(
+          { error: 'Un produit avec ce nom existe déjà' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Mettre à jour le produit
+    const product = await prisma.product.update({
       where: { id: params.id },
       data: {
-        name: name || existing.name,
-        address: address !== undefined ? address : existing.address,
-        timezone: timezone || existing.timezone,
+        name: validatedData.name,
+        category: validatedData.category || null,
+        unitPrice: validatedData.unitPrice,
       },
     })
 
-    return NextResponse.json(restaurant)
+    return NextResponse.json({
+      product,
+      message: 'Produit modifié avec succès',
+    })
   } catch (error) {
-    console.error('Error updating restaurant:', error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.errors },
+        { status: 400 }
+      )
+    }
+
+    console.error('Error updating product:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error updating product', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
 }
 
+/**
+ * DELETE /api/products/[id]
+ * Supprime un produit
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const { userId, orgId: authOrgId } = auth()
+    
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -275,51 +291,60 @@ export async function DELETE(
             }
           }
         } catch (error) {
-          console.error('[DELETE /api/restaurants/[id]] Erreur synchronisation:', error)
+          console.error('[DELETE /api/products/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
       organization = await getCurrentOrganization()
     }
-
+    
     if (!organization) {
-      console.error('[PATCH /api/restaurants/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
-      return NextResponse.json(
-        { 
-          error: 'Organization not found',
-          details: orgIdToUse 
-            ? 'L\'organisation existe dans Clerk mais n\'a pas pu être synchronisée dans la base de données. Veuillez rafraîchir la page.'
-            : 'Aucune organisation active. Veuillez sélectionner une organisation.'
-        },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Vérifier que le restaurant appartient à l'organisation
-    const existing = await prisma.restaurant.findFirst({
+    // Vérifier que le produit existe et appartient à l'organisation
+    const product = await prisma.product.findFirst({
       where: {
         id: params.id,
         organizationId: organization.id,
       },
+      include: {
+        _count: {
+          select: {
+            sales: true,
+            productIngredients: true,
+          },
+        },
+      },
     })
 
-    if (!existing) {
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    }
+
+    // Vérifier s'il y a des ventes associées
+    if (product._count.sales > 0) {
       return NextResponse.json(
-        { error: 'Restaurant not found' },
-        { status: 404 }
+        { 
+          error: 'Impossible de supprimer ce produit',
+          details: `Ce produit a ${product._count.sales} vente(s) associée(s). Supprimez d'abord les ventes.`,
+        },
+        { status: 400 }
       )
     }
 
-    // Supprimer le restaurant (cascade supprimera les données associées)
-    await prisma.restaurant.delete({
+    // Supprimer le produit (les recettes seront supprimées automatiquement via onDelete: Cascade)
+    await prisma.product.delete({
       where: { id: params.id },
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      message: 'Produit supprimé avec succès',
+    })
   } catch (error) {
-    console.error('Error deleting restaurant:', error)
+    console.error('Error deleting product:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error deleting product', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

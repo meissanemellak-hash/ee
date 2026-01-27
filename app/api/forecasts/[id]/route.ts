@@ -5,14 +5,20 @@ import { getCurrentOrganization } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+/**
+ * GET /api/forecasts/[id]
+ * Récupère une prévision spécifique
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const { userId, orgId: authOrgId } = auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Accepter clerkOrgId depuis les paramètres de requête
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
@@ -51,7 +57,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/restaurants] Erreur synchronisation:', error)
+          console.error('[GET /api/forecasts/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -59,25 +65,47 @@ export async function GET(request: NextRequest) {
     }
 
     if (!organization) {
-      return NextResponse.json([])
+      return NextResponse.json(
+        { error: 'Forecast not found' },
+        { status: 404 }
+      )
     }
 
-    const restaurants = await prisma.restaurant.findMany({
-      where: { organizationId: organization.id },
-      orderBy: { name: 'asc' },
+    const forecast = await prisma.forecast.findFirst({
+      where: {
+        id: params.id,
+        restaurant: {
+          organizationId: organization.id,
+        },
+      },
       include: {
-        _count: {
+        restaurant: {
           select: {
-            sales: true,
-            alerts: true,
+            id: true,
+            name: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            unitPrice: true,
           },
         },
       },
     })
 
-    return NextResponse.json(restaurants)
+    if (!forecast) {
+      return NextResponse.json(
+        { error: 'Forecast not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(forecast)
   } catch (error) {
-    console.error('Error fetching restaurants:', error)
+    console.error('Error fetching forecast:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -85,16 +113,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+/**
+ * DELETE /api/forecasts/[id]
+ * Supprime une prévision
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const { userId, orgId: authOrgId } = auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { name, address, timezone, clerkOrgId } = body
-    const orgIdToUse = authOrgId || clerkOrgId
+    const searchParams = request.nextUrl.searchParams
+    const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
+    const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
     let organization: any = null
 
@@ -130,7 +165,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/restaurants] Erreur synchronisation:', error)
+          console.error('[DELETE /api/forecasts/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -138,31 +173,42 @@ export async function POST(request: NextRequest) {
     }
 
     if (!organization) {
+      console.error('[DELETE /api/forecasts/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
       return NextResponse.json(
-        { error: 'Organization required' },
-        { status: 400 }
+        { 
+          error: 'Organization not found',
+          details: orgIdToUse 
+            ? 'L\'organisation existe dans Clerk mais n\'a pas pu être synchronisée dans la base de données. Veuillez rafraîchir la page.'
+            : 'Aucune organisation active. Veuillez sélectionner une organisation.'
+        },
+        { status: 404 }
       )
     }
 
-    if (!name) {
-      return NextResponse.json(
-        { error: 'name is required' },
-        { status: 400 }
-      )
-    }
-
-    const restaurant = await prisma.restaurant.create({
-      data: {
-        organizationId: organization.id,
-        name,
-        address: address || null,
-        timezone: timezone || 'Europe/Paris',
+    // Vérifier que la prévision existe et appartient à l'organisation
+    const forecast = await prisma.forecast.findFirst({
+      where: {
+        id: params.id,
+        restaurant: {
+          organizationId: organization.id,
+        },
       },
     })
 
-    return NextResponse.json(restaurant)
+    if (!forecast) {
+      return NextResponse.json(
+        { error: 'Forecast not found' },
+        { status: 404 }
+      )
+    }
+
+    await prisma.forecast.delete({
+      where: { id: params.id },
+    })
+
+    return NextResponse.json({ message: 'Forecast deleted successfully' })
   } catch (error) {
-    console.error('Error creating restaurant:', error)
+    console.error('Error deleting forecast:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
