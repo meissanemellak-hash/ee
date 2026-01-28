@@ -71,11 +71,11 @@ export function RecentActivityTable() {
     switch (type) {
       case 'sale':
         return {
-          borderColor: 'border-l-green-500',
-          bgColor: 'bg-green-50/50 dark:bg-green-900/10',
-          textColor: 'text-green-700 dark:text-green-400',
+          borderColor: 'border-l-teal-500',
+          bgColor: 'bg-teal-50/50 dark:bg-teal-900/10',
+          textColor: 'text-teal-700 dark:text-teal-400',
           icon: DollarSign,
-          iconColor: 'text-green-600 dark:text-green-400',
+          iconColor: 'text-teal-600 dark:text-teal-400',
         }
       case 'recommendation_accepted':
         return {
@@ -95,11 +95,11 @@ export function RecentActivityTable() {
         }
       case 'alert_resolved':
         return {
-          borderColor: 'border-l-blue-500',
-          bgColor: 'bg-blue-50/50 dark:bg-blue-900/10',
-          textColor: 'text-blue-700 dark:text-blue-400',
+          borderColor: 'border-l-teal-500',
+          bgColor: 'bg-teal-50/50 dark:bg-teal-900/10',
+          textColor: 'text-teal-700 dark:text-teal-400',
           icon: CheckCircle,
-          iconColor: 'text-blue-600 dark:text-blue-400',
+          iconColor: 'text-teal-600 dark:text-teal-400',
         }
       default:
         return {

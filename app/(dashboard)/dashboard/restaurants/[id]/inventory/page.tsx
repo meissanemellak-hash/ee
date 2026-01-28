@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useParams } from 'next/navigation'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Plus, Edit, Save, X, Package, AlertTriangle, ArrowLeft, Warehouse, TrendingDown, TrendingUp, CheckCircle2 } from 'lucide-react'
+import { Loader2, Plus, Edit, Save, X, Package, AlertTriangle, ArrowLeft, Warehouse, TrendingUp, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -27,121 +27,93 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useRestaurant } from '@/lib/react-query/hooks/use-restaurants'
+import { useIngredients } from '@/lib/react-query/hooks/use-ingredients'
+import {
+  useInventory,
+  useCreateInventoryItem,
+  useUpdateInventoryItem,
+  useDeleteInventoryItem,
+  type InventoryItem,
+} from '@/lib/react-query/hooks/use-inventory'
+import { Skeleton } from '@/components/ui/skeleton'
 
-interface InventoryItem {
-  id: string
-  restaurantId: string
-  ingredientId: string
-  currentStock: number
-  minThreshold: number
-  maxThreshold: number | null
-  lastUpdated: string
-  ingredient: {
-    id: string
-    name: string
-    unit: string
-    costPerUnit: number
-  }
-}
-
-interface Ingredient {
-  id: string
-  name: string
-  unit: string
-  costPerUnit: number
-}
-
-interface Restaurant {
-  id: string
-  name: string
+function InventoryPageSkeleton() {
+  return (
+    <div className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-hidden>
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <header className="flex items-center gap-4 pb-6 border-b border-border/60">
+          <Skeleton className="h-9 w-9 rounded-md shrink-0" />
+          <div className="flex items-center gap-3 flex-1">
+            <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+        </header>
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <Skeleton className="h-6 w-24 mb-2" />
+                <Skeleton className="h-4 w-80" />
+              </div>
+              <Skeleton className="h-10 w-40 rounded-md" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }
 
 export default function InventoryPage() {
   const params = useParams()
-  const router = useRouter()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null)
-  const [inventory, setInventory] = useState<InventoryItem[]>([])
-  const [ingredients, setIngredients] = useState<Ingredient[]>([])
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
+  const restaurantId = params?.id as string | undefined
+
+  const { data: restaurant, isLoading: loadingRestaurant, isError: errorRestaurant, refetch: refetchRestaurant } = useRestaurant(restaurantId)
+  const { data: ingredientsData, isLoading: loadingIngredients, isError: errorIngredients, refetch: refetchIngredients } = useIngredients()
+  const { data: inventory = [], isLoading: loadingInventory, isError: errorInventory, refetch: refetchInventory } = useInventory(restaurantId)
+
+  const createInventory = useCreateInventoryItem()
+  const updateInventory = useUpdateInventoryItem()
+  const deleteInventory = useDeleteInventoryItem()
+
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-
-  // Formulaire d'ajout/modification
   const [formData, setFormData] = useState({
     ingredientId: '',
     currentStock: '',
     minThreshold: '',
     maxThreshold: '',
   })
+  const hasToastedError = useRef(false)
 
-  const restaurantId = params.id as string
+  const ingredients = ingredientsData?.ingredients ?? []
 
+  const hasQueryError = errorRestaurant || errorIngredients || errorInventory
   useEffect(() => {
-    if (isLoaded && organization?.id && restaurantId) {
-      loadData()
-    }
-  }, [isLoaded, organization?.id, restaurantId])
-
-  const loadData = async () => {
-    if (!organization?.id) return
-
-    setLoading(true)
-    try {
-      // Charger le restaurant
-      const restaurantRes = await fetch(`/api/restaurants/${restaurantId}?clerkOrgId=${organization.id}`)
-      if (restaurantRes.ok) {
-        const restaurantData = await restaurantRes.json()
-        setRestaurant(restaurantData)
-      }
-
-      // Charger les ingrédients de l'organisation
-      const ingredientsRes = await fetch(`/api/ingredients?clerkOrgId=${organization.id}`)
-      if (ingredientsRes.ok) {
-        const responseData = await ingredientsRes.json()
-        // L'API retourne { ingredients: [...], units: [...] }
-        const ingredientsList = responseData.ingredients || responseData
-        // S'assurer que c'est un tableau
-        const ingredientsArray = Array.isArray(ingredientsList) ? ingredientsList : []
-        console.log('[Inventory] Ingrédients chargés:', ingredientsArray.length)
-        setIngredients(ingredientsArray)
-      } else {
-        console.error('[Inventory] Erreur lors du chargement des ingrédients:', ingredientsRes.status)
-        setIngredients([])
-      }
-
-      // Charger les inventaires
-      await loadInventory()
-    } catch (error) {
-      console.error('Error loading data:', error)
+    if (hasQueryError && !hasToastedError.current) {
+      hasToastedError.current = true
       toast({
         title: 'Erreur',
         description: 'Impossible de charger les données.',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
-  }
-
-  const loadInventory = async () => {
-    if (!organization?.id) return
-
-    try {
-      const response = await fetch(`/api/inventory?restaurantId=${restaurantId}&clerkOrgId=${organization.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setInventory(data)
-      } else {
-        throw new Error('Failed to load inventory')
-      }
-    } catch (error) {
-      console.error('Error loading inventory:', error)
-    }
-  }
+    if (!hasQueryError) hasToastedError.current = false
+  }, [hasQueryError, toast])
 
   const getStatus = (item: InventoryItem): 'OK' | 'LOW' | 'CRITICAL' | 'OVERSTOCK' => {
     if (item.currentStock < item.minThreshold) {
@@ -165,7 +137,7 @@ export default function InventoryPage() {
 
   const getStatusColor = (status: string): string => {
     const colors: Record<string, string> = {
-      OK: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800',
+      OK: 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800',
       LOW: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800',
       CRITICAL: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800',
       OVERSTOCK: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800',
@@ -194,9 +166,8 @@ export default function InventoryPage() {
     })
   }
 
-  const handleSave = async (itemId?: string) => {
-    if (!organization?.id) return
-
+  const handleSave = (itemId?: string) => {
+    if (!restaurantId || !organization?.id) return
     if (!formData.ingredientId || !formData.currentStock || !formData.minThreshold) {
       toast({
         title: 'Erreur',
@@ -205,166 +176,154 @@ export default function InventoryPage() {
       })
       return
     }
+    const currentStock = parseFloat(formData.currentStock)
+    const minThreshold = parseFloat(formData.minThreshold)
+    const maxThreshold = formData.maxThreshold ? parseFloat(formData.maxThreshold) : null
 
-    setSaving(itemId || 'new')
-
-    try {
-      const payload = {
-        restaurantId,
-        ingredientId: formData.ingredientId,
-        currentStock: parseFloat(formData.currentStock),
-        minThreshold: parseFloat(formData.minThreshold),
-        maxThreshold: formData.maxThreshold ? parseFloat(formData.maxThreshold) : null,
-        clerkOrgId: organization.id,
-      }
-
-      let response
-      if (itemId) {
-        // Mise à jour
-        response = await fetch(`/api/inventory/${itemId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...payload,
-            clerkOrgId: organization.id,
-          }),
-        })
-      } else {
-        // Création
-        response = await fetch('/api/inventory', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        })
-      }
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.details || error.error || 'Erreur lors de la sauvegarde')
-      }
-
-      await loadInventory()
-      handleCancel()
-
-      toast({
-        title: 'Succès',
-        description: itemId ? 'Inventaire mis à jour avec succès.' : 'Inventaire créé avec succès.',
-      })
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!deletingId || !organization?.id) return
-
-    setSaving(deletingId)
-
-    try {
-      const response = await fetch(`/api/inventory/${deletingId}?clerkOrgId=${organization.id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.details || error.error || 'Erreur lors de la suppression')
-      }
-
-      await loadInventory()
-      setDeletingId(null)
-
-      toast({
-        title: 'Succès',
-        description: 'Inventaire supprimé avec succès.',
-      })
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  // Ingrédients disponibles (ceux qui n'ont pas encore d'inventaire)
-  // Si on est en mode édition, on montre tous les ingrédients, sinon seulement ceux sans inventaire
-  const availableIngredients = Array.isArray(ingredients) 
-    ? (editingId 
-        ? ingredients // En mode édition, montrer tous les ingrédients
-        : ingredients.filter(
-            (ing) => !inventory.some((inv) => inv.ingredientId === ing.id)
-          )
+    if (itemId) {
+      updateInventory.mutate(
+        {
+          id: itemId,
+          restaurantId,
+          data: { currentStock, minThreshold, maxThreshold },
+        },
+        { onSuccess: handleCancel }
       )
+    } else {
+      createInventory.mutate(
+        {
+          restaurantId,
+          ingredientId: formData.ingredientId,
+          currentStock,
+          minThreshold,
+          maxThreshold,
+        },
+        { onSuccess: handleCancel }
+      )
+    }
+  }
+
+  const handleDelete = () => {
+    if (!deletingId || !restaurantId) return
+    deleteInventory.mutate(
+      { id: deletingId, restaurantId },
+      { onSuccess: () => setDeletingId(null) }
+    )
+  }
+
+  const availableIngredients = Array.isArray(ingredients)
+    ? (editingId
+        ? ingredients
+        : ingredients.filter((ing) => !inventory.some((inv) => inv.ingredientId === ing.id)))
     : []
 
-  // Debug: afficher les infos dans la console
-  useEffect(() => {
-    if (showAddForm) {
-      console.log('[Inventory] Formulaire d\'ajout ouvert')
-      console.log('[Inventory] Total ingrédients:', ingredients.length)
-      console.log('[Inventory] Inventaires existants:', inventory.length)
-      console.log('[Inventory] Ingrédients disponibles:', availableIngredients.length)
-    }
-  }, [showAddForm, ingredients.length, inventory.length, availableIngredients.length])
+  const loading = loadingRestaurant || loadingIngredients || loadingInventory
+
+  const handleRetry = () => {
+    refetchRestaurant()
+    refetchIngredients()
+    refetchInventory()
+  }
 
   if (!isLoaded || loading) {
+    return <InventoryPageSkeleton />
+  }
+
+  if (isLoaded && !organization?.id) {
     return (
-      <div className="p-6 space-y-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Chargement de l'inventaire...</p>
-          </CardContent>
-        </Card>
-      </div>
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Aucune organisation active. Veuillez sélectionner une organisation pour gérer l’inventaire.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/restaurants">Retour aux restaurants</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (restaurantId && !loadingRestaurant && !restaurant) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Card className="rounded-xl border shadow-sm border-red-200/50 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Restaurant introuvable ou supprimé. Retournez à la liste pour gérer l’inventaire d’un autre établissement.
+              </p>
+              <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
+                <Link href="/dashboard/restaurants">Retour aux restaurants</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (hasQueryError && (errorRestaurant || !restaurant)) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Card className="rounded-xl border shadow-sm border-red-200/50 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Une erreur s’est produite lors du chargement des données. Vérifiez votre connexion et réessayez.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button variant="outline" onClick={handleRetry}>
+                  Réessayer
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={`/dashboard/restaurants/${restaurantId}`}>Retour au restaurant</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex items-center gap-4">
-        <Link href={`/dashboard/restaurants/${restaurantId}`}>
-          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
-            <ArrowLeft className="h-4 w-4" />
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Inventaire - ${restaurant?.name ?? 'Restaurant'}`}>
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <header className="flex items-center gap-4 pb-6 border-b border-border/60">
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour au détail du restaurant">
+            <Link href={`/dashboard/restaurants/${restaurantId}`}>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </Button>
-        </Link>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-            <Warehouse className="h-6 w-6 text-white" />
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md flex-shrink-0" aria-hidden>
+              <Warehouse className="h-6 w-6 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold tracking-tight">Gestion de l’inventaire</h1>
+              <p className="text-muted-foreground truncate">
+                {restaurant ? restaurant.name : 'Chargement...'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Gestion de l'inventaire</h1>
-            <p className="text-muted-foreground">
-              {restaurant ? `Restaurant: ${restaurant.name}` : 'Chargement...'}
-            </p>
-          </div>
-        </div>
-      </div>
+        </header>
 
-      <Card className="border shadow-sm">
+        <Card className="rounded-xl border shadow-sm bg-card">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <div>
-              <CardTitle className="text-lg font-semibold">Inventaire</CardTitle>
+              <CardTitle id="inventory-title" className="text-lg font-semibold">Inventaire</CardTitle>
               <CardDescription className="mt-1">
-                Gérez les stocks et les seuils d'alerte pour chaque ingrédient
+                Gérez les stocks et les seuils d’alerte pour chaque ingrédient. Les champs marqués d’un * sont obligatoires.
               </CardDescription>
             </div>
             {!showAddForm && (
-              <Button onClick={() => setShowAddForm(true)} className="shadow-sm">
+              <Button onClick={() => setShowAddForm(true)} className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 shrink-0" aria-label="Ajouter un ingrédient à l’inventaire">
                 <Plus className="h-4 w-4 mr-2" />
                 Ajouter un ingrédient
               </Button>
@@ -374,11 +333,11 @@ export default function InventoryPage() {
         <CardContent>
           {/* Formulaire d'ajout (Style Sequence) */}
           {showAddForm && (
-            <Card className="mb-6 border-2 border-teal-200 dark:border-teal-900/30 bg-teal-50/50 dark:bg-teal-900/10">
+            <Card className="mb-6 rounded-xl border-2 border-teal-200 dark:border-teal-900/30 bg-teal-50/50 dark:bg-teal-900/10" aria-labelledby="add-ingredient-title">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                  Ajouter un ingrédient à l'inventaire
+                <CardTitle id="add-ingredient-title" className="text-lg font-semibold flex items-center gap-2">
+                  <Plus className="h-5 w-5 text-teal-600 dark:text-teal-400" aria-hidden />
+                  Ajouter un ingrédient à l’inventaire
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -460,13 +419,13 @@ export default function InventoryPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   <Button
                     onClick={() => handleSave()}
-                    disabled={saving === 'new'}
-                    className="shadow-sm"
+                    disabled={createInventory.isPending}
+                    className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                   >
-                    {saving === 'new' ? (
+                    {createInventory.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Enregistrement...
@@ -489,19 +448,23 @@ export default function InventoryPage() {
 
           {/* Liste des inventaires (Style Sequence) */}
           {inventory.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-                <Package className="h-8 w-8 text-muted-foreground" />
+            <div className="text-center py-16 px-4" role="status" aria-label="Aucun inventaire configuré">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-teal-100 to-emerald-100 dark:from-teal-900/30 dark:to-emerald-900/30 flex items-center justify-center mb-5">
+                <Package className="h-8 w-8 text-teal-600 dark:text-teal-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Aucun inventaire configuré</h3>
-              <p className="text-muted-foreground mb-2">Aucun inventaire configuré pour ce restaurant.</p>
-              <p className="text-sm text-muted-foreground">Cliquez sur "Ajouter un ingrédient" pour commencer.</p>
+              <h2 className="text-xl font-semibold mb-2">Aucun inventaire configuré</h2>
+              <p className="text-muted-foreground mb-2 max-w-md mx-auto">
+                Aucun ingrédient n’est encore suivi pour ce restaurant. Ajoutez des lignes d’inventaire pour suivre les stocks et les seuils d’alerte.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Cliquez sur « Ajouter un ingrédient » pour commencer.
+              </p>
             </div>
           ) : (
-            <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="rounded-xl border border-border overflow-hidden" role="region" aria-labelledby="inventory-title">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                <table className="w-full text-sm" role="table" aria-label="Liste des stocks d’inventaire">
+                  <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Ingrédient</th>
                       <th className="px-4 py-3 text-right font-semibold text-gray-700 dark:text-gray-300">Stock actuel</th>
@@ -524,9 +487,9 @@ export default function InventoryPage() {
                     }
 
                     return (
-                      <tr 
-                        key={item.id} 
-                        className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
+                      <tr
+                        key={item.id}
+                        className={`border-b border-border hover:bg-muted/30 dark:hover:bg-gray-800/50 transition-colors ${
                           isEditing ? 'bg-teal-50/50 dark:bg-teal-900/10' : ''
                         }`}
                       >
@@ -618,10 +581,10 @@ export default function InventoryPage() {
                                 <Button
                                   size="sm"
                                   onClick={() => handleSave(item.id)}
-                                  disabled={saving === item.id}
+                                  disabled={updateInventory.isPending && updateInventory.variables?.id === item.id}
                                   className="shadow-sm"
                                 >
-                                  {saving === item.id ? (
+                                  {updateInventory.isPending && updateInventory.variables?.id === item.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
                                     <Save className="h-4 w-4" />
@@ -643,6 +606,7 @@ export default function InventoryPage() {
                                   variant="outline"
                                   onClick={() => handleEdit(item)}
                                   className="hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-300 dark:hover:border-teal-700"
+                                  aria-label={`Modifier l’inventaire de ${item.ingredient.name}`}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
@@ -651,6 +615,7 @@ export default function InventoryPage() {
                                   variant="outline"
                                   onClick={() => setDeletingId(item.id)}
                                   className="hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400"
+                                  aria-label={`Supprimer l’inventaire de ${item.ingredient.name}`}
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -669,23 +634,24 @@ export default function InventoryPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog de confirmation de suppression */}
-      <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer l'inventaire ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action est irréversible. L'inventaire sera supprimé définitivement.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        {/* Dialog de confirmation de suppression */}
+        <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
+          <AlertDialogContent className="rounded-xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Supprimer cette ligne d’inventaire ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Cette action est irréversible. La ligne d’inventaire sera supprimée définitivement. Vous pourrez la recréer plus tard si besoin.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Supprimer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </main>
   )
 }

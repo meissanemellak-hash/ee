@@ -4,8 +4,10 @@ import { useState, useMemo } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Loader2, Lightbulb, TrendingUp, Package, CheckCircle2, XCircle, RefreshCw, Filter } from 'lucide-react'
+import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -115,178 +117,225 @@ export default function RecommendationsPage() {
 
   if (!isLoaded) {
     return (
-      <div className="p-6 space-y-6">
-        <Card className="border shadow-sm">
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">
-              Chargement de votre organisation...
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">Chargement de votre organisation...</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Recommandations</h1>
-          <p className="text-muted-foreground mt-1">
-            Recommandations actionnables pour optimiser vos opérations
-          </p>
+  if (isLoaded && !organization?.id) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Recommandations</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Recommandations actionnables pour optimiser vos opérations
+            </p>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Lightbulb className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold">Aucune organisation active</h2>
+              <p className="text-muted-foreground">
+                Veuillez sélectionner une organisation pour accéder aux recommandations.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/recommendations">Retour aux recommandations</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-        <div className="flex gap-2">
+      </main>
+    )
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Recommandations</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Recommandations actionnables pour optimiser vos opérations
+            </p>
+          </header>
+          <Card className="rounded-xl border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-red-800 dark:text-red-400">
+                Une erreur s’est produite lors du chargement des recommandations. Vérifiez votre connexion et réessayez.
+              </p>
+              <Button variant="outline" onClick={() => refetch()} className="border-red-300 dark:border-red-800 text-red-800 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20">
+                Réessayer
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Recommandations">
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Recommandations</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Recommandations actionnables pour optimiser vos opérations
+            </p>
+            {safeRecommendations.length >= 0 && (
+              <p className="text-xs text-muted-foreground mt-1 font-medium">
+                {safeRecommendations.length} recommandation{safeRecommendations.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
           <Button
             variant="outline"
             onClick={() => refetch()}
             disabled={isLoading}
-            className="shadow-sm"
+            className="shadow-sm shrink-0"
+            aria-label="Actualiser la liste des recommandations"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Actualiser
           </Button>
+        </header>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Recommandations en attente
+              </CardTitle>
+              <Lightbulb className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
+                {safeRecommendations.filter((r) => r.status === 'pending').length}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Nécessitent une action</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Économies estimées
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
+                {formatCurrency(calculateTotalSavings())}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Sur les recommandations en attente</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total recommandations
+              </CardTitle>
+              <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{safeRecommendations.length}</div>
+              <p className="text-xs text-muted-foreground mt-2">Toutes périodes confondues</p>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Statistiques (Style Sequence) */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Recommandations en attente
+        <Card className="rounded-xl border shadow-sm bg-card" role="search" aria-label="Filtres recommandations">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Filter className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+              Filtres
             </CardTitle>
-            <Lightbulb className="h-4 w-4 text-amber-600" />
+            <CardDescription className="mt-1">
+              Filtrez les recommandations par restaurant, type ou statut
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {safeRecommendations.filter((r) => r.status === 'pending').length}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="rec-filter-restaurant">Restaurant</Label>
+                <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+                  <SelectTrigger id="rec-filter-restaurant" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par restaurant">
+                    <SelectValue placeholder="Tous les restaurants" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les restaurants</SelectItem>
+                    {restaurants.map((restaurant) => (
+                      <SelectItem key={restaurant.id} value={restaurant.id}>
+                        {restaurant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rec-filter-type">Type</Label>
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger id="rec-filter-type" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par type">
+                    <SelectValue placeholder="Tous les types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les types</SelectItem>
+                    <SelectItem value="ORDER">Commandes</SelectItem>
+                    <SelectItem value="STAFFING">Staffing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rec-filter-status">Statut</Label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger id="rec-filter-status" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par statut">
+                    <SelectValue placeholder="Tous les statuts" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="pending">En attente</SelectItem>
+                    <SelectItem value="accepted">Acceptées</SelectItem>
+                    <SelectItem value="dismissed">Rejetées</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Nécessitent une action
-            </p>
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Économies estimées
+        <Card className="rounded-xl border shadow-sm border-2 border-teal-200/80 dark:border-teal-900/30 bg-teal-50/50 dark:bg-teal-900/10">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-sm" aria-hidden>
+                <Lightbulb className="h-4 w-4 text-white" />
+              </div>
+              Générer de nouvelles recommandations
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardDescription className="mt-1">
+              Créez des recommandations BOM pour un restaurant spécifique
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">
-              {formatCurrency(calculateTotalSavings())}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Sur les recommandations en attente
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total recommandations
-            </CardTitle>
-            <Package className="h-4 w-4 text-teal-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-teal-600">{safeRecommendations.length}</div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Toutes périodes confondues
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtres (Style Sequence) */}
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtres
-          </CardTitle>
-          <CardDescription className="mt-1">
-            Filtrez les recommandations par restaurant, type ou statut
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Restaurant</label>
-              <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                  <SelectValue placeholder="Tous les restaurants" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les restaurants</SelectItem>
-                  {restaurants.map((restaurant) => (
-                    <SelectItem key={restaurant.id} value={restaurant.id}>
-                      {restaurant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
-              <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                  <SelectValue placeholder="Tous les types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les types</SelectItem>
-                  <SelectItem value="ORDER">Commandes</SelectItem>
-                  <SelectItem value="STAFFING">Staffing</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Statut</label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                  <SelectValue placeholder="Tous les statuts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="pending">En attente</SelectItem>
-                  <SelectItem value="accepted">Acceptées</SelectItem>
-                  <SelectItem value="dismissed">Rejetées</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Génération de recommandations (Style Sequence) */}
-      <Card className="border shadow-sm border-2 border-amber-200 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-              <Lightbulb className="h-4 w-4 text-white" />
-            </div>
-            Générer de nouvelles recommandations
-          </CardTitle>
-          <CardDescription className="mt-1">
-            Créez des recommandations BOM pour un restaurant spécifique
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <Select
-              value={selectedRestaurant === 'all' ? '' : selectedRestaurant}
-              onValueChange={(value) => setSelectedRestaurant(value || 'all')}
-            >
-              <SelectTrigger className="flex-1 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                <SelectValue placeholder="Sélectionner un restaurant" />
-              </SelectTrigger>
+            <div className="flex gap-4 flex-wrap items-end">
+              <div className="flex-1 min-w-[200px] space-y-2">
+                <Label htmlFor="rec-gen-restaurant">Restaurant</Label>
+                <Select
+                  value={selectedRestaurant === 'all' ? '' : selectedRestaurant}
+                  onValueChange={(value) => setSelectedRestaurant(value || 'all')}
+                >
+                  <SelectTrigger id="rec-gen-restaurant" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Sélectionner un restaurant pour générer">
+                    <SelectValue placeholder="Sélectionner un restaurant" />
+                  </SelectTrigger>
               <SelectContent>
                 {restaurants.map((restaurant) => (
                   <SelectItem key={restaurant.id} value={restaurant.id}>
@@ -295,58 +344,50 @@ export default function RecommendationsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              onClick={() => handleGenerate(selectedRestaurant !== 'all' ? selectedRestaurant : undefined)}
-              disabled={generateRecommendations.isPending || selectedRestaurant === 'all'}
-              className="shadow-sm"
-            >
-              {generateRecommendations.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Génération...
-                </>
-              ) : (
-                <>
-                  <Lightbulb className="h-4 w-4 mr-2" />
-                  Générer
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Liste des recommandations (Style Sequence) */}
-      {isLoading ? (
-        <RecommendationListSkeleton />
-      ) : error ? (
-        <Card className="border shadow-sm">
-          <CardContent className="py-12 text-center">
-            <p className="text-red-600 dark:text-red-400">
-              Erreur lors du chargement des recommandations. Veuillez réessayer.
-            </p>
-          </CardContent>
-        </Card>
-      ) : filteredRecommendations.length === 0 ? (
-        <Card className="border shadow-sm">
-          <CardContent className="py-16 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-              <Lightbulb className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <Button
+                onClick={() => handleGenerate(selectedRestaurant !== 'all' ? selectedRestaurant : undefined)}
+                disabled={generateRecommendations.isPending || selectedRestaurant === 'all'}
+                className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 shrink-0"
+              >
+                {generateRecommendations.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <Lightbulb className="h-4 w-4 mr-2" />
+                    Générer
+                  </>
+                )}
+              </Button>
             </div>
-            <h3 className="text-lg font-semibold mb-2">Aucune recommandation trouvée</h3>
-            <p className="text-muted-foreground">
-              Aucune recommandation ne correspond à vos critères de recherche.
-            </p>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-4">
+
+        {isLoading ? (
+          <RecommendationListSkeleton />
+        ) : filteredRecommendations.length === 0 ? (
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-teal-100 to-emerald-100 dark:from-teal-900/30 dark:to-emerald-900/30 flex items-center justify-center mb-5">
+                <Lightbulb className="h-8 w-8 text-teal-600 dark:text-teal-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Aucune recommandation trouvée</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Aucune recommandation ne correspond à vos critères. Modifiez les filtres ou générez de nouvelles recommandations.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <section className="space-y-4" aria-label="Liste des recommandations">
           {filteredRecommendations.map((recommendation) => {
             const details = recommendation.data as RecommendationDetails
             const isExpanded = expandedId === recommendation.id
 
             return (
-              <Card key={recommendation.id} className="border shadow-sm hover:shadow-md transition-shadow duration-200">
+              <Card key={recommendation.id} className="rounded-xl border shadow-sm bg-card hover:shadow-md transition-shadow duration-200">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
@@ -354,7 +395,7 @@ export default function RecommendationsPage() {
                         <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           recommendation.type === 'ORDER' 
                             ? 'bg-gradient-to-br from-teal-500 to-emerald-600' 
-                            : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                            : 'bg-gradient-to-br from-teal-500 to-emerald-600'
                         }`}>
                           {recommendation.type === 'ORDER' ? (
                             <Package className="h-4 w-4 text-white" />
@@ -383,7 +424,7 @@ export default function RecommendationsPage() {
                             ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
                             : recommendation.priority === 'medium'
                             ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
-                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                            : 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800'
                         }`}
                       >
                         {recommendation.priority}
@@ -391,7 +432,7 @@ export default function RecommendationsPage() {
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
                           recommendation.status === 'accepted'
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                            ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800'
                             : recommendation.status === 'dismissed'
                             ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-700'
                             : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
@@ -409,7 +450,7 @@ export default function RecommendationsPage() {
                 <CardContent>
                   {recommendation.type === 'ORDER' && details?.ingredients && (
                     <div className="space-y-4">
-                      <div className="rounded-lg bg-muted p-4">
+                      <div className="rounded-xl bg-muted/50 dark:bg-gray-800/30 p-4 border border-border">
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <span className="text-muted-foreground">Période:</span>
@@ -434,14 +475,16 @@ export default function RecommendationsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setExpandedId(recommendation.id)}
+                            aria-expanded={false}
+                            aria-label="Voir les détails des ingrédients à commander"
                           >
                             Voir les détails
                           </Button>
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          <div className="rounded-lg border">
-                            <table className="w-full text-sm">
+                          <div className="rounded-xl border border-border overflow-hidden">
+                            <table className="w-full text-sm" role="table" aria-label="Détail des ingrédients à commander">
                               <thead className="bg-muted">
                                 <tr>
                                   <th className="px-4 py-2 text-left">Ingrédient</th>
@@ -482,6 +525,8 @@ export default function RecommendationsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setExpandedId(null)}
+                            aria-expanded={true}
+                            aria-label="Masquer les détails"
                           >
                             Masquer les détails
                           </Button>
@@ -494,7 +539,7 @@ export default function RecommendationsPage() {
                             <Button
                               size="sm"
                               onClick={() => handleUpdateStatus(recommendation.id, 'accepted')}
-                              className="shadow-sm"
+                              className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                             >
                               <CheckCircle2 className="h-4 w-4 mr-2" />
                               Accepter
@@ -535,8 +580,9 @@ export default function RecommendationsPage() {
               </Card>
             )
           })}
-        </div>
-      )}
-    </div>
+          </section>
+        )}
+      </div>
+    </main>
   )
 }

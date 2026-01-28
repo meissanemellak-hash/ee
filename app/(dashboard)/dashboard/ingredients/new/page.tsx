@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Beaker, ArrowLeft, Plus, Save } from 'lucide-react'
+import { Loader2, ArrowLeft, Plus, Save } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useCreateIngredient } from '@/lib/react-query/hooks/use-ingredients'
 
 const UNITS = ['kg', 'g', 'L', 'mL', 'unité', 'pièce', 'paquet', 'boîte']
 
@@ -24,7 +25,7 @@ export default function NewIngredientPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
-  const [loading, setLoading] = useState(false)
+  const createIngredient = useCreateIngredient()
   const [formData, setFormData] = useState({
     name: '',
     unit: '',
@@ -33,9 +34,8 @@ export default function NewIngredientPage() {
     supplierName: '',
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!isLoaded) {
       toast({
         title: 'Chargement...',
@@ -44,7 +44,6 @@ export default function NewIngredientPage() {
       })
       return
     }
-
     if (!organization?.id) {
       toast({
         title: 'Erreur',
@@ -53,129 +52,105 @@ export default function NewIngredientPage() {
       })
       return
     }
-
-    setLoading(true)
-
-    try {
-      const costPerUnit = parseFloat(formData.costPerUnit)
-      
-      if (isNaN(costPerUnit) || costPerUnit <= 0) {
-        throw new Error('Le coût par unité doit être un nombre positif')
-      }
-
-      if (!formData.unit) {
-        throw new Error('L\'unité est requise')
-      }
-
-      const packSize = formData.packSize ? parseFloat(formData.packSize) : null
-      if (packSize !== null && (isNaN(packSize) || packSize <= 0)) {
-        throw new Error('La taille du pack doit être un nombre positif')
-      }
-
-      let response = await fetch('/api/ingredients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          unit: formData.unit,
-          costPerUnit,
-          packSize,
-          supplierName: formData.supplierName.trim() || null,
-          clerkOrgId: organization.id, // Passer l'orgId depuis le client
-        }),
-      })
-
-      // Si erreur "Organization not found", essayer de forcer la synchronisation
-      if (!response.ok) {
-        const error = await response.json()
-        if (error.error === 'Organization not found' || error.details?.includes('synchronisée')) {
-          console.log('Tentative de synchronisation de l\'organisation...')
-          // Forcer la synchronisation
-          await fetch('/api/organizations/force-sync', { method: 'POST' })
-          // Attendre un peu pour que la synchronisation se termine
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          // Réessayer la création
-          response = await fetch('/api/ingredients', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              name: formData.name.trim(),
-              unit: formData.unit,
-              costPerUnit,
-              packSize,
-              supplierName: formData.supplierName.trim() || null,
-              clerkOrgId: organization.id, // Passer l'orgId depuis le client
-            }),
-          })
-        }
-      }
-
-      if (!response.ok) {
-        const error = await response.json()
-        const errorMessage = error.details || error.error || 'Erreur lors de la création'
-        
-        // Si c'est toujours un problème de synchronisation, proposer de rafraîchir
-        if (errorMessage.includes('synchronisée') || errorMessage.includes('Organization not found')) {
-          throw new Error(`${errorMessage} Veuillez rafraîchir la page et réessayer.`)
-        }
-        
-        throw new Error(errorMessage)
-      }
-
-      const data = await response.json()
-      
+    if (!formData.name.trim()) {
       toast({
-        title: 'Ingrédient créé',
-        description: `${data.ingredient.name} a été créé avec succès.`,
-      })
-
-      router.push('/dashboard/ingredients')
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
+        title: 'Champ requis',
+        description: 'Le nom de l’ingrédient est obligatoire.',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
+      return
     }
+    const costPerUnit = parseFloat(formData.costPerUnit)
+    if (isNaN(costPerUnit) || costPerUnit <= 0) {
+      toast({
+        title: 'Erreur',
+        description: 'Le coût par unité doit être un nombre positif',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (!formData.unit) {
+      toast({
+        title: 'Erreur',
+        description: "L'unité est requise",
+        variant: 'destructive',
+      })
+      return
+    }
+    const packSize = formData.packSize ? parseFloat(formData.packSize) : null
+    if (packSize !== null && (isNaN(packSize) || packSize <= 0)) {
+      toast({
+        title: 'Erreur',
+        description: 'La taille du pack doit être un nombre positif',
+        variant: 'destructive',
+      })
+      return
+    }
+    createIngredient.mutate(
+      {
+        name: formData.name.trim(),
+        unit: formData.unit,
+        costPerUnit,
+        packSize,
+        supplierName: formData.supplierName.trim() || null,
+      },
+      { onSuccess: () => router.push('/dashboard/ingredients') }
+    )
+  }
+
+  if (isLoaded && !organization?.id) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Aucune organisation active. Veuillez sélectionner une organisation pour ajouter un ingrédient.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/ingredients">Retour aux ingrédients</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/ingredients">
-          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
-            <ArrowLeft className="h-4 w-4" />
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Créer un nouvel ingrédient">
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <header className="flex items-center gap-4 pb-6 border-b border-border/60">
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des ingrédients">
+            <Link href="/dashboard/ingredients" className="hover:opacity-80 transition-opacity">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </Button>
-        </Link>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-            <Plus className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Nouvel ingrédient</h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md flex-shrink-0" aria-hidden>
+                <Plus className="h-5 w-5 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">Nouvel ingrédient</h1>
+            </div>
             <p className="text-muted-foreground">
               Ajoutez un nouvel ingrédient à votre catalogue
             </p>
           </div>
-        </div>
-      </div>
+        </header>
 
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Informations de l'ingrédient</CardTitle>
-          <CardDescription className="mt-1">
-            Remplissez les informations pour créer un nouvel ingrédient
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Informations de l’ingrédient</CardTitle>
+            <CardDescription className="mt-1">
+              Remplissez les informations pour créer un nouvel ingrédient. Les champs marqués d’un * sont obligatoires.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="form-desc" noValidate>
+            <p id="form-desc" className="sr-only">
+              Formulaire de création d’un ingrédient : nom, unité, coût par unité, taille du pack et fournisseur.
+            </p>
             <div className="space-y-2">
               <Label htmlFor="name">Nom de l'ingrédient *</Label>
               <Input
@@ -184,14 +159,14 @@ export default function NewIngredientPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Tomate, Fromage, Pain..."
                 required
-                disabled={loading}
+                disabled={createIngredient.isPending}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="unit">Unité *</Label>
               <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
-                <SelectTrigger disabled={loading}>
+                <SelectTrigger disabled={createIngredient.isPending}>
                   <SelectValue placeholder="Sélectionner une unité" />
                 </SelectTrigger>
                 <SelectContent>
@@ -218,7 +193,7 @@ export default function NewIngredientPage() {
                 onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
                 placeholder="2.50"
                 required
-                disabled={loading}
+                disabled={createIngredient.isPending}
               />
               <p className="text-xs text-muted-foreground">
                 Coût d'achat par unité en euros.
@@ -235,7 +210,7 @@ export default function NewIngredientPage() {
                 value={formData.packSize}
                 onChange={(e) => setFormData({ ...formData, packSize: e.target.value })}
                 placeholder="10"
-                disabled={loading}
+                disabled={createIngredient.isPending}
               />
               <p className="text-xs text-muted-foreground">
                 Optionnel. Taille du pack fournisseur (ex: 10 kg, 5 L).
@@ -249,16 +224,20 @@ export default function NewIngredientPage() {
                 value={formData.supplierName}
                 onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
                 placeholder="Fournisseur ABC"
-                disabled={loading}
+                disabled={createIngredient.isPending}
               />
               <p className="text-xs text-muted-foreground">
                 Optionnel. Nom du fournisseur pour cet ingrédient.
               </p>
             </div>
 
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={loading} className="shadow-sm">
-                {loading ? (
+            <div className="flex flex-wrap gap-4 pt-4">
+              <Button
+                type="submit"
+                disabled={createIngredient.isPending}
+                className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+              >
+                {createIngredient.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Création...
@@ -266,7 +245,7 @@ export default function NewIngredientPage() {
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Créer l'ingrédient
+                    Créer l’ingrédient
                   </>
                 )}
               </Button>
@@ -274,7 +253,7 @@ export default function NewIngredientPage() {
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
-                disabled={loading}
+                disabled={createIngredient.isPending}
                 className="shadow-sm"
               >
                 Annuler
@@ -283,6 +262,7 @@ export default function NewIngredientPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </main>
   )
 }

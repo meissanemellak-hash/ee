@@ -35,7 +35,7 @@ export default function RestaurantsPage() {
   const { organization, isLoaded } = useOrganization()
   const [page, setPage] = useState(1)
   const limit = 12
-  const { data, isLoading, error } = useRestaurants(page, limit)
+  const { data, isLoading, error, refetch } = useRestaurants(page, limit)
   const restaurants = data?.restaurants || []
   const deleteRestaurant = useDeleteRestaurant()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -58,111 +58,142 @@ export default function RestaurantsPage() {
 
   if (!isLoaded) {
     return (
-      <div className="p-6 space-y-6">
-        <Card className="border shadow-sm">
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Chargement de votre organisation...</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          <Card className="rounded-xl border shadow-sm">
+            <CardContent className="py-16 text-center">
+              <p className="text-muted-foreground">Chargement de votre organisation...</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   if (!organization?.id) {
     return (
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
-          <p className="text-muted-foreground">
-            Gérez vos établissements
-          </p>
-        </div>
-        <Card className="border shadow-sm">
-          <CardContent className="py-16 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-              <Store className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Aucune organisation active</h3>
-            <p className="text-muted-foreground">
-              Veuillez sélectionner une organisation.
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Gérez vos établissements et suivez leurs performances
             </p>
-          </CardContent>
-        </Card>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card/95">
+            <CardContent className="py-16 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Store className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold mb-2">Aucune organisation active</h2>
+              <p className="text-muted-foreground">
+                Veuillez sélectionner une organisation.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
-            <p className="text-muted-foreground mt-1">
-              Gérez vos établissements et suivez leurs performances
-            </p>
-          </div>
-          <Button asChild className="shadow-sm" disabled>
-            <Link href="/dashboard/restaurants/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Ajouter un restaurant
-            </Link>
-          </Button>
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
+              <p className="text-muted-foreground mt-1.5">
+                Gérez vos établissements et suivez leurs performances
+              </p>
+            </div>
+            <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 shrink-0" disabled>
+              <Link href="/dashboard/restaurants/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Ajouter un restaurant
+              </Link>
+            </Button>
+          </header>
+          <RestaurantListSkeleton />
         </div>
-        <RestaurantListSkeleton />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
-          <p className="text-muted-foreground mt-1">
-            Gérez vos établissements et suivez leurs performances
-          </p>
-        </div>
-        <Card className="border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10">
-          <CardContent className="py-12 text-center">
-            <p className="text-red-800 dark:text-red-400">
-              Erreur lors du chargement des restaurants. Veuillez réessayer.
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Gérez vos établissements et suivez leurs performances
             </p>
-          </CardContent>
-        </Card>
+          </header>
+          <Card className="rounded-xl border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-red-800 dark:text-red-400">
+                Une erreur s’est produite lors du chargement des restaurants. Vérifiez votre connexion et réessayez.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => refetch()}
+                className="border-red-300 dark:border-red-800 text-red-800 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20"
+              >
+                Réessayer
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
-          <p className="text-muted-foreground mt-1">
-            Gérez vos établissements et suivez leurs performances
-          </p>
-        </div>
-        <Button asChild className="shadow-sm">
-          <Link href="/dashboard/restaurants/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Ajouter un restaurant
-          </Link>
-        </Button>
-      </div>
+    <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        {/* Header */}
+        <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              Restaurants
+            </h1>
+            <p className="text-muted-foreground mt-1.5 text-sm sm:text-base">
+              Gérez vos établissements et suivez leurs performances
+            </p>
+            {data && data.total > 0 && (
+              <p className="text-xs text-muted-foreground mt-1 font-medium">
+                {data.total} établissement{data.total > 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+          <Button
+            asChild
+            className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 shrink-0"
+          >
+            <Link href="/dashboard/restaurants/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Ajouter un restaurant
+            </Link>
+          </Button>
+        </header>
 
       {restaurants.length === 0 ? (
-        <Card className="border shadow-sm">
-          <CardContent className="py-16 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-              <Store className="h-8 w-8 text-muted-foreground" />
+        <Card className="rounded-xl border shadow-sm bg-card/95 backdrop-blur-sm">
+          <CardContent className="py-16 px-6 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-teal-100 to-emerald-100 dark:from-teal-900/30 dark:to-emerald-900/30 flex items-center justify-center mb-5">
+              <Store className="h-8 w-8 text-teal-600 dark:text-teal-400" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Aucun restaurant</h3>
-            <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-              Créez votre premier restaurant pour commencer à suivre vos ventes et optimiser vos opérations.
+            <h2 className="text-xl font-semibold mb-2">Aucun restaurant pour l’instant</h2>
+            <p className="text-muted-foreground max-w-md mx-auto mb-2">
+              Créez votre premier établissement pour activer le suivi des ventes, l’inventaire et les alertes.
             </p>
-            <Button asChild className="shadow-sm">
+            <ul className="text-sm text-muted-foreground max-w-sm mx-auto mb-8 text-left list-disc list-inside space-y-1">
+              <li>Suivi des ventes et chiffre d’affaires</li>
+              <li>Gestion des stocks et seuils d’alerte</li>
+              <li>Tableau de bord par restaurant</li>
+            </ul>
+            <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un restaurant">
               <Link href="/dashboard/restaurants/new">
                 <Plus className="mr-2 h-4 w-4" />
                 Ajouter un restaurant
@@ -171,9 +202,15 @@ export default function RestaurantsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <section
+          className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+          aria-label="Liste des restaurants"
+        >
           {restaurants.map((restaurant) => (
-            <Card key={restaurant.id} className="border shadow-sm hover:shadow-md transition-shadow duration-200">
+            <Card
+              key={restaurant.id}
+              className="group rounded-xl border shadow-sm bg-card hover:shadow-lg hover:border-teal-200/80 dark:hover:border-teal-800/60 transition-all duration-200"
+            >
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
@@ -196,6 +233,7 @@ export default function RestaurantsPage() {
                       size="icon"
                       className="h-8 w-8"
                       asChild
+                      aria-label={`Modifier ${restaurant.name}`}
                     >
                       <Link href={`/dashboard/restaurants/${restaurant.id}/edit`}>
                         <Edit className="h-4 w-4" />
@@ -206,6 +244,7 @@ export default function RestaurantsPage() {
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => openDeleteDialog(restaurant)}
+                      aria-label={`Supprimer ${restaurant.name}`}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -215,7 +254,7 @@ export default function RestaurantsPage() {
               <CardContent>
                 {/* Statistiques (Style Sequence) */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="p-3 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-900/30">
+                  <div className="p-3.5 rounded-xl bg-teal-50/80 dark:bg-teal-900/20 border border-teal-100/80 dark:border-teal-900/30">
                     <div className="flex items-center gap-2 mb-1">
                       <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                       <span className="text-xs text-muted-foreground">Ventes</span>
@@ -224,10 +263,10 @@ export default function RestaurantsPage() {
                       {restaurant._count?.sales || 0}
                     </div>
                   </div>
-                  <div className={`p-3 rounded-lg border ${
+                  <div className={`p-3.5 rounded-xl border ${
                     (restaurant._count?.alerts || 0) > 0
-                      ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30'
-                      : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800'
+                      ? 'bg-orange-50/80 dark:bg-orange-900/20 border-orange-100/80 dark:border-orange-900/30'
+                      : 'bg-muted/50 dark:bg-gray-800/50 border-border/80 dark:border-gray-800'
                   }`}>
                     <div className="flex items-center gap-2 mb-1">
                       <Bell className={`h-4 w-4 ${
@@ -246,7 +285,11 @@ export default function RestaurantsPage() {
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-300 dark:hover:border-teal-700"
+                  asChild
+                >
                   <Link href={`/dashboard/restaurants/${restaurant.id}`}>
                     Voir les détails
                   </Link>
@@ -254,31 +297,34 @@ export default function RestaurantsPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+        </section>
       )}
 
-      {/* Pagination */}
-      {data && data.totalPages > 1 && (
-        <div className="flex justify-center pt-6">
-          <Pagination
-            currentPage={page}
-            totalPages={data.totalPages}
-            onPageChange={setPage}
-          />
-        </div>
-      )}
+        {/* Pagination */}
+        {data && data.totalPages > 1 && (
+          <nav
+            className="flex justify-center pt-8"
+            aria-label="Pagination des restaurants"
+          >
+            <Pagination
+              currentPage={page}
+              totalPages={data.totalPages}
+              onPageChange={setPage}
+            />
+          </nav>
+        )}
+      </div>
 
       {/* Dialog de confirmation de suppression */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer le restaurant ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer ce restaurant ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer &quot;{restaurantToDelete?.name}&quot; ?
+              Cette action est irréversible. Le restaurant &quot;{restaurantToDelete?.name}&quot; et toutes ses données (ventes, inventaire, alertes) seront définitivement supprimés.
               {restaurantToDelete && (restaurantToDelete._count?.sales || 0) > 0 && (
-                <span className="block mt-2 text-destructive">
-                  ⚠️ Ce restaurant a {restaurantToDelete._count.sales} vente(s) associée(s). 
-                  La suppression supprimera également toutes les données associées (ventes, stocks, alertes, etc.).
+                <span className="block mt-2 text-destructive font-medium">
+                  Ce restaurant contient {restaurantToDelete._count.sales} vente(s) enregistrée(s).
                 </span>
               )}
             </AlertDialogDescription>

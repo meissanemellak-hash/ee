@@ -92,7 +92,8 @@ export function useProduct(id: string | undefined) {
         throw new Error('Failed to fetch product')
       }
       
-      return response.json() as Promise<Product>
+      const data = await response.json() as { product: Product }
+      return data.product
     },
     enabled: !!id && !!organization?.id,
   })
@@ -120,10 +121,11 @@ export function useCreateProduct() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to create product')
+        throw new Error(error.error || error.details || 'Failed to create product')
       }
 
-      return response.json() as Promise<Product>
+      const result = await response.json() as { product: Product }
+      return result.product
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products', organization?.id] })
@@ -162,7 +164,8 @@ export function useUpdateProduct() {
         throw new Error(error.error || error.details || 'Failed to update product')
       }
 
-      return response.json() as Promise<Product>
+      const result = await response.json() as { product: Product }
+      return result.product
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['products', organization?.id] })
@@ -217,6 +220,119 @@ export function useDeleteProduct() {
         description: error.message,
         variant: 'destructive',
       })
+    },
+  })
+}
+
+export interface ProductIngredientItem {
+  id: string
+  ingredientId: string
+  quantityNeeded: number
+  ingredient: {
+    id: string
+    name: string
+    unit: string
+    costPerUnit: number
+  }
+}
+
+export function useProductIngredients(productId: string | undefined) {
+  const { organization } = useOrganization()
+
+  return useQuery({
+    queryKey: ['product-ingredients', organization?.id, productId],
+    queryFn: async () => {
+      if (!productId || !organization?.id) return []
+      const queryParams = new URLSearchParams()
+      queryParams.append('clerkOrgId', organization.id)
+      const response = await fetch(`/api/products/${productId}/ingredients?${queryParams.toString()}`)
+      if (!response.ok) throw new Error('Failed to fetch product ingredients')
+      return response.json() as Promise<ProductIngredientItem[]>
+    },
+    enabled: !!productId && !!organization?.id,
+  })
+}
+
+export function useAddProductIngredient() {
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async ({
+      productId,
+      ingredientId,
+      quantityNeeded,
+    }: {
+      productId: string
+      ingredientId: string
+      quantityNeeded: number
+    }) => {
+      if (!organization?.id) throw new Error('No organization selected')
+      const response = await fetch(`/api/products/${productId}/ingredients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingredientId,
+          quantityNeeded,
+          clerkOrgId: organization.id,
+        }),
+      })
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || err.details || 'Erreur lors de l\'ajout')
+      }
+      return response.json() as Promise<ProductIngredientItem>
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['product-ingredients', organization?.id, variables.productId],
+      })
+      toast({
+        title: 'Ingrédient ajouté',
+        description: 'L\'ingrédient a été ajouté à la recette avec succès.',
+      })
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' })
+    },
+  })
+}
+
+export function useRemoveProductIngredient() {
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async ({
+      productId,
+      ingredientId,
+    }: {
+      productId: string
+      ingredientId: string
+    }) => {
+      if (!organization?.id) throw new Error('No organization selected')
+      const response = await fetch(
+        `/api/products/${productId}/ingredients/${ingredientId}?clerkOrgId=${organization.id}`,
+        { method: 'DELETE' }
+      )
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || err.details || 'Erreur lors de la suppression')
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['product-ingredients', organization?.id, variables.productId],
+      })
+      toast({
+        title: 'Ingrédient supprimé',
+        description: 'L\'ingrédient a été retiré de la recette avec succès.',
+      })
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' })
     },
   })
 }

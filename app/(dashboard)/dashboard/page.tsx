@@ -78,22 +78,24 @@ export default async function DashboardPage() {
   // Le DashboardSyncHandler dans le layout gérera la synchronisation côté client
   if (!organization) {
     return (
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Synchronisation de l&apos;organisation en cours...
-          </p>
-        </div>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">
-              L&apos;organisation est en cours de synchronisation. Veuillez patienter quelques instants.
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Dashboard">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Synchronisation de l&apos;organisation en cours...
             </p>
-            <ReloadButton />
-          </CardContent>
-        </Card>
-      </div>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground mb-4">
+                L&apos;organisation est en cours de synchronisation. Veuillez patienter quelques instants.
+              </p>
+              <ReloadButton />
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     )
   }
 
@@ -101,10 +103,18 @@ export default async function DashboardPage() {
   const metrics = await calculateExecutiveDashboardMetrics(organization.id)
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Zone 1 - Hero Metric Card (Style Sequence) */}
-      <Card className="bg-gradient-to-br from-teal-500 to-emerald-600 border-0 shadow-lg">
-        <CardContent className="p-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Dashboard">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+        <header className="pb-6 border-b border-border/60">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1.5">
+            Vue d&apos;ensemble de vos économies, alertes et recommandations
+          </p>
+        </header>
+
+        {/* Zone 1 - Hero Metric Card */}
+        <Card className="rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 border-0 shadow-lg">
+          <CardContent className="p-8">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm font-medium text-teal-50/90 uppercase tracking-wide mb-2">
@@ -152,24 +162,24 @@ export default async function DashboardPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
 
-      {/* Zone 2 - KPIs Exécutifs (Style Sequence) */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border shadow-sm">
+        {/* Zone 2 - KPIs Exécutifs */}
+        <section className="grid gap-4 md:grid-cols-3" aria-label="Indicateurs clés">
+          <Card className="rounded-xl border shadow-sm bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Recommandations appliquées
             </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-teal-600" />
+            <CheckCircle2 className="h-4 w-4 text-teal-600" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{metrics.acceptedRecommendationsCount}</div>
             <div className="mt-2 flex items-center gap-2">
               {metrics.acceptedRecommendationsSavings > 0 && (
                 <>
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs text-green-600 font-medium">
+                  <TrendingUp className="h-3 w-3 text-teal-600" />
+                  <span className="text-xs text-teal-600 font-medium">
                     {formatCurrency(metrics.acceptedRecommendationsSavings)} économisés
                   </span>
                 </>
@@ -179,14 +189,13 @@ export default async function DashboardPage() {
               vs. {formatCurrency(metrics.acceptedRecommendationsSavings * 0.9)} période précédente
             </p>
           </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Risque de rupture (7 jours)
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Risque de rupture (7 jours)
+              </CardTitle>
+              <AlertTriangle className="h-4 w-4 text-orange-600" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-orange-600">
@@ -196,14 +205,13 @@ export default async function DashboardPage() {
               {metrics.criticalAlertsCount} restaurant{metrics.criticalAlertsCount > 1 ? 's' : ''} concerné{metrics.criticalAlertsCount > 1 ? 's' : ''}
             </p>
           </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Gaspillage estimé
-            </CardTitle>
-            <Package className="h-4 w-4 text-amber-600" />
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Gaspillage estimé
+              </CardTitle>
+              <Package className="h-4 w-4 text-amber-600" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
@@ -213,32 +221,34 @@ export default async function DashboardPage() {
               Produits frais surstockés ce mois-ci
             </p>
           </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </section>
 
-      {/* Zone 2.5 - Graphique Évolution des Ventes (Style Sequence) */}
-      <DashboardSalesChart />
+        {/* Zone 2.5 - Graphique Évolution des Ventes */}
+        <section aria-label="Évolution des ventes">
+          <DashboardSalesChart />
+        </section>
 
-      {/* Zone 3 - Recommandations Actionnables */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold">Recommandations actionnables</h2>
-            <p className="text-sm text-muted-foreground">
-              Actions prioritaires pour optimiser vos opérations
-            </p>
+        {/* Zone 3 - Recommandations Actionnables */}
+        <section aria-labelledby="rec-title">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 id="rec-title" className="text-2xl font-bold">Recommandations actionnables</h2>
+              <p className="text-sm text-muted-foreground">
+                Actions prioritaires pour optimiser vos opérations
+              </p>
+            </div>
+            <Button variant="outline" asChild aria-label="Voir toutes les recommandations">
+              <Link href="/dashboard/recommendations">
+                Voir toutes <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+              </Link>
+            </Button>
           </div>
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/recommendations">
-              Voir toutes <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
 
-        {metrics.topActionableRecommendations.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-3">
-            {metrics.topActionableRecommendations.map((rec) => (
-              <Card key={rec.id} className="relative">
+          {metrics.topActionableRecommendations.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-3">
+              {metrics.topActionableRecommendations.map((rec) => (
+                <Card key={rec.id} className="relative rounded-xl border shadow-sm bg-card">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -257,7 +267,7 @@ export default async function DashboardPage() {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-green-600">
+                      <p className="text-sm font-medium text-teal-600">
                         ROI estimé : x{Math.round(rec.estimatedSavings / 500)}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -269,28 +279,30 @@ export default async function DashboardPage() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">
-                Aucune recommandation en attente. Tout est optimisé !
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+          ) : (
+            <Card className="rounded-xl border shadow-sm bg-card">
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  Aucune recommandation en attente. Tout est optimisé !
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </section>
 
-      {/* Zone 3.5 - Activité Récente (Style Sequence) */}
-      <RecentActivityTable />
+        {/* Zone 3.5 - Activité Récente */}
+        <section aria-label="Activité récente">
+          <RecentActivityTable />
+        </section>
 
-      {/* Zone 4 - Alertes Critiques */}
-      {metrics.criticalAlerts.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Alertes critiques</h2>
-          <div className="space-y-3">
-            {metrics.criticalAlerts.map((alert) => (
-              <Card key={alert.id} className="border-l-4 border-l-red-500">
+        {/* Zone 4 - Alertes Critiques */}
+        {metrics.criticalAlerts.length > 0 && (
+          <section aria-labelledby="alerts-title">
+            <h2 id="alerts-title" className="text-2xl font-bold mb-4">Alertes critiques</h2>
+            <div className="space-y-3">
+              {metrics.criticalAlerts.map((alert) => (
+                <Card key={alert.id} className="rounded-xl border-l-4 border-l-red-500 border shadow-sm bg-card">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -316,17 +328,18 @@ export default async function DashboardPage() {
                   </p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-          <div className="mt-4">
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/alerts">
-                Voir toutes les alertes <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+              ))}
+            </div>
+            <div className="mt-4">
+              <Button variant="outline" asChild aria-label="Voir toutes les alertes">
+                <Link href="/dashboard/alerts">
+                  Voir toutes les alertes <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            </div>
+          </section>
+        )}
+      </div>
+    </main>
   )
 }

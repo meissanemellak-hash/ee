@@ -6,6 +6,7 @@ import { useOrganization } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useDeleteRestaurant } from '@/lib/react-query/hooks/use-restaurants'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,10 +31,10 @@ export function DeleteRestaurantButton({
   const router = useRouter()
   const { toast } = useToast()
   const { organization } = useOrganization()
-  const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const deleteRestaurant = useDeleteRestaurant()
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!organization?.id) {
       toast({
         title: 'Erreur',
@@ -43,36 +44,15 @@ export function DeleteRestaurantButton({
       return
     }
 
-    setLoading(true)
-
-    try {
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      const response = await fetch(`/api/restaurants/${restaurantId}?${queryParams.toString()}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la suppression')
-      }
-
-      toast({
-        title: 'Restaurant supprimé',
-        description: `${restaurantName} a été supprimé avec succès.`,
-      })
-
-      router.push('/dashboard/restaurants')
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-      setOpen(false)
-    } finally {
-      setLoading(false)
-    }
+    deleteRestaurant.mutate(restaurantId, {
+      onSuccess: () => {
+        setOpen(false)
+        router.push('/dashboard/restaurants')
+      },
+      onError: () => {
+        setOpen(false)
+      },
+    })
   }
 
   return (
@@ -92,13 +72,13 @@ export function DeleteRestaurantButton({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Annuler</AlertDialogCancel>
+          <AlertDialogCancel disabled={deleteRestaurant.isPending}>Annuler</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
-            disabled={loading}
+            disabled={deleteRestaurant.isPending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {loading ? 'Suppression...' : 'Supprimer'}
+            {deleteRestaurant.isPending ? 'Suppression...' : 'Supprimer'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

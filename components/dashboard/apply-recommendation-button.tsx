@@ -52,7 +52,7 @@ export function ApplyRecommendationButton({ recommendationId }: ApplyRecommendat
 
   if (applied) {
     return (
-      <Button disabled size="sm" className="bg-green-600 hover:bg-green-700">
+      <Button disabled size="sm" className="bg-teal-600 hover:bg-teal-700">
         <Check className="mr-2 h-4 w-4" />
         Appliquée
       </Button>

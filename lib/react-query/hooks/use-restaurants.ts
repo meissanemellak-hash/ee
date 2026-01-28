@@ -19,6 +19,24 @@ export interface RestaurantsResponse {
   totalPages: number
 }
 
+export interface RestaurantDetailSale {
+  id: string
+  amount: number
+  quantity: number
+  saleDate: string
+  product: { name: string }
+}
+
+export interface RestaurantDetail extends Restaurant {
+  _count?: {
+    sales: number
+    alerts: number
+    inventory: number
+  }
+  totalRevenue?: number
+  recentSales?: RestaurantDetailSale[]
+}
+
 export function useRestaurants(page: number = 1, limit: number = 50) {
   const { organization } = useOrganization()
 
@@ -26,18 +44,18 @@ export function useRestaurants(page: number = 1, limit: number = 50) {
     queryKey: ['restaurants', organization?.id, page, limit],
     queryFn: async () => {
       if (!organization?.id) return { restaurants: [], total: 0, page: 1, limit, totalPages: 0 }
-      
+
       const queryParams = new URLSearchParams()
       queryParams.append('clerkOrgId', organization.id)
       queryParams.append('page', page.toString())
       queryParams.append('limit', limit.toString())
-      
+
       const response = await fetch(`/api/restaurants?${queryParams.toString()}`)
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch restaurants')
       }
-      
+
       return response.json() as Promise<RestaurantsResponse>
     },
     enabled: !!organization?.id,
@@ -61,7 +79,7 @@ export function useRestaurant(id: string | undefined) {
         throw new Error('Failed to fetch restaurant')
       }
       
-      return response.json() as Promise<Restaurant>
+      return response.json() as Promise<RestaurantDetail | null>
     },
     enabled: !!id && !!organization?.id,
   })
@@ -162,14 +180,25 @@ export function useDeleteRestaurant() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to delete restaurant')
+        const text = await response.text()
+        let message = 'Failed to delete restaurant'
+        try {
+          if (text) {
+            const error = JSON.parse(text) as { error?: string }
+            if (error.error) message = error.error
+          }
+        } catch {
+          if (response.statusText) message = response.statusText
+        }
+        throw new Error(message)
       }
 
-      return response.json()
+      const text = await response.text()
+      return text ? (JSON.parse(text) as { success: boolean }) : { success: true }
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['restaurants', organization?.id] })
+      queryClient.invalidateQueries({ queryKey: ['restaurant', id, organization?.id] })
       toast({
         title: 'Restaurant supprimé',
         description: 'Le restaurant a été supprimé avec succès.',

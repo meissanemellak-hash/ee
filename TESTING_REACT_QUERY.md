@@ -7,19 +7,82 @@
 - ✅ Cache configuré (5 min staleTime, 10 min gcTime)
 - ✅ Devtools optionnels (si installés)
 
-### 2. Hooks personnalisés
+### 2. Hooks personnalisés par domaine
+
+#### Restaurants (`lib/react-query/hooks/use-restaurants.ts`)
 - ✅ `useRestaurants(page, limit)` - Liste paginée
-- ✅ `useRestaurant(id)` - Détails
+- ✅ `useRestaurant(id)` - Détails (avec _count, totalRevenue, recentSales)
 - ✅ `useCreateRestaurant()` - Création
 - ✅ `useUpdateRestaurant()` - Modification
 - ✅ `useDeleteRestaurant()` - Suppression
 
-### 3. Composants UI
-- ✅ `RestaurantListSkeleton` - Skeleton de chargement
-- ✅ `Pagination` - Composant de pagination
+#### Produits (`lib/react-query/hooks/use-products.ts`)
+- ✅ `useProducts(page, limit, filters?)` - Liste avec filtres
+- ✅ `useProduct(id)` - Détails
+- ✅ `useCreateProduct()` - Création
+- ✅ `useUpdateProduct()` - Modification
+- ✅ `useDeleteProduct()` - Suppression
+- ✅ `useProductIngredients(productId)` - Recette (ingrédients du produit)
+- ✅ `useAddProductIngredient()` - Ajouter un ingrédient à la recette
+- ✅ `useRemoveProductIngredient()` - Retirer un ingrédient de la recette
 
-### 4. Page migrée
-- ✅ `/dashboard/restaurants` - Utilise maintenant React Query
+#### Ingrédients (`lib/react-query/hooks/use-ingredients.ts`)
+- ✅ `useIngredients(filters?)` - Liste avec filtres
+- ✅ `useIngredient(id)` - Détails
+- ✅ `useCreateIngredient()` - Création
+- ✅ `useUpdateIngredient()` - Modification
+- ✅ `useDeleteIngredient()` - Suppression
+
+#### Inventaire (`lib/react-query/hooks/use-inventory.ts`)
+- ✅ `useInventory(restaurantId)` - Liste des stocks d'un restaurant
+- ✅ `useCreateInventoryItem()` - Création
+- ✅ `useUpdateInventoryItem()` - Modification
+- ✅ `useDeleteInventoryItem()` - Suppression
+
+#### Ventes (`lib/react-query/hooks/use-sales.ts`)
+- ✅ `useSales(organizationId, filters?)` - Liste
+- ✅ `useSalesAnalyze(organizationId, filters?)` - Analyse
+- ✅ `useSale(id)` - Détail d'une vente
+- ✅ `useCreateSale()` - Création
+- ✅ `useUpdateSale()` - Modification
+- ✅ `useDeleteSale()` - Suppression
+- ✅ `useImportSales()` - Import CSV
+
+#### Organisation & paramètres (`lib/react-query/hooks/use-organization.ts`)
+- ✅ `useOrganizationData()` - Données de l'organisation (nom, shrinkPct, etc.)
+- ✅ `useUpdateOrganization()` - Mise à jour des paramètres
+- ✅ `useFixOrganizationId()` - Correction ID organisation
+- ✅ `useCurrentUser()` - ID utilisateur côté serveur
+
+#### Autres (forecasts, recommendations, alerts, reports)
+- ✅ Hooks existants pour prévisions, recommandations, alertes, rapports
+
+### 3. Pages migrées vers React Query
+
+| Page | Hooks utilisés | Skeleton |
+|------|----------------|----------|
+| `/dashboard/restaurants` | useRestaurants, useDeleteRestaurant | ✅ RestaurantListSkeleton |
+| `/dashboard/restaurants/[id]` | useRestaurant, useDeleteRestaurant (bouton Supprimer) | ✅ RestaurantDetailSkeleton |
+| `/dashboard/restaurants/new` | useCreateRestaurant | — |
+| `/dashboard/restaurants/[id]/edit` | useRestaurant, useUpdateRestaurant | ✅ |
+| `/dashboard/restaurants/[id]/inventory` | useRestaurant, useIngredients, useInventory, mutations | ✅ InventoryPageSkeleton |
+| `/dashboard/products` | useProducts, useDeleteProduct | (existant) |
+| `/dashboard/products/new` | useCreateProduct | — |
+| `/dashboard/products/[id]/edit` | useProduct, useIngredients, useProductIngredients, useUpdateProduct, useAddProductIngredient, useRemoveProductIngredient | ✅ |
+| `/dashboard/ingredients` | useIngredients, useDeleteIngredient | (existant) |
+| `/dashboard/ingredients/new` | useCreateIngredient | — |
+| `/dashboard/ingredients/[id]/edit` | useIngredient, useUpdateIngredient | ✅ |
+| `/dashboard/sales` | useRestaurants, useSales | (existant) |
+| `/dashboard/sales/new` | useRestaurants, useProducts, useCreateSale | (existant) |
+| `/dashboard/sales/[id]/edit` | useRestaurants, useProducts, useSale, useUpdateSale | (existant) |
+| `/dashboard/sales/import` | useRestaurants, useImportSales | — |
+| `/dashboard/sales/analyze` | useRestaurants, useSalesAnalyze | (existant) |
+| `/dashboard/settings` | useOrganizationData, useCurrentUser, useUpdateOrganization, useFixOrganizationId | ✅ SettingsPageSkeleton |
+
+### 4. Composants UI
+- ✅ `RestaurantListSkeleton` - Liste restaurants
+- ✅ `Skeleton` (shadcn) - Utilisé sur détail restaurant, edit, inventaire, produits edit, ingrédients edit, paramètres
+- ✅ `Pagination` - Composant de pagination
 
 ## 🧪 Comment tester
 
@@ -29,97 +92,114 @@
 npm run dev
 ```
 
-### 2. Tester la page Restaurants
+### 2. Tester le cache et les skeletons
 
-1. **Aller sur** `/dashboard/restaurants`
-2. **Observer le skeleton** : Si les données se chargent, vous verrez un skeleton avec 6 cards au lieu d'un spinner
-3. **Tester la pagination** : Si vous avez plus de 12 restaurants, vous verrez les boutons de pagination en bas
-4. **Tester le cache** :
-   - Naviguez vers une autre page
-   - Revenez sur `/dashboard/restaurants`
-   - Les données devraient s'afficher instantanément (depuis le cache)
-5. **Tester la suppression** :
-   - Cliquez sur l'icône poubelle d'un restaurant
-   - Confirmez la suppression
-   - La liste devrait se rafraîchir automatiquement
+1. **Restaurants** : Allez sur `/dashboard/restaurants` → skeleton puis liste. Naviguez ailleurs et revenez → données instantanées (cache).
+2. **Détail restaurant** : Cliquez sur un restaurant → skeleton puis fiche. Le détail utilise le cache si la liste était déjà chargée.
+3. **Inventaire** : Depuis un restaurant, « Gérer l'inventaire » → skeleton puis liste (useRestaurant + useIngredients + useInventory).
+4. **Formulaires** : Nouveau restaurant / produit / ingrédient → submit via mutation, toast + redirection. Pas de fetch manuel.
+5. **Paramètres** : `/dashboard/settings` → skeleton puis formulaire organisation + profil.
 
 ### 3. Tester les DevTools (optionnel)
-
-Si vous voulez voir les DevTools React Query :
 
 ```bash
 npm install @tanstack/react-query-devtools --save-dev
 ```
 
-Puis redémarrez le serveur. Vous verrez une icône React Query en bas à gauche de l'écran.
+Puis redémarrez le serveur. Icône React Query en bas à gauche.
 
 ### 4. Vérifier les optimisations
 
 #### Cache
-- Ouvrez les DevTools du navigateur (F12)
-- Allez dans l'onglet "Network"
-- Chargez la page restaurants une première fois
-- Naviguez ailleurs puis revenez
-- Vous ne devriez **pas** voir de nouvelle requête vers `/api/restaurants` (données depuis le cache)
-
-#### Pagination
-- Si vous avez plus de 12 restaurants, vérifiez que :
-  - Seulement 12 restaurants s'affichent
-  - Les boutons de pagination apparaissent
-  - Cliquer sur "2" charge la page suivante
-  - L'URL ne change pas (pagination côté client)
+- Onglet Network (F12) : charger une page, naviguer ailleurs, revenir → pas de nouvelle requête pour la même ressource (cache 5 min).
 
 #### Skeletons
-- Ouvrez les DevTools
-- Allez dans l'onglet "Network"
-- Activez "Slow 3G" dans les throttling
-- Rechargez la page
-- Vous devriez voir le skeleton pendant le chargement
+- Slow 3G dans Network : recharger une page migrée → skeleton visible pendant le chargement.
+
+#### Mutations
+- Création / modification / suppression : toast de succès ou d’erreur, invalidation des queries concernées, liste ou détail à jour sans rechargement manuel.
 
 ## 🔍 Points à vérifier
 
-### ✅ Fonctionnalités
-- [ ] La page restaurants se charge correctement
-- [ ] Le skeleton s'affiche pendant le chargement
-- [ ] Les restaurants s'affichent correctement
-- [ ] La pagination fonctionne (si > 12 restaurants)
-- [ ] La suppression fonctionne et rafraîchit la liste
-- [ ] Le cache fonctionne (pas de requête au retour sur la page)
+### Fonctionnalités
+- [x] Listes (restaurants, produits, ingrédients, ventes) se chargent et s’affichent correctement
+- [x] Skeletons s’affichent pendant le chargement sur les pages concernées
+- [x] Formulaires new/edit (restaurants, produits, ingrédients) envoient les données via les mutations et redirigent après succès
+- [x] Détail restaurant et inventaire utilisent les hooks (useRestaurant, useInventory, etc.)
+- [x] Paramètres : chargement org + user, sauvegarde et « Corriger l’ID » fonctionnent
+- [x] Cache : retour sur une page déjà visitée = affichage immédiat (pas de refetch si données fraîches)
+- [x] La suppression d’un restaurant fonctionne (API DELETE, useDeleteRestaurant, toast + redirection, liste rafraîchie)
 
-### ✅ Performance
-- [ ] Pas de requêtes inutiles (vérifier dans Network tab)
-- [ ] Chargement rapide grâce au cache
-- [ ] Skeleton fluide (pas de flash de contenu)
-
-### ✅ UX
-- [ ] Skeleton au lieu de spinner (meilleure UX)
-- [ ] Pagination intuitive
-- [ ] Messages d'erreur clairs si problème
+### UX
+- [x] Toasts cohérents (succès / erreur) sur les mutations
+- [x] Pas de double toast d’erreur (gestion via useRef où nécessaire)
+- [x] Boutons désactivés pendant les mutations (isPending)
 
 ## 🐛 Problèmes possibles
 
 ### Le skeleton ne s'affiche pas
-- Vérifiez que `RestaurantListSkeleton` est bien importé
-- Vérifiez que `isLoading` est bien utilisé
+- Vérifier que le composant Skeleton (ou le skeleton spécifique) est bien importé et que la condition de chargement utilise `isLoading` (ou équivalent) du hook.
 
-### La pagination ne fonctionne pas
-- Vérifiez que l'API retourne bien `{ restaurants, total, page, limit, totalPages }`
-- Vérifiez que `useRestaurants(page, limit)` est appelé avec les bons paramètres
+### Données non à jour après une mutation
+- Les hooks invalident les queries (invalidateQueries) dans `onSuccess`. Vérifier que la queryKey correspond bien à celle utilisée pour la liste ou le détail.
 
-### Erreur "Cannot read property 'restaurants' of undefined"
-- L'API retourne peut-être encore l'ancien format (tableau)
-- Vérifiez que vous passez `page` et `limit` dans `useRestaurants()`
+### Suppression restaurant (corrigé)
+- L’API `DELETE /api/restaurants/[id]` est implémentée (clerkOrgId en query ou body). Le bouton « Supprimer » utilise `useDeleteRestaurant` ; la réponse est parsée en toute sécurité (pas d’erreur « Unexpected end of JSON input » sur réponse vide).
+
+### Erreur "Cannot read property 'X' of undefined"
+- Certaines API retournent `{ product }`, `{ ingredient }`, `{ restaurant }`. Les hooks ont été adaptés pour retourner directement l’entité (ex. `data.product`). Si une nouvelle API est ajoutée, vérifier le format de réponse.
 
 ## 📝 Notes
 
-- Le cache est actif pendant 5 minutes
-- Les données restent en cache 10 minutes après non-utilisation
-- Les requêtes échouées sont retentées automatiquement 1 fois
-- Le refetch automatique au focus de la fenêtre est désactivé (pour économiser les requêtes)
+- Cache : staleTime 5 min, gcTime 10 min
+- Les requêtes échouées sont retentées automatiquement (config par défaut React Query)
+- Refetch au focus fenêtre peut être désactivé pour limiter les requêtes (déjà le cas selon la config)
+- Pages avec formulaire : validation côté client avant `mutate()`, toasts d’erreur pour champs invalides
 
-## 🚀 Prochaines étapes
+## 🚀 État de la migration
 
-Une fois que tout fonctionne, vous pouvez :
-1. Migrer d'autres pages vers React Query (products, sales, etc.)
-2. Ajouter la pagination aux autres listes
-3. Implémenter des optimistic updates pour les mutations
+La migration React Query couvre désormais :
+- **Restaurants** : liste, détail, new, edit, inventaire
+- **Produits** : liste, new, edit (avec recette / ingrédients)
+- **Ingrédients** : liste, new, edit
+- **Ventes** : liste, analyse, new, edit, import
+- **Paramètres** : organisation, profil utilisateur
+
+Améliorations possibles pour plus tard :
+- Optimistic updates sur les mutations critiques
+- Préchargement (prefetch) sur des liens ou routes probables
+- React Query Devtools en dev pour inspecter le cache
+
+---
+
+## Tests unitaires (Vitest + React Testing Library)
+
+### Installation
+
+```bash
+npm install -D vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/jest-dom vite-tsconfig-paths
+```
+
+### Lancer les tests
+
+```bash
+npm run test        # mode watch (relance à chaque modification)
+npm run test:run    # une seule exécution (CI)
+```
+
+### Fichiers de test
+
+- **Config** : `vitest.config.ts` (alias `@/`, env jsdom), `vitest.setup.ts` (jest-dom)
+- **Utils** : `lib/react-query/__tests__/test-utils.tsx` (wrapper QueryClientProvider)
+- **Hooks restaurants** : `lib/react-query/hooks/__tests__/use-restaurants.test.tsx`
+
+### Ce qui est testé
+
+- **useRestaurants** : appel fetch avec `clerkOrgId` et params de pagination, données retournées, cas d’erreur (fetch non ok).
+- **useCreateRestaurant** : appel POST `/api/restaurants` avec le bon body (name, address, timezone, clerkOrgId), succès et données retournées.
+
+Les tests mockent `@clerk/nextjs` (useOrganization) et `@/hooks/use-toast` pour isoler les hooks React Query.
+
+---
+
+*Dernière mise à jour : vérifications manuelles validées (listes, formulaires, détail, inventaire, paramètres, suppression restaurant).*

@@ -167,3 +167,81 @@ export async function GET(
     )
   }
 }
+
+/**
+ * DELETE /api/restaurants/[id]
+ * Supprime un restaurant (et ses données en cascade)
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { userId, orgId: authOrgId } = auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    let clerkOrgId = searchParams.get('clerkOrgId')
+    if (!clerkOrgId) {
+      try {
+        const body = await request.json()
+        clerkOrgId = (body as { clerkOrgId?: string }).clerkOrgId ?? null
+      } catch {
+        // body vide ou invalide
+      }
+    }
+    const orgIdToUse = authOrgId || clerkOrgId
+
+    let organization: Awaited<ReturnType<typeof prisma.organization.findUnique>> = null
+
+    if (orgIdToUse) {
+      organization = await prisma.organization.findUnique({
+        where: { clerkOrgId: orgIdToUse },
+      })
+    }
+    if (!organization) {
+      organization = await getCurrentOrganization()
+    }
+
+    if (!organization) {
+      return NextResponse.json(
+        {
+          error: 'Organization not found',
+          details: "L'organisation n'a pas pu être trouvée. Veuillez rafraîchir la page.",
+        },
+        { status: 404 }
+      )
+    }
+
+    const restaurant = await prisma.restaurant.findFirst({
+      where: {
+        id: params.id,
+        organizationId: organization.id,
+      },
+    })
+
+    if (!restaurant) {
+      return NextResponse.json(
+        { error: 'Restaurant not found or does not belong to your organization' },
+        { status: 404 }
+      )
+    }
+
+    await prisma.restaurant.delete({
+      where: { id: params.id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('[DELETE /api/restaurants/[id]] Erreur:', error)
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Erreur inconnue',
+      },
+      { status: 500 }
+    )
+  }
+}

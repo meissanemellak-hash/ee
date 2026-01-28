@@ -3,8 +3,10 @@
 import { useState, useMemo } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Loader2, AlertTriangle, CheckCircle2, RefreshCw, Filter, XCircle } from 'lucide-react'
+import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -33,10 +35,10 @@ interface Alert {
 }
 
 const severityColors = {
-  low: 'bg-blue-100 text-blue-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  high: 'bg-orange-100 text-orange-800',
-  critical: 'bg-red-100 text-red-800',
+  low: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
+  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 }
 
 const severityLabels = {
@@ -112,277 +114,319 @@ export default function AlertsPage() {
 
   if (!isLoaded) {
     return (
-      <div className="p-6 space-y-6">
-        <Card className="border shadow-sm">
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">
-              Chargement de votre organisation...
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">Chargement de votre organisation...</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
+  if (isLoaded && !organization?.id) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Alertes</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Alertes nécessitant votre attention
+            </p>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <AlertTriangle className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold">Aucune organisation active</h2>
+              <p className="text-muted-foreground">
+                Veuillez sélectionner une organisation pour accéder aux alertes.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/alerts">Retour aux alertes</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Alertes</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Alertes nécessitant votre attention
+            </p>
+          </header>
+          <Card className="rounded-xl border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-red-800 dark:text-red-400">
+                Une erreur s’est produite lors du chargement des alertes. Vérifiez votre connexion et réessayez.
+              </p>
+              <Button variant="outline" onClick={() => refetch()} className="border-red-300 dark:border-red-800 text-red-800 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20">
+                Réessayer
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Alertes</h1>
-          <p className="text-muted-foreground mt-1">
-            Alertes nécessitant votre attention
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={() => refetch()}
-            disabled={isLoading}
-            className="shadow-sm"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Actualiser
-          </Button>
-          {selectedRestaurant !== 'all' && (
-            <>
-              <Button
-                onClick={() => handleGenerateAlerts(false)}
-                disabled={generateAlerts.isPending || isLoading}
-                className="shadow-sm"
-              >
-                {generateAlerts.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Génération...
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Générer les alertes
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleGenerateAlerts(true)}
-                disabled={generateAlerts.isPending || isLoading}
-                className="shadow-sm"
-              >
-                {generateAlerts.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Génération...
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Alertes de test
-                  </>
-                )}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Statistiques (Style Sequence) */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-gray-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground mt-2">Alertes</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Critiques</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-600">{stats.critical}</div>
-            <p className="text-xs text-muted-foreground mt-2">Non résolues</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Élevées</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600">{stats.high}</div>
-            <p className="text-xs text-muted-foreground mt-2">Non résolues</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Moyennes</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">{stats.medium}</div>
-            <p className="text-xs text-muted-foreground mt-2">Non résolues</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Résolues</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">{stats.resolved}</div>
-            <p className="text-xs text-muted-foreground mt-2">Cette période</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtres (Style Sequence) */}
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtres
-          </CardTitle>
-          <CardDescription className="mt-1">
-            Filtrez les alertes par restaurant, type, sévérité ou statut
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Restaurant</label>
-              <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                  <SelectValue placeholder="Tous les restaurants" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les restaurants</SelectItem>
-                  {restaurants.map((restaurant) => (
-                    <SelectItem key={restaurant.id} value={restaurant.id}>
-                      {restaurant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
-              <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                  <SelectValue placeholder="Tous les types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les types</SelectItem>
-                  <SelectItem value="OVERSTOCK">Surstock</SelectItem>
-                  <SelectItem value="SHORTAGE">Rupture de stock</SelectItem>
-                  <SelectItem value="OVERSTAFFING">Sur-effectif</SelectItem>
-                  <SelectItem value="UNDERSTAFFING">Sous-effectif</SelectItem>
-                  <SelectItem value="OTHER">Autre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sévérité</label>
-              <Select value={selectedSeverity} onValueChange={setSelectedSeverity}>
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                  <SelectValue placeholder="Toutes les sévérités" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les sévérités</SelectItem>
-                  <SelectItem value="critical">Critique</SelectItem>
-                  <SelectItem value="high">Élevée</SelectItem>
-                  <SelectItem value="medium">Moyenne</SelectItem>
-                  <SelectItem value="low">Faible</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Statut</label>
-              <Select
-                value={showResolved ? 'resolved' : 'active'}
-                onValueChange={(value) => setShowResolved(value === 'resolved')}
-              >
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                  <SelectValue placeholder="Statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Actives</SelectItem>
-                  <SelectItem value="resolved">Résolues</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Alertes">
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Alertes</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Alertes nécessitant votre attention
+            </p>
+            {alerts.length >= 0 && (
+              <p className="text-xs text-muted-foreground mt-1 font-medium">
+                {alerts.length} alerte{alerts.length !== 1 ? 's' : ''}
+              </p>
+            )}
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => refetch()}
+              disabled={isLoading}
+              className="shadow-sm"
+              aria-label="Actualiser la liste des alertes"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Actualiser
+            </Button>
+            {selectedRestaurant !== 'all' && (
+              <>
+                <Button
+                  onClick={() => handleGenerateAlerts(false)}
+                  disabled={generateAlerts.isPending || isLoading}
+                  className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+                >
+                  {generateAlerts.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Générer les alertes
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleGenerateAlerts(true)}
+                  disabled={generateAlerts.isPending || isLoading}
+                  className="shadow-sm"
+                >
+                  {generateAlerts.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Alertes de test
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+        </header>
 
-      {/* Liste des alertes (Style Sequence) */}
-      {isLoading ? (
-        <AlertListSkeleton />
-      ) : error ? (
-        <Card className="border shadow-sm">
-          <CardContent className="py-12 text-center">
-            <p className="text-red-600 dark:text-red-400">
-              Erreur lors du chargement des alertes. Veuillez réessayer.
-            </p>
-          </CardContent>
-        </Card>
-      ) : filteredAlerts.length === 0 ? (
-        <Card className="border shadow-sm">
-          <CardContent className="py-16 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-              <AlertTriangle className="h-8 w-8 text-muted-foreground" />
+        <div className="grid gap-4 md:grid-cols-5">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{stats.total}</div>
+              <p className="text-xs text-muted-foreground mt-2">Alertes</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Critiques</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-700 dark:text-red-400">{stats.critical}</div>
+              <p className="text-xs text-muted-foreground mt-2">Non résolues</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Élevées</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">{stats.high}</div>
+              <p className="text-xs text-muted-foreground mt-2">Non résolues</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Moyennes</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{stats.medium}</div>
+              <p className="text-xs text-muted-foreground mt-2">Non résolues</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Résolues</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{stats.resolved}</div>
+              <p className="text-xs text-muted-foreground mt-2">Cette période</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="rounded-xl border shadow-sm bg-card" role="search" aria-label="Filtres alertes">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Filter className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+              Filtres
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Filtrez les alertes par restaurant, type, sévérité ou statut
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="space-y-2">
+                <Label htmlFor="alert-filter-restaurant">Restaurant</Label>
+                <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+                  <SelectTrigger id="alert-filter-restaurant" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par restaurant">
+                    <SelectValue placeholder="Tous les restaurants" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les restaurants</SelectItem>
+                    {restaurants.map((restaurant) => (
+                      <SelectItem key={restaurant.id} value={restaurant.id}>
+                        {restaurant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="alert-filter-type">Type</Label>
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger id="alert-filter-type" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par type">
+                    <SelectValue placeholder="Tous les types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les types</SelectItem>
+                    <SelectItem value="OVERSTOCK">Surstock</SelectItem>
+                    <SelectItem value="SHORTAGE">Rupture de stock</SelectItem>
+                    <SelectItem value="OVERSTAFFING">Sur-effectif</SelectItem>
+                    <SelectItem value="UNDERSTAFFING">Sous-effectif</SelectItem>
+                    <SelectItem value="OTHER">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="alert-filter-severity">Sévérité</Label>
+                <Select value={selectedSeverity} onValueChange={setSelectedSeverity}>
+                  <SelectTrigger id="alert-filter-severity" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par sévérité">
+                    <SelectValue placeholder="Toutes les sévérités" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les sévérités</SelectItem>
+                    <SelectItem value="critical">Critique</SelectItem>
+                    <SelectItem value="high">Élevée</SelectItem>
+                    <SelectItem value="medium">Moyenne</SelectItem>
+                    <SelectItem value="low">Faible</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="alert-filter-status">Statut</Label>
+                <Select
+                  value={showResolved ? 'resolved' : 'active'}
+                  onValueChange={(value) => setShowResolved(value === 'resolved')}
+                >
+                  <SelectTrigger id="alert-filter-status" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par statut (actives ou résolues)">
+                    <SelectValue placeholder="Statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Actives</SelectItem>
+                    <SelectItem value="resolved">Résolues</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold mb-2">
-              {showResolved ? 'Aucune alerte résolue' : 'Aucune alerte active'}
-            </h3>
-            <p className="text-muted-foreground">
-              {showResolved
-                ? 'Aucune alerte résolue trouvée avec ces filtres.'
-                : 'Aucune alerte active. Tout va bien !'}
-            </p>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-4">
+
+        {isLoading ? (
+          <AlertListSkeleton />
+        ) : filteredAlerts.length === 0 ? (
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-teal-100 to-emerald-100 dark:from-teal-900/30 dark:to-emerald-900/30 flex items-center justify-center mb-5">
+                <AlertTriangle className="h-8 w-8 text-teal-600 dark:text-teal-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">
+                {showResolved ? 'Aucune alerte résolue' : 'Aucune alerte active'}
+              </h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                {showResolved
+                  ? 'Aucune alerte résolue trouvée avec ces filtres.'
+                  : 'Aucune alerte active. Tout va bien !'}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <section className="space-y-4" aria-label="Liste des alertes">
           {filteredAlerts.map((alert) => (
-            <Card 
-              key={alert.id} 
-              className={`border shadow-sm hover:shadow-md transition-shadow duration-200 ${
+            <Card
+              key={alert.id}
+              className={`rounded-xl border shadow-sm bg-card hover:shadow-md transition-shadow duration-200 ${
                 alert.resolved ? 'opacity-60' : ''
               } ${
-                alert.severity === 'critical' 
-                  ? 'border-l-4 border-l-red-500' 
+                alert.severity === 'critical'
+                  ? 'border-l-4 border-l-red-500'
                   : alert.severity === 'high'
                   ? 'border-l-4 border-l-orange-500'
                   : alert.severity === 'medium'
                   ? 'border-l-4 border-l-yellow-500'
-                  : 'border-l-4 border-l-blue-500'
+                  : 'border-l-4 border-l-teal-500'
               }`}
             >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      <div className={`h-8 w-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
                         alert.severity === 'critical'
                           ? 'bg-red-100 dark:bg-red-900/30'
                           : alert.severity === 'high'
                           ? 'bg-orange-100 dark:bg-orange-900/30'
                           : alert.severity === 'medium'
                           ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                          : 'bg-blue-100 dark:bg-blue-900/30'
+                          : 'bg-teal-100 dark:bg-teal-900/30'
                       }`}>
                         <AlertTriangle
                           className={`h-4 w-4 ${
@@ -392,7 +436,7 @@ export default function AlertsPage() {
                               ? 'text-orange-600 dark:text-orange-400'
                               : alert.severity === 'medium'
                               ? 'text-yellow-600 dark:text-yellow-400'
-                              : 'text-blue-600 dark:text-blue-400'
+                              : 'text-teal-600 dark:text-teal-400'
                           }`}
                         />
                       </div>
@@ -414,14 +458,14 @@ export default function AlertsPage() {
                           ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
                           : alert.severity === 'medium'
                           ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
-                          : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                          : 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800'
                       }`}
                     >
                       {severityLabels[alert.severity as keyof typeof severityLabels] ||
                         alert.severity}
                     </span>
                     {alert.resolved && (
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800">
                         <CheckCircle2 className="h-3 w-3" />
                         Résolue
                       </span>
@@ -440,6 +484,7 @@ export default function AlertsPage() {
                         onClick={() => handleResolve(alert.id, false)}
                         disabled={updateAlertStatus.isPending}
                         className="shadow-sm"
+                        aria-label="Réactiver cette alerte"
                       >
                         {updateAlertStatus.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -455,7 +500,8 @@ export default function AlertsPage() {
                         size="sm"
                         onClick={() => handleResolve(alert.id, true)}
                         disabled={updateAlertStatus.isPending}
-                        className="shadow-sm"
+                        className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+                        aria-label={`Résoudre l’alerte : ${alert.message.slice(0, 50)}${alert.message.length > 50 ? '…' : ''}`}
                       >
                         {updateAlertStatus.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -472,8 +518,9 @@ export default function AlertsPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
-      )}
-    </div>
+          </section>
+        )}
+      </div>
+    </main>
   )
 }

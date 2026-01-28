@@ -149,11 +149,12 @@ export function useDeleteForecast() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!organization?.id) throw new Error('No organization selected')
-      
-      const response = await fetch(`/api/forecasts/${id}`, {
+
+      const url = new URL(`/api/forecasts/${id}`, window.location.origin)
+      url.searchParams.set('clerkOrgId', organization.id)
+
+      const response = await fetch(url.toString(), {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clerkOrgId: organization.id }),
       })
 
       if (!response.ok) {

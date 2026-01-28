@@ -8,21 +8,22 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Package, ArrowLeft, Plus, Save } from 'lucide-react'
+import { Loader2, ArrowLeft, Plus, Save } from 'lucide-react'
 import Link from 'next/link'
+import { useCreateProduct } from '@/lib/react-query/hooks/use-products'
 
 export default function NewProductPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
-  const [loading, setLoading] = useState(false)
+  const createProduct = useCreateProduct()
   const [formData, setFormData] = useState({
     name: '',
     category: '',
     unitPrice: '',
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!isLoaded) {
@@ -43,115 +44,87 @@ export default function NewProductPage() {
       return
     }
 
-    setLoading(true)
-
-    try {
-      const unitPrice = parseFloat(formData.unitPrice)
-      
-      if (isNaN(unitPrice) || unitPrice <= 0) {
-        throw new Error('Le prix doit être un nombre positif')
-      }
-
-      let response = await fetch('/api/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          category: formData.category.trim() || null,
-          unitPrice,
-          clerkOrgId: organization.id, // Passer l'orgId depuis le client
-        }),
-      })
-
-      // Si erreur "Organization not found", essayer de forcer la synchronisation
-      if (!response.ok) {
-        const error = await response.json()
-        if (error.error === 'Organization not found' || error.details?.includes('synchronisée')) {
-          console.log('Tentative de synchronisation de l\'organisation...')
-          // Forcer la synchronisation
-          await fetch('/api/organizations/force-sync', { method: 'POST' })
-          // Attendre un peu pour que la synchronisation se termine
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          // Réessayer la création
-          response = await fetch('/api/products', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              name: formData.name.trim(),
-              category: formData.category.trim() || null,
-              unitPrice,
-              clerkOrgId: organization.id, // Passer l'orgId depuis le client
-            }),
-          })
-        }
-      }
-
-      if (!response.ok) {
-        const error = await response.json()
-        const errorMessage = error.details || error.error || 'Erreur lors de la création'
-        
-        // Si c'est toujours un problème de synchronisation, proposer de rafraîchir
-        if (errorMessage.includes('synchronisée') || errorMessage.includes('Organization not found')) {
-          throw new Error(`${errorMessage} Veuillez rafraîchir la page et réessayer.`)
-        }
-        
-        throw new Error(errorMessage)
-      }
-
-      const data = await response.json()
-      
+    if (!formData.name.trim()) {
       toast({
-        title: 'Produit créé',
-        description: `${data.product.name} a été créé avec succès.`,
-      })
-
-      router.push('/dashboard/products')
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
+        title: 'Champ requis',
+        description: 'Le nom du produit est obligatoire.',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
+      return
     }
+
+    const unitPrice = parseFloat(formData.unitPrice)
+    if (isNaN(unitPrice) || unitPrice <= 0) {
+      toast({
+        title: 'Erreur',
+        description: 'Le prix doit être un nombre positif.',
+        variant: 'destructive',
+      })
+      return
+    }
+    createProduct.mutate(
+      {
+        name: formData.name.trim(),
+        category: formData.category.trim() || undefined,
+        unitPrice,
+      },
+      { onSuccess: () => router.push('/dashboard/products') }
+    )
+  }
+
+  if (isLoaded && !organization?.id) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Aucune organisation active. Veuillez sélectionner une organisation pour ajouter un produit.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/products">Retour aux produits</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/products">
-          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
-            <ArrowLeft className="h-4 w-4" />
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Créer un nouveau produit">
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <header className="flex items-center gap-4 pb-6 border-b border-border/60">
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des produits">
+            <Link href="/dashboard/products" className="hover:opacity-80 transition-opacity">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </Button>
-        </Link>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <Plus className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Nouveau produit</h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md flex-shrink-0" aria-hidden>
+                <Plus className="h-5 w-5 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">Nouveau produit</h1>
+            </div>
             <p className="text-muted-foreground">
               Ajoutez un nouveau produit à votre catalogue
             </p>
           </div>
-        </div>
-      </div>
+        </header>
 
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Informations du produit</CardTitle>
-          <CardDescription className="mt-1">
-            Remplissez les informations pour créer un nouveau produit
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Informations du produit</CardTitle>
+            <CardDescription className="mt-1">
+              Remplissez les informations pour créer un nouveau produit. Les champs marqués d’un * sont obligatoires.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="form-desc" noValidate>
+            <p id="form-desc" className="sr-only">
+              Formulaire de création d’un produit : nom, catégorie et prix unitaire.
+            </p>
             <div className="space-y-2">
               <Label htmlFor="name">Nom du produit *</Label>
               <Input
@@ -160,7 +133,7 @@ export default function NewProductPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Burger Classique"
                 required
-                disabled={loading}
+                disabled={createProduct.isPending}
               />
             </div>
 
@@ -171,7 +144,7 @@ export default function NewProductPage() {
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 placeholder="Burger, Boisson, Dessert..."
-                disabled={loading}
+                disabled={createProduct.isPending}
               />
               <p className="text-xs text-muted-foreground">
                 Optionnel. Permet de regrouper vos produits par catégorie.
@@ -189,16 +162,20 @@ export default function NewProductPage() {
                 onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
                 placeholder="12.50"
                 required
-                disabled={loading}
+                disabled={createProduct.isPending}
               />
               <p className="text-xs text-muted-foreground">
                 Prix de vente unitaire du produit en euros.
               </p>
             </div>
 
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={loading} className="shadow-sm">
-                {loading ? (
+            <div className="flex flex-wrap gap-4 pt-4">
+              <Button
+                type="submit"
+                disabled={createProduct.isPending}
+                className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+              >
+                {createProduct.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Création...
@@ -214,7 +191,7 @@ export default function NewProductPage() {
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
-                disabled={loading}
+                disabled={createProduct.isPending}
                 className="shadow-sm"
               >
                 Annuler
@@ -223,6 +200,7 @@ export default function NewProductPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </main>
   )
 }

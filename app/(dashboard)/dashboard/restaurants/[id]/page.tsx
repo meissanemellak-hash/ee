@@ -1,188 +1,220 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useEffect, useRef } from 'react'
+import { useParams } from 'next/navigation'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
-import { Edit, Trash2, TrendingUp, Bell, Package, Loader2, Warehouse, Store, MapPin } from 'lucide-react'
+import { Edit, TrendingUp, Bell, Package, Warehouse, Store, MapPin } from 'lucide-react'
 import { DeleteRestaurantButton } from '@/components/restaurants/delete-restaurant-button'
 import { useToast } from '@/hooks/use-toast'
+import { useRestaurant } from '@/lib/react-query/hooks/use-restaurants'
+import { Skeleton } from '@/components/ui/skeleton'
 
-interface Sale {
-  id: string
-  amount: number
-  quantity: number
-  saleDate: string
-  product: {
-    name: string
-  }
-}
-
-interface Restaurant {
-  id: string
-  name: string
-  address: string | null
-  timezone: string
-  createdAt: string
-  _count?: {
-    sales: number
-    alerts: number
-    inventory: number
-  }
-  recentSales?: Sale[]
-  totalRevenue?: number
+function RestaurantDetailSkeleton() {
+  return (
+    <div className="p-6 space-y-6" aria-hidden>
+      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-12 w-12 rounded-lg flex-shrink-0" />
+          <div className="space-y-2 min-w-0">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-24 rounded-md" />
+          <Skeleton className="h-10 w-32 rounded-md" />
+        </div>
+      </header>
+      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="rounded-xl border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-4 rounded" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-9 w-16 mb-2" />
+              <Skeleton className="h-3 w-32" />
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="rounded-xl border shadow-sm">
+          <CardHeader>
+            <Skeleton className="h-6 w-28" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full rounded" />
+            <Skeleton className="h-10 w-full rounded" />
+          </CardContent>
+        </Card>
+        <Card className="rounded-xl border shadow-sm">
+          <CardHeader>
+            <Skeleton className="h-6 w-32 mb-2" />
+            <Skeleton className="h-4 w-40" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }
 
 export default function RestaurantDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
-  const [loading, setLoading] = useState(true)
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const id = params?.id as string | undefined
+  const { data: restaurant, isLoading, isError, error, refetch } = useRestaurant(id)
+  const hasToastedError = useRef(false)
 
   useEffect(() => {
-    if (params.id && isLoaded && organization?.id) {
-      fetchRestaurant()
-    } else if (isLoaded && !organization?.id) {
-      setError('Aucune organisation active. Veuillez sélectionner une organisation.')
-      setLoading(false)
-    }
-  }, [params.id, isLoaded, organization?.id])
-
-  const fetchRestaurant = async () => {
-    if (!organization?.id) return
-
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      
-      const response = await fetch(`/api/restaurants/${params.id}?${queryParams.toString()}`)
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          setError('Restaurant introuvable')
-          toast({
-            title: 'Restaurant introuvable',
-            description: 'Le restaurant que vous recherchez n\'existe pas.',
-            variant: 'destructive',
-          })
-          return
-        }
-        throw new Error('Erreur lors du chargement du restaurant')
-      }
-
-      const data = await response.json()
-      setRestaurant(data)
-    } catch (error) {
-      console.error('Error fetching restaurant:', error)
-      setError(error instanceof Error ? error.message : 'Impossible de charger les données')
+    if (isError && error && !hasToastedError.current) {
+      hasToastedError.current = true
       toast({
         title: 'Erreur',
         description: error instanceof Error ? error.message : 'Impossible de charger les données',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
-  }
+    if (!isError) hasToastedError.current = false
+  }, [isError, error, toast])
 
-  if (!isLoaded || loading) {
+  if (!isLoaded) {
     return (
-      <div className="p-6 space-y-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement du restaurant...'}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">Chargement de votre organisation...</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
-  if (error || !restaurant) {
+  if (isLoaded && !organization?.id) {
     return (
-      <div className="p-6 space-y-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">
-              {error || 'Restaurant introuvable. Veuillez rafraîchir la page.'}
-            </p>
-            <Button asChild>
-              <Link href="/dashboard/restaurants">Retour aux restaurants</Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <Card className="rounded-xl border shadow-sm bg-card/95">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Aucune organisation active. Veuillez sélectionner une organisation.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/restaurants">Retour aux restaurants</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return <RestaurantDetailSkeleton />
+  }
+
+  if (isError || !restaurant) {
+    const isNotFound = !restaurant && !isLoading
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          <Card className="rounded-xl border shadow-sm border-red-200/50 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                {isNotFound
+                  ? 'Restaurant introuvable ou supprimé. Vérifiez le lien ou retournez à la liste.'
+                  : 'Une erreur s’est produite lors du chargement. Vérifiez votre connexion et réessayez.'}
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {!isNotFound && (
+                  <Button variant="outline" onClick={() => refetch()}>
+                    Réessayer
+                  </Button>
+                )}
+                <Button asChild variant={isNotFound ? 'default' : 'outline'} className={isNotFound ? 'bg-teal-600 hover:bg-teal-700 text-white border-0' : ''}>
+                  <Link href="/dashboard/restaurants">Retour aux restaurants</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-              <Store className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">{restaurant.name}</h1>
-              {restaurant.address && (
-                <p className="text-muted-foreground flex items-center gap-1 mt-1">
-                  <MapPin className="h-4 w-4" />
-                  {restaurant.address}
-                </p>
-              )}
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Détail du restaurant ${restaurant.name}`}>
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        {/* Header */}
+        <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm" aria-hidden>
+                <Store className="h-6 w-6 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-3xl font-bold tracking-tight truncate">{restaurant.name}</h1>
+                {restaurant.address && (
+                  <p className="text-muted-foreground flex items-center gap-1 mt-1">
+                    <MapPin className="h-4 w-4 flex-shrink-0" aria-hidden />
+                    <span className="truncate">{restaurant.address}</span>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild className="shadow-sm">
-            <Link href={`/dashboard/restaurants/${restaurant.id}/edit`}>
-              <Edit className="h-4 w-4 mr-2" />
-              Modifier
-            </Link>
-          </Button>
-          <DeleteRestaurantButton restaurantId={restaurant.id} restaurantName={restaurant.name} />
-        </div>
-      </div>
+          <nav className="flex flex-wrap gap-2 shrink-0" aria-label="Actions du restaurant">
+            <Button variant="outline" asChild className="shadow-sm border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20" aria-label={`Modifier ${restaurant.name}`}>
+              <Link href={`/dashboard/restaurants/${restaurant.id}/edit`}>
+                <Edit className="h-4 w-4 mr-2" />
+                Modifier
+              </Link>
+            </Button>
+            <DeleteRestaurantButton restaurantId={restaurant.id} restaurantName={restaurant.name} />
+          </nav>
+        </header>
 
-      {/* KPIs (Style Sequence) */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border shadow-sm">
+        {/* KPIs */}
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" aria-label="Indicateurs clés">
+        <Card className="rounded-xl border shadow-sm bg-card hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Ventes totales
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-teal-600" />
+            <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{restaurant._count?.sales || 0}</div>
+            <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{restaurant._count?.sales || 0}</div>
             <p className="text-xs text-muted-foreground mt-2">
               Toutes périodes confondues
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm">
+        <Card className="rounded-xl border shadow-sm bg-card hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Chiffre d&apos;affaires (7j)
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" aria-hidden="true" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">
+            <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
               {new Intl.NumberFormat('fr-FR', {
                 style: 'currency',
                 currency: 'EUR',
@@ -194,7 +226,7 @@ export default function RestaurantDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className={`border shadow-sm ${
+        <Card className={`rounded-xl border shadow-sm bg-card hover:shadow-md transition-shadow ${
           (restaurant._count?.alerts || 0) > 0 ? 'border-orange-200 dark:border-orange-900/30' : ''
         }`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -202,12 +234,12 @@ export default function RestaurantDetailPage() {
               Alertes actives
             </CardTitle>
             <Bell className={`h-4 w-4 ${
-              (restaurant._count?.alerts || 0) > 0 ? 'text-orange-600' : 'text-muted-foreground'
+              (restaurant._count?.alerts || 0) > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'
             }`} />
           </CardHeader>
           <CardContent>
             <div className={`text-3xl font-bold ${
-              (restaurant._count?.alerts || 0) > 0 ? 'text-orange-600' : ''
+              (restaurant._count?.alerts || 0) > 0 ? 'text-orange-700 dark:text-orange-400' : ''
             }`}>
               {restaurant._count?.alerts || 0}
             </div>
@@ -217,19 +249,19 @@ export default function RestaurantDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm">
+        <Card className="rounded-xl border shadow-sm bg-card hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Articles en stock
             </CardTitle>
-            <Package className="h-4 w-4 text-amber-600" />
+            <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{restaurant._count?.inventory || 0}</div>
+            <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{restaurant._count?.inventory || 0}</div>
             <p className="text-xs text-muted-foreground mt-2 mb-3">
               Ingrédients suivis
             </p>
-            <Button asChild variant="outline" size="sm" className="w-full shadow-sm">
+            <Button asChild variant="outline" size="sm" className="w-full shadow-sm border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20">
               <Link href={`/dashboard/restaurants/${restaurant.id}/inventory`}>
                 <Warehouse className="h-4 w-4 mr-2" />
                 Gérer l'inventaire
@@ -237,15 +269,15 @@ export default function RestaurantDetailPage() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </section>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border shadow-sm">
+        <Card className="rounded-xl border shadow-sm bg-card hover:shadow-md transition-shadow" aria-labelledby="info-title">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Informations</CardTitle>
+            <CardTitle id="info-title" className="text-lg font-semibold">Informations</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex justify-between items-center py-2 border-b border-border/80">
               <span className="text-sm text-muted-foreground">Fuseau horaire</span>
               <span className="text-sm font-medium">{restaurant.timezone}</span>
             </div>
@@ -256,43 +288,50 @@ export default function RestaurantDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm">
+        <Card className="border shadow-sm" aria-labelledby="sales-title">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Ventes récentes</CardTitle>
+            <CardTitle id="sales-title" className="text-lg font-semibold">Ventes récentes</CardTitle>
             <CardDescription>
               Les 10 dernières ventes
             </CardDescription>
           </CardHeader>
           <CardContent>
             {restaurant.recentSales && restaurant.recentSales.length > 0 ? (
-              <div className="space-y-3">
+              <ul className="space-y-3" aria-label="Liste des ventes récentes">
                 {restaurant.recentSales.map((sale) => (
-                  <div key={sale.id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <li
+                    key={sale.id}
+                    className="flex justify-between items-center p-3 rounded-lg bg-muted/50 dark:bg-gray-800/50 hover:bg-muted/80 dark:hover:bg-gray-800 transition-colors"
+                  >
                     <div>
                       <span className="font-medium text-sm">{sale.product.name}</span>
                       <span className="text-muted-foreground ml-2 text-sm">
                         x{sale.quantity}
                       </span>
                     </div>
-                    <span className="font-semibold text-green-600 dark:text-green-400">
+                    <span className="font-semibold text-teal-600 dark:text-teal-400">
                       {new Intl.NumberFormat('fr-FR', {
                         style: 'currency',
                         currency: 'EUR',
                       }).format(sale.amount)}
                     </span>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
-              <div className="py-8 text-center">
+              <div className="py-8 text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Aucune vente récente
+                  Aucune vente enregistrée pour l’instant
                 </p>
+                <Button variant="link" size="sm" asChild className="text-teal-600 dark:text-teal-400">
+                  <Link href="/dashboard/sales/new">Enregistrer une vente</Link>
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-    </div>
+      </div>
+    </main>
   )
 }

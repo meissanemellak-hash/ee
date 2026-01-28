@@ -69,10 +69,9 @@ export async function GET(request: NextRequest) {
 
     if (usePagination) {
       const page = parseInt(pageParam || '1')
-      const limit = parseInt(limitParam || '50')
+      const limit = parseInt(limitParam || '50') || 50
       const skip = (page - 1) * limit
 
-      // Requête optimisée avec select uniquement pour les champs nécessaires
       const [restaurants, total] = await Promise.all([
         prisma.restaurant.findMany({
           where: { organizationId: organization.id },

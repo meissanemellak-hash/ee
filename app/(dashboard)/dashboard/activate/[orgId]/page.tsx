@@ -113,28 +113,28 @@ function ActivateContent() {
   }, [orgId, isLoaded, userMemberships])
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="text-center space-y-4">
-        <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md mb-4">
+    <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Activation de l'organisation" aria-live="polite">
+      <div className="max-w-7xl mx-auto w-full px-6 text-center space-y-4">
+        <div className="mx-auto w-16 h-16 rounded-full bg-teal-600 flex items-center justify-center shadow-md mb-4" aria-hidden="true">
           <Loader2 className="h-8 w-8 animate-spin text-white" />
         </div>
         <h2 className="text-lg font-semibold">Activation de l&apos;organisation en cours...</h2>
         <p className="text-sm text-muted-foreground">Veuillez patienter</p>
       </div>
-    </div>
+    </main>
   )
 }
 
 export default function ActivatePage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+      <main className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Chargement">
         <div className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
+          <div className="mx-auto w-16 h-16 rounded-full bg-teal-600 flex items-center justify-center shadow-md" aria-hidden="true">
             <Loader2 className="h-8 w-8 animate-spin text-white" />
           </div>
         </div>
-      </div>
+      </main>
     }>
       <ActivateContent />
     </Suspense>

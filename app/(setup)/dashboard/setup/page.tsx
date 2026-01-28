@@ -110,22 +110,22 @@ export default async function SetupPage() {
     }
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-6">
-      <div className="w-full max-w-2xl space-y-6">
-        {/* Header (Style Sequence) */}
-        <div className="text-center space-y-3">
-          <div className="mx-auto w-16 h-16 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
-            <Building2 className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">Configuration requise</h1>
-          <p className="text-muted-foreground">
-            Pour accéder au dashboard, vous devez créer ou activer une organisation.
-          </p>
-        </div>
+    <main className="min-h-screen bg-muted/25" role="main" aria-label="Configuration requise">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8">
+        <div className="max-w-2xl mx-auto space-y-8">
+          <header className="pb-6 border-b border-border/60 text-center space-y-3">
+            <div className="mx-auto w-16 h-16 rounded-xl bg-teal-600 flex items-center justify-center shadow-md" aria-hidden="true">
+              <Building2 className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">Configuration requise</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Pour accéder au dashboard, vous devez créer ou activer une organisation.
+            </p>
+          </header>
 
-        {/* Message d'erreur (Style Sequence) */}
-        {clerkError && (
-          <Card className="border shadow-sm border-orange-200 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-900/10">
+          {/* Message d'erreur Clerk */}
+          {clerkError && (
+            <Card className="rounded-xl border shadow-sm border-orange-200 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-900/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-400">
                 <AlertCircle className="h-5 w-5" />
@@ -139,35 +139,35 @@ export default async function SetupPage() {
               <RetryButton />
               <ClearStorageButton />
             </CardContent>
-          </Card>
-        )}
+            </Card>
+          )}
 
-        {availableOrganizations.length > 0 ? (
-          <Card className="border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Organisations disponibles</CardTitle>
-              <CardDescription className="mt-1">
+          {availableOrganizations.length > 0 ? (
+            <Card className="rounded-xl border shadow-sm bg-card">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold" id="setup-orgs-title">Organisations disponibles</CardTitle>
+              <CardDescription className="mt-1" aria-describedby="setup-orgs-title">
                 Vous avez {availableOrganizations.length} organisation{availableOrganizations.length > 1 ? 's' : ''} dans Clerk.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Instructions (Style Sequence) */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-lg p-4 mb-4">
-                <p className="text-sm font-semibold text-blue-900 dark:text-blue-400 mb-2">
+              {/* Instructions */}
+              <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-900/30 rounded-lg p-4 mb-4" role="region" aria-label="Comment activer votre organisation">
+                <p className="text-sm font-semibold text-teal-900 dark:text-teal-400 mb-2">
                   📌 Comment activer votre organisation :
                 </p>
-                <ol className="text-sm text-blue-800 dark:text-blue-300 space-y-1 list-decimal list-inside">
+                <ol className="text-sm text-teal-800 dark:text-teal-300 space-y-1 list-decimal list-inside">
                   <li>Cliquez sur le sélecteur d&apos;organisation en haut à gauche</li>
                   <li>Sélectionnez votre organisation dans le menu déroulant</li>
                   <li>L&apos;organisation sera automatiquement synchronisée et vous serez redirigé vers le dashboard</li>
                 </ol>
               </div>
               
-              {/* Liste des organisations (Style Sequence) */}
-              <div className="space-y-3">
+              {/* Liste des organisations */}
+              <div className="space-y-3" role="list" aria-label="Liste des organisations">
                 {availableOrganizations.map((org) => (
-                  <div key={org.id} className="flex items-center gap-3 p-4 rounded-lg border bg-gray-50/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <div key={org.id} className="flex items-center gap-3 p-4 rounded-xl border border-border bg-muted/30 hover:bg-muted/50 transition-colors" role="listitem">
+                    <div className="h-10 w-10 rounded-lg bg-teal-600 flex items-center justify-center flex-shrink-0" aria-hidden="true">
                       <Building2 className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -180,7 +180,7 @@ export default async function SetupPage() {
                 ))}
               </div>
               
-              {/* Actions (Style Sequence) */}
+              {/* Actions */}
               <div className="pt-4 border-t space-y-4">
                 <div>
                   <p className="text-sm font-medium mb-3 text-center text-muted-foreground">
@@ -208,14 +208,14 @@ export default async function SetupPage() {
                 </div>
               </div>
             </CardContent>
-          </Card>
-        ) : (
-          <Card className="border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
-                Aucune organisation
-              </CardTitle>
+            </Card>
+          ) : (
+            <Card className="rounded-xl border shadow-sm bg-card">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-600" aria-hidden="true" />
+                  Aucune organisation
+                </CardTitle>
               <CardDescription className="mt-1">
                 Vous n&apos;avez pas encore d&apos;organisation. Créez-en une pour commencer.
               </CardDescription>
@@ -225,47 +225,48 @@ export default async function SetupPage() {
                 <CreateOrganizationButton />
               </div>
             </CardContent>
-          </Card>
-        )}
+            </Card>
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   )
   } catch (error) {
     // En cas d'erreur critique, afficher quand même la page avec un message d'erreur
     console.error('❌ Critical error in SetupPage:', error)
     return (
-      <div className="flex items-center justify-center min-h-screen p-6">
-        <div className="w-full max-w-2xl space-y-6">
-          {/* Header (Style Sequence) */}
-          <div className="text-center space-y-3">
-            <div className="mx-auto w-16 h-16 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
-              <Building2 className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight">Configuration requise</h1>
-            <p className="text-muted-foreground">
-              Pour accéder au dashboard, vous devez créer ou activer une organisation.
-            </p>
-          </div>
-          
-          {/* Message d'erreur critique (Style Sequence) */}
-          <Card className="border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-red-800 dark:text-red-400">
-                <AlertCircle className="h-5 w-5" />
-                Erreur
-              </CardTitle>
-              <CardDescription className="mt-1 text-red-700 dark:text-red-300">
-                Une erreur est survenue. Vous pouvez toujours créer une nouvelle organisation.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center">
-                <CreateOrganizationButton />
+      <main className="min-h-screen bg-muted/25" role="main" aria-label="Configuration requise">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8">
+          <div className="max-w-2xl mx-auto space-y-8">
+            <header className="pb-6 border-b border-border/60 text-center space-y-3">
+              <div className="mx-auto w-16 h-16 rounded-xl bg-teal-600 flex items-center justify-center shadow-md" aria-hidden="true">
+                <Building2 className="h-8 w-8 text-white" />
               </div>
-            </CardContent>
-          </Card>
+              <h1 className="text-3xl font-bold tracking-tight">Configuration requise</h1>
+              <p className="text-muted-foreground mt-1.5">
+                Pour accéder au dashboard, vous devez créer ou activer une organisation.
+              </p>
+            </header>
+
+            <Card className="rounded-xl border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2 text-red-800 dark:text-red-400">
+                  <AlertCircle className="h-5 w-5" aria-hidden="true" />
+                  Erreur
+                </CardTitle>
+                <CardDescription className="mt-1 text-red-700 dark:text-red-300">
+                  Une erreur est survenue. Vous pouvez toujours créer une nouvelle organisation.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-center">
+                  <CreateOrganizationButton />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      </main>
     )
   }
 }

@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useOrganization, useUser } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Save, Building2, User, Bell, Shield, Trash2 } from 'lucide-react'
-import { Separator } from '@/components/ui/separator'
+import { Loader2, Save, Building2, User, Bell, Shield, Trash2, AlertCircle } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,254 +18,191 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useOrganizationData, useUpdateOrganization, useFixOrganizationId, useCurrentUser } from '@/lib/react-query/hooks/use-organization'
+import { Skeleton } from '@/components/ui/skeleton'
 
-interface OrganizationData {
-  id: string
-  name: string
-  shrinkPct: number
-  clerkOrgId?: string
-  createdAt: string
-  updatedAt: string
+function SettingsPageSkeleton() {
+  return (
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Paramètres">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-48" />
+          <Skeleton className="h-4 w-80" />
+        </div>
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <Skeleton className="h-6 w-32 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-32" />
+            <div className="flex gap-2 pt-2">
+              <Skeleton className="h-10 w-48" />
+              <Skeleton className="h-10 w-28" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <Skeleton className="h-6 w-36 mb-2" />
+            <Skeleton className="h-4 w-56" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    </main>
+  )
 }
 
 export default function SettingsPage() {
   const { organization, membership, isLoaded: orgLoaded } = useOrganization()
   const { user, isLoaded: userLoaded } = useUser()
   const { toast } = useToast()
-  
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [orgData, setOrgData] = useState<OrganizationData | null>(null)
+  const hasToastedError = useRef(false)
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [serverUserId, setServerUserId] = useState<string | null>(null)
-  
-  // Vérifier si l'utilisateur peut modifier le nom (créateur ou admin)
+
+  const { data: orgData, isLoading: loadingOrg, isError: orgError, refetch: refetchOrg } = useOrganizationData()
+  const { data: currentUserData } = useCurrentUser()
+  const serverUserId = currentUserData?.userId ?? null
+
+  const updateOrganization = useUpdateOrganization()
+  const fixOrgId = useFixOrganizationId()
+
   const canEditName = membership?.role === 'org:admin' || membership?.role === 'org:creator' || organization?.createdBy === user?.id
-  
-  // Form data
+
   const [formData, setFormData] = useState({
     name: '',
     shrinkPct: '0.1',
   })
 
   useEffect(() => {
-    if (orgLoaded && organization?.id) {
-      loadOrganizationData()
-    } else if (orgLoaded && !organization?.id) {
-      setLoading(false)
+    if (orgData) {
+      setFormData({
+        name: orgData.name || '',
+        shrinkPct: (orgData.shrinkPct ?? 0.1).toString(),
+      })
     }
-  }, [orgLoaded, organization?.id])
+  }, [orgData])
 
   useEffect(() => {
-    // Charger l'ID utilisateur depuis le serveur pour comparaison
-    const loadServerUserId = async () => {
-      try {
-        const response = await fetch('/api/user/current')
-        if (response.ok) {
-          const data = await response.json()
-          setServerUserId(data.userId)
-        }
-      } catch (error) {
-        console.error('Error loading server user ID:', error)
-      }
-    }
-    
-    if (userLoaded) {
-      loadServerUserId()
-    }
-  }, [userLoaded])
-
-  const loadOrganizationData = async () => {
-    if (!organization?.id) return
-
-    setLoading(true)
-    try {
-      const response = await fetch(`/api/organizations?clerkOrgId=${organization.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setOrgData(data)
-        setFormData({
-          name: data.name || '',
-          shrinkPct: (data.shrinkPct || 0.1).toString(),
-        })
-      } else {
-        throw new Error('Failed to load organization data')
-      }
-    } catch (error) {
-      console.error('Error loading organization:', error)
+    if (orgError && !hasToastedError.current) {
+      hasToastedError.current = true
       toast({
         title: 'Erreur',
-        description: 'Impossible de charger les données de l\'organisation.',
+        description: 'Impossible de charger les paramètres de l\'organisation.',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
-  }
+    if (!orgError) hasToastedError.current = false
+  }, [orgError, toast])
 
-  const handleSaveOrganization = async () => {
+  const handleSaveOrganization = () => {
     if (!organization?.id) return
-
-    setSaving(true)
-    try {
-      const response = await fetch('/api/organizations/update', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          shrinkPct: parseFloat(formData.shrinkPct),
-          clerkOrgId: organization.id,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        // Si c'est une erreur de permissions, afficher un message spécifique
-        if (response.status === 403 && error.requiresAdmin) {
-          throw new Error(error.details || error.error || 'Vous n\'avez pas les permissions nécessaires pour modifier le nom de l\'organisation.')
-        }
-        throw new Error(error.details || error.error || 'Erreur lors de la sauvegarde')
-      }
-
-      const updatedData = await response.json()
-      setOrgData(updatedData)
-
-      // Afficher un message de succès ou d'information selon le résultat
-      if (updatedData.warning) {
-        // Information (pas d'erreur) - la mise à jour a réussi dans l'app
-        toast({
-          title: '✅ Paramètres mis à jour',
-          description: updatedData.warning,
-          variant: 'default',
-        })
-      } else if (updatedData.clerkSync) {
-        // Synchronisation réussie avec Clerk
-        toast({
-          title: '✅ Succès',
-          description: 'Les paramètres de l\'organisation ont été mis à jour dans l\'application et synchronisés avec Clerk.',
-          variant: 'default',
-        })
-      } else {
-        // Mise à jour réussie dans la DB uniquement (pas de synchronisation Clerk nécessaire)
-        toast({
-          title: '✅ Succès',
-          description: 'Les paramètres de l\'organisation ont été mis à jour avec succès.',
-          variant: 'default',
-        })
-      }
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
+    updateOrganization.mutate({
+      name: formData.name,
+      shrinkPct: parseFloat(formData.shrinkPct),
+    })
   }
 
-  const handleFixOrgId = async () => {
+  const handleFixOrgId = () => {
     if (!organization?.id || !orgData) return
-
-    setSaving(true)
-    try {
-      const response = await fetch('/api/organizations/fix-id', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          correctClerkOrgId: organization.id, // L'ID correct depuis Clerk
-          currentOrgId: orgData.clerkOrgId || orgData.id, // Le clerkOrgId actuel dans la DB
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.details || data.error || 'Erreur lors de la correction de l\'ID')
-      }
-
-      toast({
-        title: 'Succès',
-        description: data.message || 'L\'ID de l\'organisation a été corrigé avec succès.',
-        variant: 'default',
-      })
-
-      // Recharger les données de l'organisation
-      await loadOrganizationData()
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
+    fixOrgId.mutate({
+      correctClerkOrgId: organization.id,
+      currentOrgId: orgData.clerkOrgId || orgData.id,
+    })
   }
 
-  if (!orgLoaded || !userLoaded || loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <Card className="border shadow-sm">
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Chargement des paramètres...</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const saving = updateOrganization.isPending || fixOrgId.isPending
+
+  if (!orgLoaded || !userLoaded || (loadingOrg && !orgData)) {
+    return <SettingsPageSkeleton />
   }
 
   if (!organization) {
     return (
-      <div className="p-6 space-y-6">
-        <Card className="border shadow-sm">
-          <CardContent className="py-16 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-              <Building2 className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Aucune organisation active</h3>
-            <p className="text-muted-foreground">
-              Veuillez sélectionner ou créer une organisation.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Paramètres">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
+            <p className="text-muted-foreground mt-1.5">Gérez les paramètres de votre organisation et votre profil</p>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4" aria-hidden="true">
+                <Building2 className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold mb-2">Aucune organisation active</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Veuillez sélectionner ou créer une organisation pour accéder aux paramètres.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (orgError && organization?.id) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Paramètres">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
+            <p className="text-muted-foreground mt-1.5">Gérez les paramètres de votre organisation et votre profil</p>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4" aria-hidden="true">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+              </div>
+              <h2 className="text-lg font-semibold mb-2">Erreur de chargement</h2>
+              <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                Impossible de charger les paramètres de l&apos;organisation. Vérifiez votre connexion et réessayez.
+              </p>
+              <Button onClick={() => refetchOrg()} variant="default" className="bg-teal-600 hover:bg-teal-700">
+                Réessayer
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
-        <p className="text-muted-foreground mt-1">
-          Gérez les paramètres de votre organisation et votre profil
-        </p>
-      </div>
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Paramètres">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+        <header className="pb-6 border-b border-border/60">
+          <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
+          <p className="text-muted-foreground mt-1.5">
+            Gérez les paramètres de votre organisation et votre profil
+          </p>
+        </header>
 
-      {/* Section Organisation (Style Sequence) */}
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-              <Building2 className="h-4 w-4 text-white" />
+        {/* Section Organisation */}
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center" aria-hidden="true">
+                <Building2 className="h-4 w-4 text-white" />
+              </div>
+              <CardTitle className="text-lg font-semibold" id="org-section-title">Organisation</CardTitle>
             </div>
-            <CardTitle className="text-lg font-semibold">Organisation</CardTitle>
-          </div>
-          <CardDescription className="mt-1">
+          <CardDescription className="mt-1" aria-describedby="org-section-title">
             Informations et paramètres de votre organisation
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="org-name">Nom de l'organisation</Label>
+            <Label htmlFor="org-name">Nom de l&apos;organisation</Label>
             <Input
               id="org-name"
+              aria-label="Nom de l'organisation"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Nom de l'organisation"
@@ -292,6 +228,7 @@ export default function SettingsPage() {
             <div className="flex items-center gap-2">
               <Input
                 id="shrink-pct"
+                aria-label="Pourcentage de shrink (gaspillage) par défaut"
                 type="number"
                 step="0.01"
                 min="0"
@@ -329,21 +266,25 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-4">
-            <Button onClick={handleSaveOrganization} disabled={saving} className="shadow-sm">
+          <div className="flex items-center gap-4 flex-wrap">
+            <Button
+              onClick={handleSaveOrganization}
+              disabled={saving}
+              className="shadow-sm bg-teal-600 hover:bg-teal-700"
+              aria-label={saving ? 'Enregistrement en cours' : 'Enregistrer les modifications'}
+            >
               {saving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
                   Enregistrement...
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="h-4 w-4 mr-2" aria-hidden="true" />
                   Enregistrer les modifications
                 </>
               )}
             </Button>
-            
             {orgData && (
               <Button
                 variant="outline"
@@ -351,23 +292,24 @@ export default function SettingsPage() {
                 disabled={saving}
                 title="Corriger l'ID de l'organisation si il ne correspond pas à celui dans Clerk"
                 className="shadow-sm"
+                aria-label="Corriger l'ID de l'organisation"
               >
-                🔧 Corriger l'ID
+                🔧 Corriger l&apos;ID
               </Button>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Section Profil utilisateur (Style Sequence) */}
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <User className="h-4 w-4 text-white" />
+      {/* Section Profil utilisateur */}
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center" aria-hidden="true">
+                <User className="h-4 w-4 text-white" />
+              </div>
+              <CardTitle className="text-lg font-semibold">Profil utilisateur</CardTitle>
             </div>
-            <CardTitle className="text-lg font-semibold">Profil utilisateur</CardTitle>
-          </div>
           <CardDescription className="mt-1">
             Informations sur votre compte
           </CardDescription>
@@ -376,29 +318,36 @@ export default function SettingsPage() {
           {user && (
             <>
               <div className="space-y-2">
-                <Label>Nom complet</Label>
+                <Label htmlFor="profile-fullname">Nom complet</Label>
                 <Input
+                  id="profile-fullname"
                   value={user.fullName || 'Non défini'}
                   disabled
-                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                  readOnly
+                  aria-readonly="true"
+                  className="bg-muted border-border"
                 />
               </div>
-
               <div className="space-y-2">
-                <Label>Email</Label>
+                <Label htmlFor="profile-email">Email</Label>
                 <Input
+                  id="profile-email"
                   value={user.primaryEmailAddress?.emailAddress || 'Non défini'}
                   disabled
-                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                  readOnly
+                  aria-readonly="true"
+                  className="bg-muted border-border"
                 />
               </div>
-
               <div className="space-y-2">
-                <Label>ID utilisateur (Clerk)</Label>
+                <Label htmlFor="profile-user-id">ID utilisateur (Clerk)</Label>
                 <Input
+                  id="profile-user-id"
                   value={user.id || 'Non disponible'}
                   disabled
-                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 font-mono text-xs"
+                  readOnly
+                  aria-readonly="true"
+                  className="bg-muted border-border font-mono text-xs"
                   placeholder="ID utilisateur depuis Clerk"
                 />
                 {serverUserId && (
@@ -411,19 +360,19 @@ export default function SettingsPage() {
                       </div>
                     )}
                     {user.id && serverUserId && user.id === serverUserId && (
-                      <div className="mt-2 p-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                        <p className="text-xs text-green-700 dark:text-green-400">
+                      <div className="mt-2 p-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
+                        <p className="text-xs text-teal-700 dark:text-teal-400">
                           ✅ L'ID utilisateur est correct et correspond entre client et serveur
                         </p>
                       </div>
                     )}
                   </>
                 )}
-                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <p className="text-xs text-blue-800 dark:text-blue-200 font-semibold mb-1">
+                <div className="mt-4 p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
+                  <p className="text-xs text-teal-800 dark:text-teal-200 font-semibold mb-1">
                     ℹ️ Note importante :
                   </p>
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                  <p className="text-xs text-teal-700 dark:text-teal-300">
                     L'<strong>ID utilisateur</strong> (commence par <code>user_</code>) identifie <strong>votre compte personnel</strong> dans Clerk.
                     <br />
                     L'<strong>ID organisation</strong> (commence par <code>org_</code>) identifie <strong>l'organisation</strong> dans Clerk.
@@ -443,15 +392,15 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Section Préférences (Style Sequence) */}
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-              <Bell className="h-4 w-4 text-white" />
+      {/* Section Préférences */}
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center" aria-hidden="true">
+                <Bell className="h-4 w-4 text-white" />
+              </div>
+              <CardTitle className="text-lg font-semibold">Préférences</CardTitle>
             </div>
-            <CardTitle className="text-lg font-semibold">Préférences</CardTitle>
-          </div>
           <CardDescription className="mt-1">
             Configurez vos préférences de notifications et d'affichage
           </CardDescription>
@@ -471,8 +420,8 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Section Danger Zone (Style Sequence) */}
-      <Card className="border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10">
+      {/* Section Danger Zone */}
+        <Card className="rounded-xl border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10">
         <CardHeader>
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
@@ -504,7 +453,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
 
       {/* Dialog de confirmation de suppression */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -538,6 +488,6 @@ export default function SettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </main>
   )
 }

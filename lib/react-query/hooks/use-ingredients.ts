@@ -95,7 +95,8 @@ export function useIngredient(id: string | undefined) {
         throw new Error('Failed to fetch ingredient')
       }
       
-      return response.json() as Promise<Ingredient>
+      const data = await response.json() as { ingredient: Ingredient }
+      return data.ingredient
     },
     enabled: !!id && !!organization?.id,
   })
@@ -124,10 +125,11 @@ export function useCreateIngredient() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to create ingredient')
+        throw new Error(error.error || error.details || 'Failed to create ingredient')
       }
 
-      return response.json() as Promise<Ingredient>
+      const result = await response.json() as { ingredient: Ingredient }
+      return result.ingredient
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ingredients', organization?.id] })
@@ -166,7 +168,8 @@ export function useUpdateIngredient() {
         throw new Error(error.error || error.details || 'Failed to update ingredient')
       }
 
-      return response.json() as Promise<Ingredient>
+      const result = await response.json() as { ingredient: Ingredient }
+      return result.ingredient
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['ingredients', organization?.id] })

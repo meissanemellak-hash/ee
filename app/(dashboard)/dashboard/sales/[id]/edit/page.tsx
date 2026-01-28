@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, ArrowLeft, ShoppingCart, Save, Link } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Loader2, ArrowLeft, ShoppingCart, Save } from 'lucide-react'
+import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -16,48 +18,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-interface Sale {
-  id: string
-  restaurantId: string
-  productId: string
-  quantity: number
-  amount: number
-  saleDate: string
-  saleHour: number
-  restaurant: {
-    id: string
-    name: string
-  }
-  product: {
-    id: string
-    name: string
-    unitPrice: number
-  }
-}
-
-interface Restaurant {
-  id: string
-  name: string
-}
-
-interface Product {
-  id: string
-  name: string
-  unitPrice: number
-}
+import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
+import { useProducts } from '@/lib/react-query/hooks/use-products'
+import { useSale, useUpdateSale } from '@/lib/react-query/hooks/use-sales'
 
 export default function EditSalePage() {
   const router = useRouter()
   const params = useParams()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
-  const [loading, setLoading] = useState(true)
-  const [loadingData, setLoadingData] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [sale, setSale] = useState<Sale | null>(null)
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
-  const [products, setProducts] = useState<Product[]>([])
+  const saleId = params.id as string
+
+  const { data: restaurantsData, isLoading: loadingRestaurants } = useRestaurants(1, 100)
+  const { data: productsData, isLoading: loadingProducts } = useProducts(1, 100)
+  const { data: sale, isLoading: loadingSale, error: saleError } = useSale(saleId)
+  const updateSale = useUpdateSale()
+
+  const restaurants = restaurantsData?.restaurants || []
+  const products = productsData?.products || []
+  const loadingData = loadingRestaurants || loadingProducts
+
   const [formData, setFormData] = useState({
     restaurantId: '',
     productId: '',
@@ -67,96 +47,20 @@ export default function EditSalePage() {
     saleHour: '',
   })
 
+  // Initialiser le formulaire quand la vente est chargée
   useEffect(() => {
-    if (params.id && isLoaded && organization?.id) {
-      fetchRestaurants()
-      fetchProducts()
-      fetchSale()
-    }
-  }, [params.id, isLoaded, organization?.id])
-
-  const fetchRestaurants = async () => {
-    if (!organization?.id) return
-
-    try {
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      const response = await fetch(`/api/restaurants?${queryParams.toString()}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        setRestaurants(data)
-      }
-    } catch (error) {
-      console.error('Error fetching restaurants:', error)
-    }
-  }
-
-  const fetchProducts = async () => {
-    if (!organization?.id) return
-
-    try {
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      const response = await fetch(`/api/products?${queryParams.toString()}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        setProducts(data.products || [])
-      }
-    } catch (error) {
-      console.error('Error fetching products:', error)
-    }
-  }
-
-  const fetchSale = async () => {
-    if (!organization?.id) {
-      return
-    }
-
-    try {
-      setLoading(true)
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      const response = await fetch(`/api/sales/${params.id}?${queryParams.toString()}`)
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          toast({
-            title: 'Vente introuvable',
-            description: 'La vente que vous recherchez n\'existe pas.',
-            variant: 'destructive',
-          })
-          router.push('/dashboard/sales')
-          return
-        }
-        throw new Error('Erreur lors du chargement de la vente')
-      }
-
-      const data = await response.json()
-      setSale(data)
-      
-      const saleDate = new Date(data.saleDate).toISOString().split('T')[0]
+    if (sale) {
+      const saleDate = new Date(sale.saleDate).toISOString().split('T')[0]
       setFormData({
-        restaurantId: data.restaurantId,
-        productId: data.productId,
-        quantity: data.quantity.toString(),
-        amount: data.amount.toString(),
+        restaurantId: sale.restaurantId,
+        productId: sale.productId,
+        quantity: sale.quantity.toString(),
+        amount: sale.amount.toString(),
         saleDate,
-        saleHour: data.saleHour.toString(),
+        saleHour: sale.saleHour.toString(),
       })
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Impossible de charger la vente',
-        variant: 'destructive',
-      })
-      router.push('/dashboard/sales')
-    } finally {
-      setLoading(false)
-      setLoadingData(false)
     }
-  }
+  }, [sale])
 
   // Calculer automatiquement le montant quand la quantité ou le produit change
   useEffect(() => {
@@ -174,93 +78,138 @@ export default function EditSalePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!organization?.id) {
-      toast({
-        title: 'Erreur',
-        description: 'Aucune organisation active. Veuillez sélectionner une organisation.',
-        variant: 'destructive',
-      })
+
+    if (!organization?.id || !saleId) {
+      toast({ title: 'Erreur', description: 'Aucune organisation active. Sélectionnez une organisation.', variant: 'destructive' })
+      return
+    }
+    if (!formData.restaurantId || !formData.productId) {
+      toast({ title: 'Champs requis', description: 'Restaurant et produit sont obligatoires.', variant: 'destructive' })
       return
     }
 
-    setSaving(true)
+    const quantity = parseInt(formData.quantity, 10)
+    const amount = parseFloat(formData.amount)
+    const saleHour = parseInt(formData.saleHour, 10)
 
-    try {
-      const quantity = parseInt(formData.quantity)
-      const amount = parseFloat(formData.amount)
-      const saleHour = parseInt(formData.saleHour)
-      
-      if (isNaN(quantity) || quantity <= 0) {
-        throw new Error('La quantité doit être un nombre positif')
-      }
+    if (isNaN(quantity) || quantity <= 0) {
+      toast({ title: 'Quantité invalide', description: 'La quantité doit être un entier positif.', variant: 'destructive' })
+      return
+    }
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Montant invalide', description: 'Le montant doit être un nombre positif.', variant: 'destructive' })
+      return
+    }
+    if (isNaN(saleHour) || saleHour < 0 || saleHour > 23) {
+      toast({ title: 'Heure invalide', description: 'L’heure doit être entre 0 et 23.', variant: 'destructive' })
+      return
+    }
 
-      if (isNaN(amount) || amount <= 0) {
-        throw new Error('Le montant doit être un nombre positif')
-      }
-
-      if (isNaN(saleHour) || saleHour < 0 || saleHour > 23) {
-        throw new Error('L\'heure doit être entre 0 et 23')
-      }
-
-      const response = await fetch(`/api/sales/${params.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+    updateSale.mutate(
+      {
+        id: saleId,
+        data: {
           restaurantId: formData.restaurantId,
           productId: formData.productId,
           quantity,
           amount,
           saleDate: formData.saleDate,
           saleHour,
-          clerkOrgId: organization.id,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        const errorMessage = error.details || error.error || 'Erreur lors de la modification'
-        
-        if (errorMessage.includes('synchronisée') || errorMessage.includes('Organization not found')) {
-          throw new Error(`${errorMessage} Veuillez rafraîchir la page et réessayer.`)
-        }
-        
-        throw new Error(errorMessage)
+        } as any,
+      },
+      {
+        onSuccess: () => {
+          router.push('/dashboard/sales')
+        },
       }
-
-      const data = await response.json()
-      
-      toast({
-        title: 'Vente modifiée',
-        description: 'La vente a été modifiée avec succès.',
-      })
-
-      router.push('/dashboard/sales')
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
+    )
   }
 
-  if (!isLoaded || loading || loadingData) {
+  if (!isLoaded) {
     return (
-      <div className="p-6 space-y-6">
-        <Card className="border shadow-sm">
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">
-              {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement de la vente...'}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">Chargement de votre organisation...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (isLoaded && !organization?.id) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Aucune organisation active. Veuillez sélectionner une organisation.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/sales">Retour aux ventes</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (saleId && !loadingSale && (saleError || !sale)) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Card className="rounded-xl border shadow-sm border-red-200/50 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Vente introuvable ou supprimée. Retournez à la liste pour modifier une autre vente.
+              </p>
+              <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
+                <Link href="/dashboard/sales">Retour aux ventes</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (loadingSale || loadingData) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-hidden>
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="flex items-center gap-4 pb-6 border-b border-border/60">
+            <Skeleton className="h-9 w-9 rounded-md shrink-0" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-8 w-56" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader>
+              <Skeleton className="h-6 w-48 mb-2" />
+              <Skeleton className="h-4 w-64" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full rounded-md" />
+              <Skeleton className="h-10 w-full rounded-md" />
+              <Skeleton className="h-10 w-full rounded-md" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full rounded-md" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full rounded-md" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     )
   }
 
@@ -269,47 +218,50 @@ export default function EditSalePage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/sales" className="hover:opacity-80 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <ArrowLeft className="h-4 w-4" />
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Modifier la vente">
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <header className="flex items-center gap-4 pb-6 border-b border-border/60">
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des ventes">
+            <Link href="/dashboard/sales" className="hover:opacity-80 transition-opacity">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </Button>
-        </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
-              <ShoppingCart className="h-5 w-5 text-white" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md flex-shrink-0" aria-hidden>
+                <ShoppingCart className="h-5 w-5 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">Modifier la vente</h1>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Modifier la vente</h1>
+            <p className="text-muted-foreground">
+              Modifiez les informations de la vente
+            </p>
           </div>
-          <p className="text-muted-foreground">
-            Modifiez les informations de la vente
-          </p>
-        </div>
-      </div>
+        </header>
 
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Informations de la vente</CardTitle>
-          <CardDescription className="mt-1">
-            Modifiez les informations ci-dessous
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="restaurantId">Restaurant *</Label>
-              <Select
-                value={formData.restaurantId}
-                onValueChange={(value) => setFormData({ ...formData, restaurantId: value })}
-                required
-                disabled={saving}
-              >
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                  <SelectValue placeholder="Sélectionner un restaurant" />
-                </SelectTrigger>
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Informations de la vente</CardTitle>
+            <CardDescription className="mt-1">
+              Modifiez les informations ci-dessous. Les champs marqués d’un * sont obligatoires.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="edit-sale-form-desc" id="edit-sale-form">
+              <p id="edit-sale-form-desc" className="sr-only">
+                Formulaire de modification de la vente : restaurant, produit, quantité, montant, date et heure.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="restaurantId">Restaurant *</Label>
+                <Select
+                  value={formData.restaurantId}
+                  onValueChange={(value) => setFormData({ ...formData, restaurantId: value })}
+                  required
+                  disabled={updateSale.isPending || loadingData}
+                >
+                  <SelectTrigger id="restaurantId" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Sélectionner un restaurant">
+                    <SelectValue placeholder="Sélectionner un restaurant" />
+                  </SelectTrigger>
                 <SelectContent>
                   {restaurants.map((restaurant) => (
                     <SelectItem key={restaurant.id} value={restaurant.id}>
@@ -318,19 +270,19 @@ export default function EditSalePage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="productId">Produit *</Label>
-              <Select
-                value={formData.productId}
-                onValueChange={(value) => setFormData({ ...formData, productId: value })}
-                required
-                disabled={saving}
-              >
-                <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors">
-                  <SelectValue placeholder="Sélectionner un produit" />
-                </SelectTrigger>
+              <div className="space-y-2">
+                <Label htmlFor="productId">Produit *</Label>
+                <Select
+                  value={formData.productId}
+                  onValueChange={(value) => setFormData({ ...formData, productId: value })}
+                  required
+                  disabled={updateSale.isPending || loadingData}
+                >
+                  <SelectTrigger id="productId" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Sélectionner un produit">
+                    <SelectValue placeholder="Sélectionner un produit" />
+                  </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
@@ -339,102 +291,109 @@ export default function EditSalePage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantité *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                  placeholder="1"
-                  required
-                  disabled={saving}
-                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
-                />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="amount">Montant total (€) *</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  placeholder="0.00"
-                  required
-                  disabled={saving}
-                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Calculé automatiquement ou saisissez manuellement
-                </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantité *</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                    placeholder="1"
+                    required
+                    disabled={updateSale.isPending || loadingData}
+                    className="bg-muted/50 dark:bg-gray-800 border-border"
+                    aria-label="Quantité"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Montant total (€) *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    placeholder="0.00"
+                    required
+                    disabled={updateSale.isPending || loadingData}
+                    className="bg-muted/50 dark:bg-gray-800 border-border"
+                    aria-label="Montant total en euros"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Calculé automatiquement ou saisissez manuellement
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="saleDate">Date de la vente *</Label>
-                <Input
-                  id="saleDate"
-                  type="date"
-                  value={formData.saleDate}
-                  onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
-                  required
-                  disabled={saving}
-                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
-                />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="saleDate">Date de la vente *</Label>
+                  <Input
+                    id="saleDate"
+                    type="date"
+                    value={formData.saleDate}
+                    onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
+                    required
+                    disabled={updateSale.isPending || loadingData}
+                    className="bg-muted/50 dark:bg-gray-800 border-border"
+                    aria-label="Date de la vente"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="saleHour">Heure (0-23) *</Label>
+                  <Input
+                    id="saleHour"
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={formData.saleHour}
+                    onChange={(e) => setFormData({ ...formData, saleHour: e.target.value })}
+                    placeholder="14"
+                    required
+                    disabled={updateSale.isPending || loadingData}
+                    className="bg-muted/50 dark:bg-gray-800 border-border"
+                    aria-label="Heure de la vente (0 à 23)"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="saleHour">Heure (0-23) *</Label>
-                <Input
-                  id="saleHour"
-                  type="number"
-                  min="0"
-                  max="23"
-                  value={formData.saleHour}
-                  onChange={(e) => setFormData({ ...formData, saleHour: e.target.value })}
-                  placeholder="14"
-                  required
-                  disabled={saving}
-                  className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
-                />
+              <div className="flex gap-4 pt-4">
+                <Button
+                  type="submit"
+                  disabled={updateSale.isPending || loadingData}
+                  className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+                >
+                  {updateSale.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Modification...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Enregistrer les modifications
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                  disabled={updateSale.isPending || loadingData}
+                  className="shadow-sm"
+                >
+                  Annuler
+                </Button>
               </div>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={saving} className="shadow-sm">
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Modification...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Enregistrer les modifications
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-                disabled={saving}
-                className="shadow-sm"
-              >
-                Annuler
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </main>
   )
 }

@@ -100,6 +100,69 @@ export function useSales(page: number = 1, limit: number = 50, filters?: {
   })
 }
 
+export interface SalesAnalysis {
+  totalSales: number
+  totalRevenue: number
+  averagePerDay: number
+  topProducts: Array<{
+    productId: string
+    productName: string
+    quantity: number
+    revenue: number
+  }>
+  salesByHour: Array<{
+    hour: number
+    quantity: number
+    revenue: number
+  }>
+  salesByDay: Array<{
+    date: string
+    quantity: number
+    revenue: number
+  }>
+}
+
+export function useSalesAnalyze(filters?: {
+  restaurantId?: string
+  startDate?: string
+  endDate?: string
+}) {
+  const { organization } = useOrganization()
+
+  return useQuery({
+    queryKey: ['salesAnalyze', organization?.id, filters],
+    queryFn: async () => {
+      if (!organization?.id) {
+        return {
+          totalSales: 0,
+          totalRevenue: 0,
+          averagePerDay: 0,
+          topProducts: [],
+          salesByHour: [],
+          salesByDay: [],
+        } as SalesAnalysis
+      }
+
+      const params = new URLSearchParams()
+      params.append('clerkOrgId', organization.id)
+      if (filters?.restaurantId && filters.restaurantId !== 'all') {
+        params.append('restaurantId', filters.restaurantId)
+      }
+      if (filters?.startDate) params.append('startDate', filters.startDate)
+      if (filters?.endDate) params.append('endDate', filters.endDate)
+
+      const response = await fetch(`/api/sales/analyze?${params.toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement de l\'analyse')
+      }
+
+      return response.json() as Promise<SalesAnalysis>
+    },
+    enabled: !!organization?.id,
+  })
+}
+
 export function useSale(id: string | undefined) {
   const { organization } = useOrganization()
 
@@ -217,11 +280,12 @@ export function useDeleteSale() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!organization?.id) throw new Error('No organization selected')
-      
-      const response = await fetch(`/api/sales/${id}`, {
+
+      const url = new URL(`/api/sales/${id}`, window.location.origin)
+      url.searchParams.set('clerkOrgId', organization.id)
+
+      const response = await fetch(url.toString(), {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clerkOrgId: organization.id }),
       })
 
       if (!response.ok) {
@@ -236,6 +300,56 @@ export function useDeleteSale() {
       toast({
         title: 'Vente supprimée',
         description: 'La vente a été supprimée avec succès.',
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useImportSales() {
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (data: {
+      file: File
+      restaurantId: string
+    }) => {
+      if (!organization?.id) throw new Error('No organization selected')
+
+      const formData = new FormData()
+      formData.append('file', data.file)
+      formData.append('restaurantId', data.restaurantId)
+
+      const response = await fetch('/api/sales/import', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de l\'import')
+      }
+
+      return result as Promise<{
+        success: boolean
+        imported: number
+        errors?: string[]
+      }>
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sales', organization?.id] })
+      toast({
+        title: 'Import réussi',
+        description: `${data.imported} ventes importées avec succès${data.errors ? ` (${data.errors.length} erreurs)` : ''}`,
       })
     },
     onError: (error: Error) => {

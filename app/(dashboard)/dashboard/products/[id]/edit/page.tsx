@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import Link from 'next/link'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,7 +10,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, Plus, Trash2, Beaker, Package, ArrowLeft, Save } from 'lucide-react'
-import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -27,148 +27,66 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-
-interface Product {
-  id: string
-  name: string
-  category: string | null
-  unitPrice: number
-}
-
-interface Ingredient {
-  id: string
-  name: string
-  unit: string
-  costPerUnit: number
-}
-
-interface ProductIngredient {
-  id: string
-  ingredientId: string
-  quantityNeeded: number
-  ingredient: {
-    id: string
-    name: string
-    unit: string
-    costPerUnit: number
-  }
-}
+import {
+  useProduct,
+  useUpdateProduct,
+  useProductIngredients,
+  useAddProductIngredient,
+  useRemoveProductIngredient,
+  type ProductIngredientItem,
+} from '@/lib/react-query/hooks/use-products'
+import { useIngredients } from '@/lib/react-query/hooks/use-ingredients'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function EditProductPage() {
   const router = useRouter()
   const params = useParams()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [product, setProduct] = useState<Product | null>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    unitPrice: '',
-  })
-  const [ingredients, setIngredients] = useState<Ingredient[]>([])
-  const [productIngredients, setProductIngredients] = useState<ProductIngredient[]>([])
-  const [loadingIngredients, setLoadingIngredients] = useState(true)
-  const [newIngredient, setNewIngredient] = useState({
-    ingredientId: '',
-    quantityNeeded: '',
-  })
-  const [addingIngredient, setAddingIngredient] = useState(false)
+  const id = params?.id as string | undefined
+
+  const { data: product, isLoading: loadingProduct, isError: errorProduct } = useProduct(id)
+  const { data: ingredientsData } = useIngredients()
+  const { data: productIngredients = [], isLoading: loadingIngredients } = useProductIngredients(id)
+  const updateProduct = useUpdateProduct()
+  const addIngredient = useAddProductIngredient()
+  const removeIngredient = useRemoveProductIngredient()
+
+  const [formData, setFormData] = useState({ name: '', category: '', unitPrice: '' })
+  const [newIngredient, setNewIngredient] = useState({ ingredientId: '', quantityNeeded: '' })
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [ingredientToDelete, setIngredientToDelete] = useState<ProductIngredient | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  const [ingredientToDelete, setIngredientToDelete] = useState<ProductIngredientItem | null>(null)
+  const hasRedirected = useRef(false)
+
+  const ingredients = ingredientsData?.ingredients ?? []
 
   useEffect(() => {
-    if (params.id && isLoaded && organization?.id) {
-      fetchProduct()
-      fetchIngredients()
-      fetchProductIngredients()
-    }
-  }, [params.id, isLoaded, organization?.id])
-
-  const fetchProduct = async () => {
-    if (!organization?.id) {
-      return
-    }
-
-    try {
-      setLoading(true)
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      const response = await fetch(`/api/products/${params.id}?${queryParams.toString()}`)
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          toast({
-            title: 'Produit introuvable',
-            description: 'Le produit que vous recherchez n\'existe pas.',
-            variant: 'destructive',
-          })
-          router.push('/dashboard/products')
-          return
-        }
-        throw new Error('Erreur lors du chargement du produit')
-      }
-
-      const data = await response.json()
-      setProduct(data.product)
+    if (product) {
       setFormData({
-        name: data.product.name,
-        category: data.product.category || '',
-        unitPrice: data.product.unitPrice.toString(),
+        name: product.name || '',
+        category: product.category || '',
+        unitPrice: product.unitPrice.toString(),
       })
-    } catch (error) {
+    }
+  }, [product])
+
+  useEffect(() => {
+    if (id && errorProduct && !product && !hasRedirected.current) {
+      hasRedirected.current = true
       toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Impossible de charger le produit',
+        title: 'Produit introuvable',
+        description: 'Le produit que vous recherchez n’existe pas ou a été supprimé.',
         variant: 'destructive',
       })
-      router.push('/dashboard/products')
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [id, errorProduct, product, toast])
 
-  const fetchIngredients = async () => {
-    if (!organization?.id) return
+  const availableIngredients = ingredients.filter(
+    (ing) => !productIngredients.some((pi) => pi.ingredientId === ing.id)
+  )
 
-    try {
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      const response = await fetch(`/api/ingredients?${queryParams.toString()}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        setIngredients(data.ingredients || [])
-      }
-    } catch (error) {
-      console.error('Error fetching ingredients:', error)
-    }
-  }
-
-  const fetchProductIngredients = async () => {
-    if (!organization?.id || !params.id) return
-
-    try {
-      setLoadingIngredients(true)
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      const response = await fetch(`/api/products/${params.id}/ingredients?${queryParams.toString()}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        setProductIngredients(data)
-      }
-    } catch (error) {
-      console.error('Error fetching product ingredients:', error)
-    } finally {
-      setLoadingIngredients(false)
-    }
-  }
-
-  const handleAddIngredient = async () => {
-    if (!newIngredient.ingredientId || !newIngredient.quantityNeeded) {
+  const handleAddIngredient = () => {
+    if (!newIngredient.ingredientId || !newIngredient.quantityNeeded || !id) {
       toast({
         title: 'Erreur',
         description: 'Veuillez sélectionner un ingrédient et saisir une quantité',
@@ -176,209 +94,185 @@ export default function EditProductPage() {
       })
       return
     }
-
-    if (!organization?.id) {
+    const quantity = parseFloat(newIngredient.quantityNeeded)
+    if (isNaN(quantity) || quantity <= 0) {
       toast({
         title: 'Erreur',
-        description: 'Aucune organisation active.',
+        description: 'La quantité doit être un nombre positif',
         variant: 'destructive',
       })
       return
     }
-
-    setAddingIngredient(true)
-
-    try {
-      const quantity = parseFloat(newIngredient.quantityNeeded)
-      
-      if (isNaN(quantity) || quantity <= 0) {
-        throw new Error('La quantité doit être un nombre positif')
-      }
-
-      const response = await fetch(`/api/products/${params.id}/ingredients`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ingredientId: newIngredient.ingredientId,
-          quantityNeeded: quantity,
-          clerkOrgId: organization.id,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || error.details || 'Erreur lors de l\'ajout')
-      }
-
-      toast({
-        title: 'Ingrédient ajouté',
-        description: 'L\'ingrédient a été ajouté à la recette avec succès.',
-      })
-
-      setNewIngredient({ ingredientId: '', quantityNeeded: '' })
-      fetchProductIngredients()
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setAddingIngredient(false)
-    }
-  }
-
-  const handleDeleteIngredient = async () => {
-    if (!ingredientToDelete || !organization?.id) return
-
-    try {
-      setDeleting(true)
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      
-      const response = await fetch(
-        `/api/products/${params.id}/ingredients/${ingredientToDelete.ingredientId}?${queryParams.toString()}`,
-        {
-          method: 'DELETE',
-        }
-      )
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la suppression')
-      }
-
-      toast({
-        title: 'Ingrédient supprimé',
-        description: 'L\'ingrédient a été retiré de la recette avec succès.',
-      })
-
-      setDeleteDialogOpen(false)
-      setIngredientToDelete(null)
-      fetchProductIngredients()
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Impossible de supprimer l\'ingrédient',
-        variant: 'destructive',
-      })
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  // Filtrer les ingrédients déjà ajoutés
-  const availableIngredients = ingredients.filter(
-    (ing) => !productIngredients.some((pi) => pi.ingredientId === ing.id)
-  )
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
-
-    try {
-      const unitPrice = parseFloat(formData.unitPrice)
-      
-      if (isNaN(unitPrice) || unitPrice <= 0) {
-        throw new Error('Le prix doit être un nombre positif')
-      }
-
-      if (!organization?.id) {
-        toast({
-          title: 'Erreur',
-          description: 'Aucune organisation active. Veuillez sélectionner une organisation.',
-          variant: 'destructive',
-        })
-        return
-      }
-
-      const response = await fetch(`/api/products/${params.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          category: formData.category.trim() || null,
-          unitPrice,
-          clerkOrgId: organization.id, // Passer l'orgId depuis le client
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || error.details || 'Erreur lors de la modification')
-      }
-
-      const data = await response.json()
-      
-      toast({
-        title: 'Produit modifié',
-        description: `${data.product.name} a été modifié avec succès.`,
-      })
-
-      router.push('/dashboard/products')
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <Card className="border shadow-sm">
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Chargement du produit...</p>
-          </CardContent>
-        </Card>
-      </div>
+    addIngredient.mutate(
+      { productId: id, ingredientId: newIngredient.ingredientId, quantityNeeded: quantity },
+      { onSuccess: () => setNewIngredient({ ingredientId: '', quantityNeeded: '' }) }
     )
   }
 
-  if (!product) {
-    return null
+  const handleDeleteIngredient = () => {
+    if (!ingredientToDelete || !id) return
+    removeIngredient.mutate(
+      { productId: id, ingredientId: ingredientToDelete.ingredientId },
+      { onSuccess: () => { setDeleteDialogOpen(false); setIngredientToDelete(null) } }
+    )
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!organization?.id || !id) {
+      toast({
+        title: 'Erreur',
+        description: 'Aucune organisation active. Veuillez sélectionner une organisation.',
+        variant: 'destructive',
+      })
+      return
+    }
+    const unitPrice = parseFloat(formData.unitPrice)
+    if (isNaN(unitPrice) || unitPrice <= 0) {
+      toast({
+        title: 'Erreur',
+        description: 'Le prix doit être un nombre positif',
+        variant: 'destructive',
+      })
+      return
+    }
+    updateProduct.mutate(
+      {
+        id,
+        data: {
+          name: formData.name.trim(),
+          category: formData.category.trim() || null,
+          unitPrice,
+        },
+      },
+      { onSuccess: () => router.push('/dashboard/products') }
+    )
+  }
+
+  if (!isLoaded) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">Chargement de votre organisation...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (isLoaded && !organization?.id) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Aucune organisation active. Veuillez sélectionner une organisation.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/products">Retour aux produits</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (id && !loadingProduct && (errorProduct || !product)) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Card className="rounded-xl border shadow-sm border-red-200/50 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10">
+            <CardContent className="py-12 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Produit introuvable ou supprimé. Retournez à la liste pour modifier un autre produit.
+              </p>
+              <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
+                <Link href="/dashboard/products">Retour aux produits</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (loadingProduct) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-hidden>
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="flex items-center gap-4 pb-6 border-b border-border/60">
+            <Skeleton className="h-9 w-9 rounded-md shrink-0" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-8 w-56" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader>
+              <Skeleton className="h-6 w-48 mb-2" />
+              <Skeleton className="h-4 w-64" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full rounded-md" />
+              <Skeleton className="h-10 w-full rounded-md" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader>
+              <Skeleton className="h-6 w-40 mb-2" />
+              <Skeleton className="h-4 w-72" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/products">
-          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
-            <ArrowLeft className="h-4 w-4" />
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Modifier le produit ${product?.name ?? ''}`}>
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <header className="flex items-center gap-4 pb-6 border-b border-border/60">
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des produits">
+            <Link href="/dashboard/products" className="hover:opacity-80 transition-opacity">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </Button>
-        </Link>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <Package className="h-6 w-6 text-white" />
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md flex-shrink-0" aria-hidden>
+              <Package className="h-5 w-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold tracking-tight">Modifier le produit</h1>
+              <p className="text-muted-foreground truncate">
+                Modifiez les informations et la recette de {formData.name || 'ce produit'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Modifier le produit</h1>
-            <p className="text-muted-foreground">
-              Modifiez les informations et la recette du produit
-            </p>
-          </div>
-        </div>
-      </div>
+        </header>
 
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Informations du produit</CardTitle>
-          <CardDescription className="mt-1">
-            Modifiez les informations de base du produit
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Informations du produit</CardTitle>
+            <CardDescription className="mt-1">
+              Les champs marqués d’un * sont obligatoires. Enregistrez pour appliquer les modifications.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="edit-form-desc" noValidate>
+            <p id="edit-form-desc" className="sr-only">
+              Formulaire de modification du produit : nom, catégorie et prix unitaire.
+            </p>
             <div className="space-y-2">
               <Label htmlFor="name">Nom du produit *</Label>
               <Input
@@ -387,7 +281,7 @@ export default function EditProductPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Burger Classique"
                 required
-                disabled={saving}
+                disabled={updateProduct.isPending}
               />
             </div>
 
@@ -398,7 +292,7 @@ export default function EditProductPage() {
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 placeholder="Burger, Boisson, Dessert..."
-                disabled={saving}
+                disabled={updateProduct.isPending}
               />
               <p className="text-xs text-muted-foreground">
                 Optionnel. Permet de regrouper vos produits par catégorie.
@@ -416,16 +310,20 @@ export default function EditProductPage() {
                 onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
                 placeholder="12.50"
                 required
-                disabled={saving}
+                disabled={updateProduct.isPending}
               />
               <p className="text-xs text-muted-foreground">
                 Prix de vente unitaire du produit en euros.
               </p>
             </div>
 
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={saving} className="shadow-sm">
-                {saving ? (
+            <div className="flex flex-wrap gap-4 pt-4">
+              <Button
+                type="submit"
+                disabled={updateProduct.isPending}
+                className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+              >
+                {updateProduct.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Enregistrement...
@@ -441,7 +339,7 @@ export default function EditProductPage() {
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
-                disabled={saving}
+                disabled={updateProduct.isPending}
                 className="shadow-sm"
               >
                 Annuler
@@ -451,11 +349,10 @@ export default function EditProductPage() {
         </CardContent>
       </Card>
 
-      {/* Section Recette (Style Sequence) */}
-      <Card className="border shadow-sm">
+      <Card className="rounded-xl border shadow-sm bg-card" aria-labelledby="recipe-title">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+          <CardTitle id="recipe-title" className="text-lg font-semibold flex items-center gap-2">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-sm" aria-hidden>
               <Beaker className="h-4 w-4 text-white" />
             </div>
             Recette du produit
@@ -478,10 +375,10 @@ export default function EditProductPage() {
                 {productIngredients.map((pi) => (
                   <div
                     key={pi.id}
-                    className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    className="flex items-center justify-between p-4 border border-border rounded-xl bg-muted/30 dark:bg-gray-800/50 hover:bg-muted/50 dark:hover:bg-gray-800 transition-colors"
                   >
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{pi.ingredient.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground truncate">{pi.ingredient.name}</p>
                       <p className="text-sm text-muted-foreground mt-1">
                         {pi.quantityNeeded} {pi.ingredient.unit} par produit
                       </p>
@@ -489,12 +386,13 @@ export default function EditProductPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400"
+                      className="h-8 w-8 shrink-0 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400"
                       onClick={() => {
                         setIngredientToDelete(pi)
                         setDeleteDialogOpen(true)
                       }}
-                      disabled={saving || addingIngredient}
+                      disabled={updateProduct.isPending || addIngredient.isPending}
+                      aria-label={`Retirer ${pi.ingredient.name} de la recette`}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -503,9 +401,9 @@ export default function EditProductPage() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
-              <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
-                <Beaker className="h-6 w-6 text-muted-foreground" />
+            <div className="text-center py-12 border border-border rounded-xl bg-muted/30 dark:bg-gray-800/50" role="status" aria-label="Aucun ingrédient dans la recette">
+              <div className="mx-auto w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center mb-3">
+                <Beaker className="h-6 w-6 text-teal-600 dark:text-teal-400" />
               </div>
               <p className="text-sm font-medium mb-1">Aucun ingrédient dans la recette</p>
               <p className="text-xs text-muted-foreground">
@@ -514,11 +412,10 @@ export default function EditProductPage() {
             </div>
           )}
 
-          {/* Formulaire d'ajout d'ingrédient (Style Sequence) */}
           {availableIngredients.length > 0 && (
-            <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-800">
-              <div className="p-4 rounded-lg bg-purple-50/50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-900/30">
-                <Label className="text-sm font-semibold mb-3 block">Ajouter un ingrédient</Label>
+            <div className="space-y-4 pt-6 border-t border-border">
+              <div className="p-4 rounded-xl bg-teal-50/50 dark:bg-teal-900/10 border border-teal-200 dark:border-teal-900/30" aria-labelledby="add-ingredient-label">
+                <Label id="add-ingredient-label" className="text-sm font-semibold mb-3 block">Ajouter un ingrédient</Label>
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Ingrédient</Label>
@@ -527,7 +424,7 @@ export default function EditProductPage() {
                       onValueChange={(value) =>
                         setNewIngredient({ ...newIngredient, ingredientId: value })
                       }
-                      disabled={addingIngredient}
+                      disabled={addIngredient.isPending}
                     >
                       <SelectTrigger className="bg-white dark:bg-gray-900">
                         <SelectValue placeholder="Sélectionner un ingrédient" />
@@ -552,7 +449,7 @@ export default function EditProductPage() {
                         setNewIngredient({ ...newIngredient, quantityNeeded: e.target.value })
                       }
                       placeholder="0.00"
-                      disabled={addingIngredient}
+                      disabled={addIngredient.isPending}
                       className="bg-white dark:bg-gray-900"
                     />
                   </div>
@@ -560,10 +457,10 @@ export default function EditProductPage() {
                     <Button
                       type="button"
                       onClick={handleAddIngredient}
-                      disabled={addingIngredient || !newIngredient.ingredientId || !newIngredient.quantityNeeded}
-                      className="w-full shadow-sm"
+                      disabled={addIngredient.isPending || !newIngredient.ingredientId || !newIngredient.quantityNeeded}
+                      className="w-full shadow-sm bg-teal-600 hover:bg-teal-700 text-white border-0"
                     >
-                      {addingIngredient ? (
+                      {addIngredient.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Ajout...
@@ -582,7 +479,7 @@ export default function EditProductPage() {
           )}
 
           {availableIngredients.length === 0 && productIngredients.length > 0 && (
-            <div className="text-center py-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+            <div className="text-center py-6 border border-border rounded-xl bg-muted/30 dark:bg-gray-800/50">
               <p className="text-sm text-muted-foreground">
                 Tous les ingrédients disponibles sont déjà dans la recette
               </p>
@@ -590,19 +487,19 @@ export default function EditProductPage() {
           )}
 
           {ingredients.length === 0 && (
-            <div className="text-center py-8 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
-              <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
-                <Beaker className="h-6 w-6 text-muted-foreground" />
+            <div className="text-center py-8 border border-border rounded-xl bg-muted/30 dark:bg-gray-800/50">
+              <div className="mx-auto w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center mb-3">
+                <Beaker className="h-6 w-6 text-teal-600 dark:text-teal-400" />
               </div>
               <p className="text-sm font-medium mb-2">Aucun ingrédient disponible</p>
               <p className="text-xs text-muted-foreground mb-4">
-                Créez d'abord des ingrédients pour pouvoir les ajouter à la recette
+                Créez d’abord des ingrédients pour pouvoir les ajouter à la recette
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => router.push('/dashboard/ingredients/new')}
-                className="shadow-sm"
+                className="shadow-sm border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20"
               >
                 Créer un ingrédient
               </Button>
@@ -611,33 +508,34 @@ export default function EditProductPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer l&apos;ingrédient</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir retirer &quot;{ingredientToDelete?.ingredient.name}&quot; de la recette ? Cette action est irréversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteIngredient}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Suppression...
-                </>
-              ) : (
-                'Supprimer'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent className="rounded-xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Retirer cet ingrédient de la recette ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                L’ingrédient &quot;{ingredientToDelete?.ingredient.name}&quot; sera retiré de la recette. Cette action est irréversible. Vous pourrez l’ajouter à nouveau plus tard si besoin.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={removeIngredient.isPending}>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteIngredient}
+                disabled={removeIngredient.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {removeIngredient.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Suppression...
+                  </>
+                ) : (
+                  'Supprimer'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </main>
   )
 }

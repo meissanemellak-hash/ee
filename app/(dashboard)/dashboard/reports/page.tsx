@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, FileText, Download, RefreshCw, Filter, TrendingUp, Package, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react'
+import { Loader2, FileText, Download, TrendingUp, Package, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react'
+import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -17,6 +18,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import type { Report, ReportType } from '@/lib/services/reports'
+import { useGenerateReport } from '@/lib/react-query/hooks/use-reports'
+import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 
 const severityLabels: Record<string, string> = {
   low: 'Faible',
@@ -50,99 +53,33 @@ const statusLabels: Record<string, string> = {
 export default function ReportsPage() {
   const { organization, isLoaded } = useOrganization()
   const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [generating, setGenerating] = useState(false)
-  const [report, setReport] = useState<Report | null>(null)
-  const [restaurants, setRestaurants] = useState<Array<{ id: string; name: string }>>([])
-  const [selectedReportType, setSelectedReportType] = useState<ReportType>('SUMMARY')
-  const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
 
-  // Initialiser les dates par défaut (30 derniers jours)
-  useEffect(() => {
-    const end = new Date()
+  // Dates par défaut (30 derniers jours)
+  const [startDate, setStartDate] = useState<string>(() => {
     const start = new Date()
     start.setDate(start.getDate() - 30)
-    
-    setEndDate(end.toISOString().split('T')[0])
-    setStartDate(start.toISOString().split('T')[0])
-  }, [])
+    return start.toISOString().split('T')[0]
+  })
+  const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split('T')[0])
 
-  // Charger les restaurants
-  useEffect(() => {
-    if (isLoaded && organization?.id) {
-      const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      fetch(`/api/restaurants?${queryParams.toString()}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setRestaurants(data)
-          }
-        })
-        .catch((error) => {
-          console.error('Error fetching restaurants:', error)
-        })
-    }
-  }, [isLoaded, organization?.id])
+  const [selectedReportType, setSelectedReportType] = useState<ReportType>('SUMMARY')
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
 
-  const handleGenerateReport = async () => {
-    if (!organization?.id) {
-      toast({
-        title: 'Erreur',
-        description: 'Aucune organisation active.',
-        variant: 'destructive',
-      })
-      return
-    }
+  const { data: restaurantsData } = useRestaurants(1, 100)
+  const restaurants = restaurantsData?.restaurants || []
 
-    setGenerating(true)
-    try {
-      const filters: any = {}
-      if (selectedRestaurant !== 'all') {
-        filters.restaurantId = selectedRestaurant
-      }
-      if (startDate) {
-        filters.startDate = startDate
-      }
-      if (endDate) {
-        filters.endDate = endDate
-      }
+  const generateReport = useGenerateReport()
+  const report = generateReport.data ?? null
 
-      const response = await fetch('/api/reports/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          reportType: selectedReportType,
-          filters,
-          clerkOrgId: organization.id,
-        }),
-      })
+  const handleGenerateReport = () => {
+    if (!organization?.id) return
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.details || error.error || 'Erreur lors de la génération')
-      }
+    const filters: { restaurantId?: string; startDate?: string; endDate?: string } = {}
+    if (selectedRestaurant !== 'all') filters.restaurantId = selectedRestaurant
+    if (startDate) filters.startDate = startDate
+    if (endDate) filters.endDate = endDate
 
-      const data = await response.json()
-      setReport(data)
-
-      toast({
-        title: 'Rapport généré',
-        description: 'Le rapport a été généré avec succès.',
-      })
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
-        variant: 'destructive',
-      })
-    } finally {
-      setGenerating(false)
-    }
+    generateReport.mutate({ reportType: selectedReportType, filters })
   }
 
   const handleExportCSV = () => {
@@ -251,49 +188,77 @@ export default function ReportsPage() {
 
   if (!isLoaded) {
     return (
-      <div className="p-6 space-y-6">
-        <Card className="border shadow-sm">
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Chargement de votre organisation...</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">Chargement de votre organisation...</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
+  if (isLoaded && !organization?.id) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Rapports</h1>
+            <p className="text-muted-foreground mt-1.5">
+              Rapports et analyses détaillées de votre activité
+            </p>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <FileText className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold">Aucune organisation active</h2>
+              <p className="text-muted-foreground">
+                Veuillez sélectionner une organisation pour générer des rapports.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/reports">Retour aux rapports</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header (Style Sequence) */}
-      <div className="flex justify-between items-start">
-        <div>
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Rapports">
+      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <header className="pb-6 border-b border-border/60">
           <h1 className="text-3xl font-bold tracking-tight">Rapports</h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1.5">
             Rapports et analyses détaillées de votre activité
           </p>
-        </div>
-      </div>
+        </header>
 
-      {/* Sélection du type de rapport (Style Sequence) */}
-      <Card className="border shadow-sm border-2 border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <FileText className="h-4 w-4 text-white" />
-            </div>
-            Générer un rapport
-          </CardTitle>
-          <CardDescription className="mt-1">
-            Sélectionnez le type de rapport et configurez les filtres
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Type de rapport</Label>
-            <Select value={selectedReportType} onValueChange={(value) => setSelectedReportType(value as ReportType)}>
-              <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
-                <SelectValue placeholder="Sélectionner un type de rapport" />
-              </SelectTrigger>
+        <Card className="rounded-xl border shadow-sm border-2 border-teal-200/80 dark:border-teal-900/30 bg-teal-50/50 dark:bg-teal-900/10">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-sm" aria-hidden>
+                <FileText className="h-4 w-4 text-white" />
+              </div>
+              Générer un rapport
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Sélectionnez le type de rapport et configurez les filtres (période, restaurant).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="report-type">Type de rapport</Label>
+              <Select value={selectedReportType} onValueChange={(value) => setSelectedReportType(value as ReportType)}>
+                <SelectTrigger id="report-type" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Type de rapport">
+                  <SelectValue placeholder="Sélectionner un type de rapport" />
+                </SelectTrigger>
               <SelectContent>
                 <SelectItem value="SUMMARY">
                   <div className="flex items-center gap-2">
@@ -358,9 +323,9 @@ export default function ReportsPage() {
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Restaurant</Label>
+              <Label htmlFor="report-restaurant">Restaurant</Label>
               <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
-                <SelectTrigger className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                <SelectTrigger id="report-restaurant" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Restaurant pour le rapport">
                   <SelectValue placeholder="Tous les restaurants" />
                 </SelectTrigger>
                 <SelectContent>
@@ -373,34 +338,36 @@ export default function ReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
-              <Label>Date de début</Label>
+              <Label htmlFor="report-start">Date de début</Label>
               <Input
+                id="report-start"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
+                className="bg-muted/50 dark:bg-gray-900 border-border"
+                aria-label="Date de début"
               />
             </div>
-
             <div className="space-y-2">
-              <Label>Date de fin</Label>
+              <Label htmlFor="report-end">Date de fin</Label>
               <Input
+                id="report-end"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
+                className="bg-muted/50 dark:bg-gray-900 border-border"
+                aria-label="Date de fin"
               />
             </div>
           </div>
 
           <Button
             onClick={handleGenerateReport}
-            disabled={generating}
-            className="w-full shadow-sm"
+            disabled={generateReport.isPending}
+            className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
           >
-            {generating ? (
+            {generateReport.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Génération en cours...
@@ -415,55 +382,54 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      {/* Affichage du rapport (Style Sequence) */}
-      {report && (
-        <Card className="border shadow-sm">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-lg font-semibold">{getReportTypeLabel(report.type)}</CardTitle>
-                <CardDescription className="mt-1">
-                  {report.type !== 'INVENTORY' && 'period' in report
-                    ? `Période: ${report.period.start} - ${report.period.end}`
-                    : report.type === 'INVENTORY'
-                    ? `Généré le: ${new Date(report.generatedAt).toLocaleDateString('fr-FR')}`
-                    : ''}
-                </CardDescription>
+        {report && (
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                <div>
+                  <CardTitle className="text-lg font-semibold">{getReportTypeLabel(report.type)}</CardTitle>
+                  <CardDescription className="mt-1">
+                    {report.type !== 'INVENTORY' && 'period' in report
+                      ? `Période: ${report.period.start} - ${report.period.end}`
+                      : report.type === 'INVENTORY'
+                      ? `Généré le: ${new Date(report.generatedAt).toLocaleDateString('fr-FR')}`
+                      : ''}
+                  </CardDescription>
+                </div>
+                <Button variant="outline" onClick={handleExportCSV} className="shadow-sm shrink-0" aria-label="Exporter le rapport en CSV">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exporter CSV
+                </Button>
               </div>
-              <Button variant="outline" onClick={handleExportCSV} className="shadow-sm">
-                <Download className="h-4 w-4 mr-2" />
-                Exporter CSV
-              </Button>
-            </div>
-          </CardHeader>
+            </CardHeader>
           <CardContent>
             {report.type === 'SALES' && (
               <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Total ventes</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">{report.summary.totalSales}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.totalSales}</div>
                       <p className="text-xs text-muted-foreground mt-2">unités vendues</p>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Revenu total</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-green-600">{formatCurrency(report.summary.totalRevenue)}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(report.summary.totalRevenue)}</div>
                       <p className="text-xs text-muted-foreground mt-2">sur la période</p>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Moyenne par jour</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-teal-600">{report.summary.averagePerDay}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.averagePerDay}</div>
                       <p className="text-xs text-muted-foreground mt-2">unités/jour</p>
                     </CardContent>
                   </Card>
@@ -471,9 +437,9 @@ export default function ReportsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Top produits</h3>
-                  <div className="rounded-lg border overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 dark:bg-gray-800/50 border-b">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-sm" role="table" aria-label="Top produits du rapport ventes">
+                      <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold">Produit</th>
                           <th className="px-4 py-3 text-right font-semibold">Quantité</th>
@@ -483,10 +449,10 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {report.summary.topProducts.map((product, i) => (
-                          <tr key={product.productId} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <tr key={product.productId} className="border-b border-border last:border-0 hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors">
                             <td className="px-4 py-3 font-medium">{product.productName}</td>
                             <td className="px-4 py-3 text-right">{product.quantity}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400">{formatCurrency(product.revenue)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-teal-700 dark:text-teal-400">{formatCurrency(product.revenue)}</td>
                             <td className="px-4 py-3 text-right">{product.percentage.toFixed(1)}%</td>
                           </tr>
                         ))}
@@ -497,9 +463,9 @@ export default function ReportsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Ventes par jour</h3>
-                  <div className="rounded-lg border overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 dark:bg-gray-800/50 border-b">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-sm" role="table" aria-label="Ventes par jour">
+                      <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold">Date</th>
                           <th className="px-4 py-3 text-right font-semibold">Ventes</th>
@@ -508,10 +474,10 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {report.dailyBreakdown.map((day, i) => (
-                          <tr key={i} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors">
                             <td className="px-4 py-3">{new Date(day.date).toLocaleDateString('fr-FR')}</td>
                             <td className="px-4 py-3 text-right">{day.sales}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-teal-600 dark:text-teal-400">{formatCurrency(day.revenue)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-teal-700 dark:text-teal-400">{formatCurrency(day.revenue)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -524,45 +490,45 @@ export default function ReportsPage() {
             {report.type === 'PERFORMANCE' && (
               <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-4">
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Restaurants</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">{report.summary.totalRestaurants}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.totalRestaurants}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Produits</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-blue-600">{report.summary.totalProducts}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.totalProducts}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Total ventes</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-teal-600">{report.summary.totalSales}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.totalSales}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Revenu moyen</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-green-600">{formatCurrency(report.summary.averageRevenuePerRestaurant)}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(report.summary.averageRevenuePerRestaurant)}</div>
                     </CardContent>
                   </Card>
                 </div>
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Performance par restaurant</h3>
-                  <div className="rounded-lg border overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 dark:bg-gray-800/50 border-b">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-sm" role="table" aria-label="Performance par restaurant">
+                      <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold">Restaurant</th>
                           <th className="px-4 py-3 text-right font-semibold">Ventes</th>
@@ -572,10 +538,10 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {report.restaurants.map((restaurant) => (
-                          <tr key={restaurant.restaurantId} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <tr key={restaurant.restaurantId} className="border-b border-border last:border-0 hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors">
                             <td className="px-4 py-3 font-medium">{restaurant.restaurantName}</td>
                             <td className="px-4 py-3 text-right">{restaurant.sales}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400">{formatCurrency(restaurant.revenue)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-teal-700 dark:text-teal-400">{formatCurrency(restaurant.revenue)}</td>
                             <td className="px-4 py-3">
                               {restaurant.topProduct ? (
                                 <span>
@@ -600,14 +566,14 @@ export default function ReportsPage() {
                   <div key={restaurant.restaurantId}>
                     <h3 className="text-lg font-semibold mb-4">{restaurant.restaurantName}</h3>
                     {restaurant.ingredients.length === 0 ? (
-                      <div className="rounded-lg border p-6 text-center text-muted-foreground">
+                      <div className="rounded-xl border border-border p-6 text-center text-muted-foreground">
                         <p>Aucun ingrédient trouvé pour ce restaurant.</p>
                         <p className="text-sm mt-2">Créez des ingrédients dans la section "Ingrédients" pour les voir apparaître ici.</p>
                       </div>
                     ) : (
-                      <div className="rounded-lg border overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50 dark:bg-gray-800/50 border-b">
+                      <div className="rounded-xl border border-border overflow-hidden">
+                        <table className="w-full text-sm" role="table" aria-label="Inventaire par ingrédient">
+                          <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                             <tr>
                               <th className="px-4 py-3 text-left font-semibold">Ingrédient</th>
                               <th className="px-4 py-3 text-right font-semibold">Stock actuel</th>
@@ -618,7 +584,7 @@ export default function ReportsPage() {
                           </thead>
                           <tbody>
                             {restaurant.ingredients.map((ing) => (
-                              <tr key={ing.ingredientId} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                              <tr key={ing.ingredientId} className="border-b border-border last:border-0 hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors">
                                 <td className="px-4 py-3 font-medium">
                                   {ing.ingredientName}
                                   {ing.notConfigured && (
@@ -662,7 +628,7 @@ export default function ReportsPage() {
                                           ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
                                           : ing.status === 'OVERSTOCK'
                                           ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
-                                          : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                                          : 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800'
                                       }`}
                                     >
                                       {ing.status === 'CRITICAL'
@@ -689,45 +655,45 @@ export default function ReportsPage() {
             {report.type === 'RECOMMENDATIONS' && (
               <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-4">
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">{report.summary.totalRecommendations}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.totalRecommendations}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Acceptées</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-green-600">{report.summary.accepted}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.accepted}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">En attente</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-yellow-600">{report.summary.pending}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.pending}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Économies</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-teal-600">{formatCurrency(report.summary.totalEstimatedSavings)}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(report.summary.totalEstimatedSavings)}</div>
                     </CardContent>
                   </Card>
                 </div>
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Recommandations</h3>
-                  <div className="rounded-lg border overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 dark:bg-gray-800/50 border-b">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-sm" role="table" aria-label="Liste des recommandations">
+                      <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold">Type</th>
                           <th className="px-4 py-3 text-left font-semibold">Restaurant</th>
@@ -739,7 +705,7 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {report.recommendations.map((rec) => (
-                          <tr key={rec.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <tr key={rec.id} className="border-b border-border last:border-0 hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors">
                             <td className="px-4 py-3">{rec.type}</td>
                             <td className="px-4 py-3 font-medium">{rec.restaurantName}</td>
                             <td className="px-4 py-3 text-center">
@@ -749,7 +715,7 @@ export default function ReportsPage() {
                                     ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
                                     : rec.priority === 'medium'
                                     ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
-                                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                                    : 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800'
                                 }`}
                               >
                                 {rec.priority}
@@ -759,7 +725,7 @@ export default function ReportsPage() {
                               <span
                                 className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
                                   rec.status === 'accepted'
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                                    ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800'
                                     : rec.status === 'dismissed'
                                     ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-700'
                                     : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
@@ -772,7 +738,7 @@ export default function ReportsPage() {
                                   : 'En attente'}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400">{formatCurrency(rec.estimatedSavings)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-teal-700 dark:text-teal-400">{formatCurrency(rec.estimatedSavings)}</td>
                             <td className="px-4 py-3">{new Date(rec.createdAt).toLocaleDateString('fr-FR')}</td>
                           </tr>
                         ))}
@@ -786,53 +752,53 @@ export default function ReportsPage() {
             {report.type === 'ALERTS' && (
               <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-5">
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">{report.summary.totalAlerts}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.totalAlerts}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Critiques</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-red-600">{report.summary.critical}</div>
+                      <div className="text-3xl font-bold text-red-700 dark:text-red-400">{report.summary.critical}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Élevées</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-orange-600">{report.summary.high}</div>
+                      <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">{report.summary.high}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Moyennes</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-yellow-600">{report.summary.medium}</div>
+                      <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{report.summary.medium}</div>
                     </CardContent>
                   </Card>
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Résolues</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-green-600">{report.summary.resolved}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.resolved}</div>
                     </CardContent>
                   </Card>
                 </div>
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Alertes</h3>
-                  <div className="rounded-lg border overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 dark:bg-gray-800/50 border-b">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-sm" role="table" aria-label="Liste des alertes">
+                      <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold">Type</th>
                           <th className="px-4 py-3 text-left font-semibold">Restaurant</th>
@@ -844,7 +810,7 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {report.alerts.map((alert) => (
-                          <tr key={alert.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <tr key={alert.id} className="border-b border-border last:border-0 hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors">
                             <td className="px-4 py-3">{typeLabels[alert.type] || alert.type}</td>
                             <td className="px-4 py-3 font-medium">{alert.restaurantName}</td>
                             <td className="px-4 py-3 text-center">
@@ -856,7 +822,7 @@ export default function ReportsPage() {
                                     ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
                                     : alert.severity === 'medium'
                                     ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
-                                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                                    : 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800'
                                 }`}
                               >
                                 {severityLabels[alert.severity] || alert.severity}
@@ -865,7 +831,7 @@ export default function ReportsPage() {
                             <td className="px-4 py-3">{alert.message}</td>
                             <td className="px-4 py-3 text-center">
                               {alert.resolved ? (
-                                <span className="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                <span className="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800">
                                   <CheckCircle2 className="h-3 w-3" />
                                   Résolue
                                 </span>
@@ -888,47 +854,47 @@ export default function ReportsPage() {
             {report.type === 'SUMMARY' && (
               <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader>
                       <CardTitle className="text-sm font-medium text-muted-foreground">Ventes</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div>
                         <p className="text-xs text-muted-foreground">Total ventes</p>
-                        <p className="text-2xl font-bold">{report.sales.totalSales}</p>
+                        <p className="text-2xl font-bold text-teal-700 dark:text-teal-400">{report.sales.totalSales}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Revenu total</p>
-                        <p className="text-2xl font-bold text-green-600">{formatCurrency(report.sales.totalRevenue)}</p>
+                        <p className="text-2xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(report.sales.totalRevenue)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Moyenne par jour</p>
-                        <p className="text-2xl font-bold text-teal-600">{formatCurrency(report.sales.averagePerDay)}</p>
+                        <p className="text-2xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(report.sales.averagePerDay)}</p>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader>
                       <CardTitle className="text-sm font-medium text-muted-foreground">Recommandations</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div>
                         <p className="text-xs text-muted-foreground">Total</p>
-                        <p className="text-2xl font-bold">{report.recommendations.total}</p>
+                        <p className="text-2xl font-bold text-teal-700 dark:text-teal-400">{report.recommendations.total}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Acceptées</p>
-                        <p className="text-2xl font-bold text-green-600">{report.recommendations.accepted}</p>
+                        <p className="text-2xl font-bold text-teal-700 dark:text-teal-400">{report.recommendations.accepted}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Économies estimées</p>
-                        <p className="text-2xl font-bold text-teal-600">{formatCurrency(report.recommendations.estimatedSavings)}</p>
+                        <p className="text-2xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(report.recommendations.estimatedSavings)}</p>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="border shadow-sm">
+                  <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader>
                       <CardTitle className="text-sm font-medium text-muted-foreground">Alertes</CardTitle>
                     </CardHeader>
@@ -939,11 +905,11 @@ export default function ReportsPage() {
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Critiques</p>
-                        <p className="text-2xl font-bold text-red-600">{report.alerts.critical}</p>
+                        <p className="text-2xl font-bold text-red-700 dark:text-red-400">{report.alerts.critical}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Résolues</p>
-                        <p className="text-2xl font-bold text-green-600">{report.alerts.resolved}</p>
+                        <p className="text-2xl font-bold text-teal-700 dark:text-teal-400">{report.alerts.resolved}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -951,9 +917,9 @@ export default function ReportsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Top produits</h3>
-                  <div className="rounded-lg border overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 dark:bg-gray-800/50 border-b">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <table className="w-full text-sm" role="table" aria-label="Top produits du rapport récapitulatif">
+                      <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold">Produit</th>
                           <th className="px-4 py-3 text-right font-semibold">Quantité</th>
@@ -962,10 +928,10 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {report.topProducts.map((product) => (
-                          <tr key={product.productId} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <tr key={product.productId} className="border-b border-border last:border-0 hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors">
                             <td className="px-4 py-3 font-medium">{product.productName}</td>
                             <td className="px-4 py-3 text-right">{product.quantity}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400">{formatCurrency(product.revenue)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-teal-700 dark:text-teal-400">{formatCurrency(product.revenue)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -976,7 +942,8 @@ export default function ReportsPage() {
             )}
           </CardContent>
         </Card>
-      )}
-    </div>
+        )}
+      </div>
+    </main>
   )
 }

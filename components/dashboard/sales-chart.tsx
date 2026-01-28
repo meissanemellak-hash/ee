@@ -50,11 +50,13 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
             </CardDescription>
           </div>
           {onPeriodChange && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" role="group" aria-label="Période du graphique">
               <Button
                 variant={period === 'daily' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => onPeriodChange('daily')}
+                className={period === 'daily' ? 'bg-teal-600 hover:bg-teal-700 text-white' : undefined}
+                aria-pressed={period === 'daily'}
               >
                 Quotidien
               </Button>
@@ -62,6 +64,8 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
                 variant={period === 'weekly' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => onPeriodChange('weekly')}
+                className={period === 'weekly' ? 'bg-teal-600 hover:bg-teal-700 text-white' : undefined}
+                aria-pressed={period === 'weekly'}
               >
                 Hebdomadaire
               </Button>
@@ -80,9 +84,9 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
                   {formatCurrency(totalRevenue)}
                 </p>
               </div>
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
                 <p className="text-xs text-muted-foreground mb-1">Total ventes</p>
-                <p className="text-lg font-semibold text-blue-700 dark:text-blue-400">
+                <p className="text-lg font-semibold text-teal-700 dark:text-teal-400">
                   {totalSales.toLocaleString()}
                 </p>
               </div>
