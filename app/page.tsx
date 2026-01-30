@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
+import { LandingPage } from '@/components/landing/landing-page'
 
 export default async function Home() {
   const { userId } = auth()
@@ -8,5 +9,5 @@ export default async function Home() {
     redirect('/dashboard')
   }
 
-  redirect('/sign-in')
+  return <LandingPage />
 }

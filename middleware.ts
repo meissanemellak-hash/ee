@@ -4,6 +4,9 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/',
+  '/mentions-legales',
+  '/confidentialite',
+  '/contact',
   '/api/webhooks(.*)',
   '/dashboard/setup(.*)', // Permettre l'accès à la page setup
 ])

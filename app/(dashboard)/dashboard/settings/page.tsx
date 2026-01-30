@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useOrganization, useUser } from '@clerk/nextjs'
+import { useOrganization, useUser, useClerk } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Save, Building2, User, Bell, Shield, Trash2, AlertCircle } from 'lucide-react'
+import { Loader2, Save, Building2, User, Bell, Shield, Trash2, AlertCircle, LogOut } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +61,7 @@ function SettingsPageSkeleton() {
 export default function SettingsPage() {
   const { organization, membership, isLoaded: orgLoaded } = useOrganization()
   const { user, isLoaded: userLoaded } = useUser()
+  const { signOut } = useClerk()
   const { toast } = useToast()
   const hasToastedError = useRef(false)
 
@@ -387,6 +388,18 @@ export default function SettingsPage() {
               <p className="text-sm text-muted-foreground">
                 Pour modifier votre profil (nom, email, mot de passe), utilisez le menu utilisateur en haut à droite.
               </p>
+              <div className="mt-6 pt-4 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => signOut({ redirectUrl: '/' })}
+                  className="border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20"
+                  aria-label="Se déconnecter"
+                >
+                  <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Déconnexion
+                </Button>
+              </div>
             </>
           )}
         </CardContent>
