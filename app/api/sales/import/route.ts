@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
+import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
 import Papa from 'papaparse'
 import { csvSaleRowSchema } from '@/lib/validations/sales'
 
@@ -12,17 +12,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const organization = await getCurrentOrganization()
-    if (!organization) {
-      return NextResponse.json(
-        { error: 'Organization required' },
-        { status: 400 }
-      )
-    }
-
     const formData = await request.formData()
     const file = formData.get('file') as File
     const restaurantId = formData.get('restaurantId') as string
+    const clerkOrgIdFromClient = formData.get('clerkOrgId') as string | null
+
+    let organization = await getCurrentOrganization()
+    if (!organization && clerkOrgIdFromClient) {
+      organization = await getOrganizationByClerkIdIfMember(userId, clerkOrgIdFromClient)
+    }
+    if (!organization) {
+      return NextResponse.json(
+        {
+          error: 'Organisation requise',
+          details: 'Aucune organisation active. Vérifiez qu\'une organisation est bien sélectionnée (sélecteur en haut à droite) puis réessayez.',
+        },
+        { status: 400 }
+      )
+    }
 
     if (!file || !restaurantId) {
       return NextResponse.json(
@@ -76,15 +83,16 @@ export async function POST(request: NextRequest) {
       const row = parseResult.data[i] as Record<string, string>
       
       try {
-        // Valider la ligne
-        const validated = csvSaleRowSchema.parse({
-          restaurant: row.restaurant || row.Restaurant,
-          product: row.product || row.Product,
-          quantity: row.quantity || row.Quantity,
-          amount: row.amount || row.Amount || row.amount || row.Amount,
-          date: row.date || row.Date || row.sale_date,
-          hour: row.hour || row.Hour || row.sale_hour,
-        })
+        // Accepter colonnes en français ou en anglais
+        const normalizedRow = {
+          restaurant: row.restaurant ?? row.Restaurant,
+          product: row.product ?? row.produit ?? row.Product,
+          quantity: row.quantity ?? row.quantite ?? row.Quantity,
+          amount: row.amount ?? row.montant ?? row.Amount ?? row.amount ?? row.Amount,
+          date: row.date ?? row.Date ?? row.sale_date,
+          hour: row.hour ?? row.heure ?? row.Hour ?? row.sale_hour,
+        }
+        const validated = csvSaleRowSchema.parse(normalizedRow)
 
         // Trouver le produit
         const product = productMap.get(validated.product.toLowerCase())

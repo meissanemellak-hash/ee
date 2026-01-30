@@ -79,6 +79,8 @@ export async function GET(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
+    const withInventory = searchParams.get('withInventory') === '1'
+
     const ingredient = await prisma.ingredient.findFirst({
       where: {
         id: params.id,
@@ -91,6 +93,15 @@ export async function GET(
             inventory: true,
           },
         },
+        ...(withInventory && {
+          inventory: {
+            include: {
+              restaurant: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+        }),
       },
     })
 

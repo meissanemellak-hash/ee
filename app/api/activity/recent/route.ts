@@ -71,6 +71,11 @@ export async function GET(request: NextRequest) {
 
     console.log('[GET /api/activity/recent] Organisation trouvée:', organization.name, organization.id)
 
+    const restaurantId = searchParams.get('restaurantId')
+    const restaurantWhere = restaurantId
+      ? { organizationId: organization.id, id: restaurantId }
+      : { organizationId: organization.id }
+
     // Récupérer les activités récentes (30 derniers jours)
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
@@ -84,9 +89,7 @@ export async function GET(request: NextRequest) {
     try {
       recentSales = await prisma.sale.findMany({
         where: {
-          restaurant: {
-            organizationId: organization.id,
-          },
+          restaurant: restaurantWhere,
           saleDate: {
             gte: thirtyDaysAgo,
           },
@@ -128,9 +131,7 @@ export async function GET(request: NextRequest) {
     try {
       recentAcceptedRecommendations = await prisma.recommendation.findMany({
         where: {
-          restaurant: {
-            organizationId: organization.id,
-          },
+          restaurant: restaurantWhere,
           status: 'accepted',
           updatedAt: {
             gte: thirtyDaysAgo,
@@ -191,9 +192,7 @@ export async function GET(request: NextRequest) {
     try {
       recentResolvedAlerts = await prisma.alert.findMany({
         where: {
-          restaurant: {
-            organizationId: organization.id,
-          },
+          restaurant: restaurantWhere,
           resolved: true,
           updatedAt: {
             gte: thirtyDaysAgo,

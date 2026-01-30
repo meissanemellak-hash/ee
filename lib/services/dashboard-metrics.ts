@@ -37,22 +37,26 @@ export interface ExecutiveDashboardMetrics {
 }
 
 /**
- * Calcule les métriques du dashboard exécutif
+ * Calcule les métriques du dashboard exécutif.
+ * Si restaurantId est fourni, toutes les métriques sont filtrées pour ce restaurant uniquement.
  */
 export async function calculateExecutiveDashboardMetrics(
-  organizationId: string
+  organizationId: string,
+  restaurantId?: string | null
 ): Promise<ExecutiveDashboardMetrics> {
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
 
+  const restaurantWhere = restaurantId
+    ? { organizationId, id: restaurantId }
+    : { organizationId }
+
   // 1. Récupérer toutes les recommandations acceptées ce mois-ci
   const acceptedRecommendationsThisMonth = await prisma.recommendation.findMany({
     where: {
-      restaurant: {
-        organizationId,
-      },
+      restaurant: restaurantWhere,
       status: 'accepted',
       updatedAt: {
         gte: startOfMonth,
@@ -141,9 +145,7 @@ export async function calculateExecutiveDashboardMetrics(
   // 4. Récupérer les alertes critiques
   const criticalAlerts = await prisma.alert.findMany({
     where: {
-      restaurant: {
-        organizationId,
-      },
+      restaurant: restaurantWhere,
       resolved: false,
       severity: {
         in: ['high', 'critical'],
@@ -201,9 +203,7 @@ export async function calculateExecutiveDashboardMetrics(
   // 7. Calculer le gaspillage estimé (basé sur les alertes OVERSTOCK)
   const overstockAlerts = await prisma.alert.findMany({
     where: {
-      restaurant: {
-        organizationId,
-      },
+      restaurant: restaurantWhere,
       type: 'OVERSTOCK',
       resolved: false,
       createdAt: {

@@ -164,12 +164,19 @@ export default function ProductsPage() {
               </p>
             )}
           </div>
-          <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 shrink-0">
-            <Link href="/dashboard/products/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Ajouter un produit
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button variant="outline" asChild className="shadow-sm">
+              <Link href="/dashboard/products/import">
+                Importer CSV
+              </Link>
+            </Button>
+            <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
+              <Link href="/dashboard/products/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Ajouter un produit
+              </Link>
+            </Button>
+          </div>
         </header>
 
         <Card className="rounded-xl border shadow-sm bg-card">

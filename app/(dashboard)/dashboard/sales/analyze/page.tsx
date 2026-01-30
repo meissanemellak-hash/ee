@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useOrganization } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
+import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Loader2, TrendingUp, Package, DollarSign, Calendar, BarChart3 } from 'lucide-react'
+import { Loader2, TrendingUp, Package, Euro, Calendar, BarChart3 } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -22,7 +24,10 @@ import { AnalyzeSkeleton } from '@/components/ui/skeletons/analyze-skeleton'
 
 export default function SalesAnalyzePage() {
   const { organization, isLoaded } = useOrganization()
-  const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
+  const searchParams = useSearchParams()
+  const urlRestaurant = searchParams.get('restaurant')
+  const { setActiveRestaurantId } = useActiveRestaurant()
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string>(() => urlRestaurant || 'all')
   const [startDate, setStartDate] = useState(() => {
     const date = new Date()
     date.setDate(date.getDate() - 30)
@@ -32,6 +37,10 @@ export default function SalesAnalyzePage() {
 
   const { data: restaurantsData } = useRestaurants(1, 100)
   const restaurants = restaurantsData?.restaurants || []
+
+  useEffect(() => {
+    setSelectedRestaurant(urlRestaurant || 'all')
+  }, [urlRestaurant])
 
   const { data: analysis, isLoading, error, refetch } = useSalesAnalyze({
     restaurantId: selectedRestaurant,
@@ -200,7 +209,13 @@ export default function SalesAnalyzePage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="analyze-restaurant">Restaurant</Label>
-                <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+                <Select
+                  value={selectedRestaurant}
+                  onValueChange={(v) => {
+                    setSelectedRestaurant(v)
+                    setActiveRestaurantId(v === 'all' ? null : v)
+                  }}
+                >
                   <SelectTrigger id="analyze-restaurant" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par restaurant">
                     <SelectValue placeholder="Tous les restaurants" />
                   </SelectTrigger>
@@ -254,7 +269,7 @@ export default function SalesAnalyzePage() {
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Chiffre d&apos;affaires</CardTitle>
-              <DollarSign className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <Euro className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(analysis.totalRevenue)}</div>

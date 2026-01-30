@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
@@ -14,9 +14,10 @@ import {
   Bell,
   Settings,
   FileText,
+  PackageCheck,
 } from 'lucide-react'
 
-const navigation = [
+const baseNavigation = [
   {
     name: 'Dashboard',
     href: '/dashboard',
@@ -69,8 +70,30 @@ const navigation = [
   },
 ]
 
+type NavItem = (typeof baseNavigation)[number]
+
+/** Retourne la navigation : base + lien Inventaire (restaurant actif) si un restaurant est sélectionné */
+function getNavigation(activeRestaurantId: string | null): NavItem[] {
+  if (!activeRestaurantId) return baseNavigation
+  const inventaireItem: NavItem = {
+    name: 'Inventaire',
+    href: `/dashboard/restaurants/${activeRestaurantId}/inventory`,
+    icon: PackageCheck,
+  }
+  const alertesIndex = baseNavigation.findIndex((n) => n.name === 'Alertes')
+  const insertIndex = alertesIndex >= 0 ? alertesIndex + 1 : baseNavigation.length
+  return [
+    ...baseNavigation.slice(0, insertIndex),
+    inventaireItem,
+    ...baseNavigation.slice(insertIndex),
+  ]
+}
+
 export function Sidebar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const activeRestaurantId = searchParams.get('restaurant')
+  const navigation = getNavigation(activeRestaurantId)
 
   return (
     <div className="flex h-full w-64 flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-sm">
@@ -89,11 +112,12 @@ export function Sidebar() {
         {navigation.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
           const Icon = item.icon
+          const href = activeRestaurantId ? `${item.href}${item.href.includes('?') ? '&' : '?'}restaurant=${activeRestaurantId}` : item.href
           
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={href}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 isActive

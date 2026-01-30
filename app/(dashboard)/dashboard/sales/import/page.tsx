@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Upload, FileText, CheckCircle2, XCircle, Loader2, ArrowLeft } from 'lucide-react'
+import { Upload, FileText, CheckCircle2, XCircle, Loader2, ArrowLeft, Download } from 'lucide-react'
 import Link from 'next/link'
 import Papa from 'papaparse'
 import {
@@ -30,6 +30,10 @@ interface CSVRow {
   [key: string]: string | undefined
 }
 
+/** Contenu du modèle CSV pour l'import des ventes (UTF-8 avec BOM pour Excel, colonnes en français) */
+const SALES_CSV_TEMPLATE =
+  '\uFEFFrestaurant,produit,quantite,montant,date,heure\nMon Restaurant,Croissant,10,15.00,2025-01-20,8\nMon Restaurant,Café noir,25,37.50,2025-01-20,9'
+
 export default function ImportSalesPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -42,6 +46,22 @@ export default function ImportSalesPage() {
   const { data: restaurantsData } = useRestaurants(1, 100)
   const restaurants = restaurantsData?.restaurants || []
   const importSales = useImportSales()
+
+  const handleDownloadTemplate = useCallback(() => {
+    const blob = new Blob([SALES_CSV_TEMPLATE], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'modele_import_ventes.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    toast({
+      title: 'Modèle téléchargé',
+      description: 'Le fichier modele_import_ventes.csv a été téléchargé. Remplissez-le puis importez-le ci-dessous.',
+    })
+  }, [toast])
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -268,7 +288,7 @@ export default function ImportSalesPage() {
                         Glissez-déposez un fichier CSV ou cliquez pour sélectionner
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Format attendu : restaurant, product, quantity, amount, date, hour
+                        Format attendu : restaurant, produit, quantite, montant, date, heure
                       </p>
                     </label>
                   )}
@@ -368,11 +388,23 @@ export default function ImportSalesPage() {
         </div>
 
         <Card className="rounded-xl border shadow-sm bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Format CSV attendu</CardTitle>
-            <CardDescription className="mt-1">
-              Votre fichier CSV doit contenir les colonnes suivantes (noms exacts ou reconnus)
-            </CardDescription>
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-semibold">Format CSV attendu</CardTitle>
+                <CardDescription className="mt-1">
+                  Votre fichier CSV doit contenir les colonnes suivantes (en français ci-dessous). Les noms en anglais (product, quantity, amount, hour) sont aussi acceptés. Téléchargez le modèle pour partir d&apos;un fichier prêt à remplir.
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                className="shrink-0 rounded-xl bg-teal-600 hover:bg-teal-700 text-white border-0 shadow-sm"
+                onClick={handleDownloadTemplate}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Télécharger le modèle CSV
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -381,18 +413,21 @@ export default function ImportSalesPage() {
               </p>
               <div className="rounded-xl bg-muted/30 dark:bg-gray-800/30 border border-border p-4 font-mono text-xs">
                 <ul className="space-y-1 list-none p-0 m-0">
-                  <li><strong>restaurant</strong> : Nom du restaurant (doit correspondre à un restaurant existant)</li>
-                  <li><strong>product</strong> : Nom du produit (doit correspondre à un produit existant)</li>
-                  <li><strong>quantity</strong> : Quantité vendue (nombre)</li>
-                  <li><strong>amount</strong> : Montant total de la vente (nombre)</li>
-                  <li><strong>date</strong> : Date de la vente (format YYYY-MM-DD)</li>
-                  <li><strong>hour</strong> : Heure de la vente (0-23)</li>
+                  <li><strong>restaurant</strong> : Nom du restaurant (informatif ; le restaurant sélectionné ci-dessus est utilisé pour toutes les lignes)</li>
+                  <li><strong>produit</strong> : Nom du produit (doit correspondre à un produit existant)</li>
+                  <li><strong>quantite</strong> : Quantité vendue (nombre entier)</li>
+                  <li><strong>montant</strong> : Montant total de la vente (nombre, décimal avec point)</li>
+                  <li><strong>date</strong> : Date de la vente (format AAAA-MM-JJ)</li>
+                  <li><strong>heure</strong> : Heure de la vente (0-23)</li>
                 </ul>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Le modèle téléchargeable contient ces colonnes et deux lignes d&apos;exemple. Remplissez-le avec vos données puis importez-le après avoir choisi le restaurant.
+              </p>
               <div className="rounded-xl border border-teal-200/60 dark:border-teal-800/40 p-4 bg-teal-50/50 dark:bg-teal-900/10">
                 <p className="text-xs font-semibold mb-2 text-teal-800 dark:text-teal-300">Exemple :</p>
                 <pre className="text-xs bg-muted/50 dark:bg-gray-800/50 p-3 rounded-lg border border-border overflow-x-auto" aria-hidden>
-{`restaurant,product,quantity,amount,date,hour
+{`restaurant,produit,quantite,montant,date,heure
 Restaurant Paris Centre,Burger Classique,5,62.50,2024-01-15,12
 Restaurant Paris Centre,Burger Classique,3,37.50,2024-01-15,13`}
                 </pre>

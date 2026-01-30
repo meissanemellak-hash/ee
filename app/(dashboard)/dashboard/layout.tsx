@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { Suspense } from 'react'
 import { DashboardSyncWrapper } from '@/components/dashboard/dashboard-sync-wrapper'
+import { OnboardingRedirectGuard } from '@/components/dashboard/onboarding-redirect-guard'
 
 // Force dynamic rendering pour les pages avec authentification
 export const dynamic = 'force-dynamic'
@@ -65,20 +66,26 @@ export default async function DashboardLayout({
     // On laisse passer pour éviter les boucles de redirection
   }
 
+  const onboardingCompleted = organization
+    ? !!organization.onboardingCompletedAt
+    : null
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Suspense fallback={null}>
-        <DashboardSyncWrapper />
-      </Suspense>
-      <div className="hidden lg:block">
-        <Sidebar />
+    <OnboardingRedirectGuard onboardingCompleted={onboardingCompleted}>
+      <div className="flex h-screen overflow-hidden">
+        <Suspense fallback={null}>
+          <DashboardSyncWrapper />
+        </Suspense>
+        <div className="hidden lg:block">
+          <Sidebar />
+        </div>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto bg-muted/40">
+            {children}
+          </main>
+        </div>
       </div>
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto bg-muted/40">
-          {children}
-        </main>
-      </div>
-    </div>
+    </OnboardingRedirectGuard>
   )
 }

@@ -327,6 +327,7 @@ export function useImportSales() {
       const formData = new FormData()
       formData.append('file', data.file)
       formData.append('restaurantId', data.restaurantId)
+      formData.append('clerkOrgId', organization.id)
 
       const response = await fetch('/api/sales/import', {
         method: 'POST',
@@ -336,7 +337,8 @@ export function useImportSales() {
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Erreur lors de l\'import')
+        const message = result.details || result.error || 'Erreur lors de l\'import'
+        throw new Error(message)
       }
 
       return result as Promise<{

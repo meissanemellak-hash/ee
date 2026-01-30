@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useOrganization } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
+import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,7 +57,11 @@ interface Restaurant {
 
 export default function ForecastsPage() {
   const { organization, isLoaded } = useOrganization()
-  const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
+  const searchParams = useSearchParams()
+  const { setActiveRestaurantId } = useActiveRestaurant()
+  const urlRestaurant = searchParams.get('restaurant')
+
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string>(() => urlRestaurant || 'all')
   const [selectedMethod, setSelectedMethod] = useState<string>('moving_average')
   const [forecastDate, setForecastDate] = useState(() => {
     const date = new Date()
@@ -66,6 +72,10 @@ export default function ForecastsPage() {
   const [endDate, setEndDate] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [forecastToDelete, setForecastToDelete] = useState<Forecast | null>(null)
+
+  useEffect(() => {
+    setSelectedRestaurant(urlRestaurant || 'all')
+  }, [urlRestaurant])
 
   // Charger les restaurants pour les filtres
   const { data: restaurantsData } = useRestaurants(1, 100)
@@ -340,7 +350,13 @@ export default function ForecastsPage() {
               <div className="flex items-end gap-2 flex-wrap" role="search" aria-label="Filtres liste prévisions">
                 <div className="space-y-1.5">
                   <Label htmlFor="list-forecast-restaurant" className="text-xs text-muted-foreground">Restaurant</Label>
-                  <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+                  <Select
+                    value={selectedRestaurant}
+                    onValueChange={(v) => {
+                      setSelectedRestaurant(v)
+                      setActiveRestaurantId(v === 'all' ? null : v)
+                    }}
+                  >
                     <SelectTrigger id="list-forecast-restaurant" className="w-[160px] h-9 text-sm bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par restaurant">
                       <SelectValue placeholder="Tous" />
                     </SelectTrigger>

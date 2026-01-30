@@ -98,24 +98,25 @@ export async function GET(
       )
     }
 
-    // Calculer le chiffre d'affaires des 7 derniers jours
+    // Chiffre d'affaires des 7 derniers jours (prix actuel du produit : quantity × unitPrice)
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
     sevenDaysAgo.setHours(0, 0, 0, 0)
 
-    const recentSalesData = await prisma.sale.aggregate({
+    const recentSalesForRevenue = await prisma.sale.findMany({
       where: {
         restaurantId: restaurant.id,
-        saleDate: {
-          gte: sevenDaysAgo,
-        },
+        saleDate: { gte: sevenDaysAgo },
       },
-      _sum: {
-        amount: true,
+      include: {
+        product: { select: { unitPrice: true } },
       },
     })
 
-    const totalRevenue = recentSalesData._sum.amount || 0
+    const totalRevenue = recentSalesForRevenue.reduce(
+      (sum, s) => sum + s.quantity * s.product.unitPrice,
+      0
+    )
 
     // Récupérer les 10 dernières ventes
     const recentSales = await prisma.sale.findMany({

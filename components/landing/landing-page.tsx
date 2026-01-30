@@ -10,7 +10,6 @@ import {
   Store,
   Target,
   CheckCircle2,
-  ArrowRight,
   Quote,
   Play,
   LayoutDashboard,
@@ -37,7 +36,7 @@ export function LandingPage() {
                 <Link href="/sign-in">Se connecter</Link>
               </Button>
               <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
-                <Link href="/sign-up">Démarrer</Link>
+                <Link href="/demo">Demander une démo</Link>
               </Button>
             </nav>
           </div>
@@ -49,12 +48,12 @@ export function LandingPage() {
         <section className="relative py-20 lg:py-28">
           <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Pilotez tous vos restaurants
-              <span className="block mt-2 text-teal-600 dark:text-teal-400">en un seul endroit</span>
+              Pilotez vos restaurants sur
+              <span className="block mt-2 text-teal-600 dark:text-teal-400">une seule plate-forme</span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Gaspillage, ruptures, tableaux Excel qui s&apos;empilent… Les groupes et chaînes perdent du temps et de l&apos;argent. 
-              Une plateforme pensée pour le multi-restaurants : ventes, inventaire, alertes et prévisions au même endroit.
+              Gaspillage, ruptures de stocks, Excel partout : vous perdez du temps et de l&apos;argent. 
+              Reprenez la main : ventes, inventaire et alertes en un endroit, des économies concrètes et des stocks maîtrisés.
             </p>
             {/* Ancres en pills (3 principales) */}
             <nav className="mt-8 flex flex-wrap justify-center gap-2" aria-label="Aller à une section">
@@ -68,16 +67,6 @@ export function LandingPage() {
                 FAQ
               </a>
             </nav>
-            <div className="mt-10 flex flex-col items-center gap-3">
-              <Button asChild size="lg" className="bg-teal-600 hover:bg-teal-700 text-white border-0 text-base px-8">
-                <Link href="/sign-up?intent=demo">
-                  Demander une démo <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Link href="/sign-in" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Se connecter
-              </Link>
-            </div>
           </div>
         </section>
 
@@ -88,7 +77,7 @@ export function LandingPage() {
               Aperçu du produit
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Vue d&apos;ensemble de vos économies, alertes et recommandations comme dans votre tableau de bord.
+              Bénéfice : visualisez vos économies en temps réel et pilotez vos restaurants avec des recommandations actionnables, comme dans votre tableau de bord.
             </p>
 
             {/* Mockup aligné sur le vrai dashboard */}
@@ -192,7 +181,7 @@ export function LandingPage() {
               Ils pilotent déjà avec AI Operations
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
-              Une plateforme pour tout piloter : centralisez vos restaurants, réduisez le gaspillage et les ruptures de stock, et dégagez des économies concrètes.
+              Bénéfices : centralisez vos restaurants, réduisez le gaspillage et les ruptures de stock, dégagez des économies concrètes et gagnez du temps sur le suivi opérationnel.
             </p>
 
             {/* 3 indicateurs percutants */}
@@ -208,9 +197,9 @@ export function LandingPage() {
                 <p className="text-xs text-muted-foreground mt-0.5">Service assuré, clients sereins</p>
               </div>
               <div className="text-center min-w-[140px] rounded-xl border-2 border-teal-200/80 dark:border-teal-800/80 bg-teal-50/50 dark:bg-teal-950/30 px-6 py-5 shadow-sm">
-                <p className="text-4xl font-bold text-teal-600 dark:text-teal-400">–15 %</p>
-                <p className="text-sm font-semibold text-foreground mt-1">d&apos;économies</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Achats et stocks</p>
+                <p className="text-4xl font-bold text-teal-600 dark:text-teal-400">+15 %</p>
+                <p className="text-sm font-semibold text-foreground mt-1">de marge</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Maîtrise des achats et du stock</p>
               </div>
             </div>
 
@@ -265,7 +254,7 @@ export function LandingPage() {
               Ces problèmes vous parlent ?
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Gérer plusieurs établissements sans outil dédié, c&apos;est perdre en visibilité et en réactivité.
+              Sans outil dédié, vous pilotez à l&apos;aveugle. Avec AI Operations, vous retrouvez la visibilité, la réactivité et des bénéfices mesurables : moins de gaspillage, moins de ruptures de stocks, plus de marge.
             </p>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
@@ -324,7 +313,7 @@ export function LandingPage() {
               Une seule plateforme pour tout piloter
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Ventes, inventaire, alertes, prévisions et recommandations : tout est centralisé et pensé pour le multi-restaurants.
+              Tout est centralisé pour le multi-restaurants. Bénéfices : moins de temps perdu, moins de ruptures, des économies mesurables sur les achats et le gaspillage.
             </p>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
@@ -383,8 +372,7 @@ export function LandingPage() {
               Pour qui ?
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
-              Que vous gériez 3 établissements ou 30, AI Operations vous donne la visibilité et les leviers 
-              pour réduire le gaspillage, éviter les ruptures et piloter vos coûts comme un pro.
+              Que vous gériez 3 établissements ou 30 : bénéfices concrets : visibilité en temps réel, réduction du gaspillage et des ruptures, pilotage des coûts et économies sur les achats.
             </p>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {[
@@ -402,7 +390,7 @@ export function LandingPage() {
                 },
                 {
                   title: 'Achats & supply chain',
-                  text: 'Suivez les stocks, les seuils d\'alerte et les prévisions. Réduisez le gaspillage et les ruptures en anticipant les besoins par restaurant.',
+                  text: 'Suivez les stocks, les seuils d\'alerte et les prévisions. Réduisez le gaspillage et les ruptures de stocks en anticipant les besoins par restaurant.',
                 },
               ].map((item) => (
                 <div
@@ -424,7 +412,7 @@ export function LandingPage() {
               Une offre pensée pour la croissance
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Tarification adaptée au nombre d&apos;établissements et d&apos;utilisateurs. Devis personnalisé pour les plans Pro et Enterprise.
+              Tarification adaptée à votre périmètre. Bénéfice : un investissement qui se traduit par des économies mesurables, un pilotage simplifié et un accompagnement dédié (devis Pro et Enterprise).
             </p>
             <div className="mt-12 flex flex-col items-center">
               <div className="rounded-xl border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-900/10 p-8 max-w-md w-full text-center">
@@ -458,10 +446,7 @@ export function LandingPage() {
                   </li>
                 </ul>
                 <Button asChild size="lg" className="mt-6 w-full bg-teal-600 hover:bg-teal-700 text-white border-0">
-                  <Link href="/sign-up">Demander un devis personnalisé</Link>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="mt-3 w-full border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20">
-                  <Link href="/sign-up?intent=demo">Demander une démo</Link>
+                  <Link href="/demo">Demander une démo</Link>
                 </Button>
               </div>
             </div>
@@ -524,7 +509,7 @@ export function LandingPage() {
               Questions fréquentes
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Quelques réponses pour vous aider à y voir plus clair.
+              Réponses utiles pour évaluer les bénéfices d&apos;AI Operations sur votre activité et votre ROI.
             </p>
             <dl className="mt-12 max-w-2xl mx-auto space-y-4">
               {[
@@ -575,12 +560,9 @@ export function LandingPage() {
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
               Moins de stress, plus de bénéfices et d&apos;économies. Essayez la plateforme.
             </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="mt-8 flex justify-center">
               <Button asChild size="lg" className="bg-teal-600 hover:bg-teal-700 text-white border-0 text-base px-8">
-                <Link href="/sign-up">Démarrer gratuitement</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 text-base px-8">
-                <Link href="/sign-up?intent=demo">Demander une démo</Link>
+                <Link href="/demo">Demander une démo</Link>
               </Button>
             </div>
           </div>
@@ -602,12 +584,6 @@ export function LandingPage() {
                 </Link>
                 <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Contact
-                </Link>
-                <Link href="/sign-in" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Se connecter
-                </Link>
-                <Link href="/sign-up" className="text-sm text-teal-600 dark:text-teal-400 hover:underline font-medium">
-                  Créer un compte
                 </Link>
               </nav>
             </div>

@@ -2,8 +2,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,10 +21,19 @@ interface SalesChartData {
   sales: number
 }
 
+export type SalesChartPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly'
+
 interface SalesChartProps {
   data: SalesChartData[]
-  period?: 'weekly' | 'daily'
-  onPeriodChange?: (period: 'weekly' | 'daily') => void
+  period?: SalesChartPeriod
+  onPeriodChange?: (period: SalesChartPeriod) => void
+}
+
+const PERIOD_LABELS: Record<SalesChartPeriod, string> = {
+  daily: '7 derniers jours',
+  weekly: '12 dernières semaines',
+  monthly: '12 derniers mois',
+  yearly: '3 dernières années',
 }
 
 export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesChartProps) {
@@ -46,11 +55,11 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
           <div>
             <CardTitle className="text-lg font-semibold">Évolution des ventes</CardTitle>
             <CardDescription className="mt-1">
-              Revenus et nombre de ventes sur la période
+              Revenus (€) et nombre de ventes {PERIOD_LABELS[period]}
             </CardDescription>
           </div>
           {onPeriodChange && (
-            <div className="flex items-center gap-2" role="group" aria-label="Période du graphique">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Période du graphique">
               <Button
                 variant={period === 'daily' ? 'default' : 'outline'}
                 size="sm"
@@ -58,7 +67,7 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
                 className={period === 'daily' ? 'bg-teal-600 hover:bg-teal-700 text-white' : undefined}
                 aria-pressed={period === 'daily'}
               >
-                Quotidien
+                Par jour
               </Button>
               <Button
                 variant={period === 'weekly' ? 'default' : 'outline'}
@@ -67,7 +76,25 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
                 className={period === 'weekly' ? 'bg-teal-600 hover:bg-teal-700 text-white' : undefined}
                 aria-pressed={period === 'weekly'}
               >
-                Hebdomadaire
+                Par semaine
+              </Button>
+              <Button
+                variant={period === 'monthly' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => onPeriodChange('monthly')}
+                className={period === 'monthly' ? 'bg-teal-600 hover:bg-teal-700 text-white' : undefined}
+                aria-pressed={period === 'monthly'}
+              >
+                Par mois
+              </Button>
+              <Button
+                variant={period === 'yearly' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => onPeriodChange('yearly')}
+                className={period === 'yearly' ? 'bg-teal-600 hover:bg-teal-700 text-white' : undefined}
+                aria-pressed={period === 'yearly'}
+              >
+                Par année
               </Button>
             </div>
           )}
@@ -95,7 +122,7 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
             {/* Graphique (Style Sequence) */}
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <LineChart data={chartData} margin={{ top: 20, right: 44, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                   <XAxis
                     dataKey="date"
@@ -119,6 +146,15 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
                       return `€${value}`
                     }}
                   />
+                  <YAxis
+                    yAxisId="sales"
+                    orientation="right"
+                    stroke="#6b7280"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => value.toLocaleString()}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'white',
@@ -131,18 +167,35 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
                       if (name === 'revenue') {
                         return [formatCurrency(value), 'Revenus']
                       }
-                      return [value.toLocaleString(), 'Ventes']
+                      return [value.toLocaleString(), 'Nombre de ventes']
                     }}
                     labelStyle={{ fontWeight: 600, marginBottom: '4px' }}
                   />
-                  <Bar
+                  <Legend
+                    wrapperStyle={{ paddingTop: '8px' }}
+                    formatter={(value) => (value === 'revenue' ? 'Revenus (€)' : 'Nombre de ventes')}
+                  />
+                  <Line
                     yAxisId="revenue"
+                    type="monotone"
                     dataKey="revenue"
-                    fill="#14b8a6"
-                    radius={[6, 6, 0, 0]}
+                    stroke="#14b8a6"
+                    strokeWidth={2}
+                    dot={{ fill: '#14b8a6', strokeWidth: 0, r: 4 }}
+                    activeDot={{ r: 6, fill: '#14b8a6', stroke: '#fff', strokeWidth: 2 }}
                     name="revenue"
                   />
-                </BarChart>
+                  <Line
+                    yAxisId="sales"
+                    type="monotone"
+                    dataKey="sales"
+                    stroke="#64748b"
+                    strokeWidth={2}
+                    dot={{ fill: '#64748b', strokeWidth: 0, r: 4 }}
+                    activeDot={{ r: 6, fill: '#64748b', stroke: '#fff', strokeWidth: 2 }}
+                    name="sales"
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>

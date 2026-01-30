@@ -102,6 +102,43 @@ export function useIngredient(id: string | undefined) {
   })
 }
 
+/** Ingredient avec les lignes d'inventaire par restaurant (pour la page détail) */
+export interface IngredientWithInventory extends Ingredient {
+  inventory?: Array<{
+    id: string
+    restaurantId: string
+    currentStock: number
+    minThreshold: number
+    maxThreshold: number | null
+    restaurant: { id: string; name: string }
+  }>
+}
+
+export function useIngredientWithStock(id: string | undefined) {
+  const { organization } = useOrganization()
+
+  return useQuery({
+    queryKey: ['ingredient', id, organization?.id, 'withInventory'],
+    queryFn: async () => {
+      if (!id || !organization?.id) return null
+      
+      const queryParams = new URLSearchParams()
+      queryParams.append('clerkOrgId', organization.id)
+      queryParams.append('withInventory', '1')
+      const response = await fetch(`/api/ingredients/${id}?${queryParams.toString()}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) return null
+        throw new Error('Failed to fetch ingredient')
+      }
+      
+      const data = await response.json() as { ingredient: IngredientWithInventory }
+      return data.ingredient
+    },
+    enabled: !!id && !!organization?.id,
+  })
+}
+
 export function useCreateIngredient() {
   const queryClient = useQueryClient()
   const { organization } = useOrganization()
@@ -216,6 +253,54 @@ export function useDeleteIngredient() {
       toast({
         title: 'Ingrédient supprimé',
         description: 'L\'ingrédient a été supprimé avec succès.',
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useImportIngredients() {
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (data: { file: File }) => {
+      if (!organization?.id) throw new Error('Aucune organisation sélectionnée')
+
+      const formData = new FormData()
+      formData.append('file', data.file)
+      formData.append('clerkOrgId', organization.id)
+
+      const response = await fetch('/api/ingredients/import', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        const message = result.details || result.error || 'Erreur lors de l\'import'
+        throw new Error(typeof message === 'string' ? message : message[0] || result.error)
+      }
+
+      return result as {
+        success: boolean
+        imported: number
+        errors?: string[]
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ingredients', organization?.id] })
+      toast({
+        title: 'Import réussi',
+        description: `${data.imported} ingrédient${data.imported > 1 ? 's' : ''} importé${data.imported > 1 ? 's' : ''} avec succès${data.errors?.length ? ` (${data.errors.length} erreur${data.errors.length > 1 ? 's' : ''})` : ''}`,
       })
     },
     onError: (error: Error) => {

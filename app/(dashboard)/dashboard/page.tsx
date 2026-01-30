@@ -16,9 +16,16 @@ import { RecentActivityTable } from '@/components/dashboard/recent-activity-tabl
 // Force dynamic rendering pour les pages avec authentification
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage() {
+type PageProps = { searchParams?: Promise<{ restaurant?: string }> | { restaurant?: string } }
+
+export default async function DashboardPage(props: PageProps) {
   const { userId } = auth()
-  
+  const rawParams = props.searchParams
+  const searchParams = rawParams && typeof (rawParams as Promise<unknown>).then === 'function'
+    ? await (rawParams as Promise<{ restaurant?: string }>)
+    : (rawParams as { restaurant?: string }) ?? {}
+  const restaurantId = searchParams.restaurant && searchParams.restaurant !== 'all' ? searchParams.restaurant : undefined
+
   if (!userId) {
     redirect('/sign-in')
   }
@@ -99,8 +106,8 @@ export default async function DashboardPage() {
     )
   }
 
-  // Calculer les métriques du dashboard exécutif
-  const metrics = await calculateExecutiveDashboardMetrics(organization.id)
+  // Calculer les métriques du dashboard exécutif (filtrées par restaurant si ?restaurant=xxx)
+  const metrics = await calculateExecutiveDashboardMetrics(organization.id, restaurantId)
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Dashboard">
@@ -226,7 +233,7 @@ export default async function DashboardPage() {
 
         {/* Zone 2.5 - Graphique Évolution des Ventes */}
         <section aria-label="Évolution des ventes">
-          <DashboardSalesChart />
+          <DashboardSalesChart restaurantId={restaurantId} />
         </section>
 
         {/* Zone 3 - Recommandations Actionnables */}
@@ -293,7 +300,7 @@ export default async function DashboardPage() {
 
         {/* Zone 3.5 - Activité Récente */}
         <section aria-label="Activité récente">
-          <RecentActivityTable />
+          <RecentActivityTable restaurantId={restaurantId} />
         </section>
 
         {/* Zone 4 - Alertes Critiques */}
@@ -332,7 +339,7 @@ export default async function DashboardPage() {
             </div>
             <div className="mt-4">
               <Button variant="outline" asChild aria-label="Voir toutes les alertes">
-                <Link href="/dashboard/alerts">
+                <Link href={restaurantId ? `/dashboard/alerts?restaurant=${restaurantId}` : '/dashboard/alerts'}>
                   Voir toutes les alertes <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Link>
               </Button>

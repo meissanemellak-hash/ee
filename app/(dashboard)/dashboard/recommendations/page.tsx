@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useOrganization } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -37,10 +38,17 @@ interface Recommendation {
 export default function RecommendationsPage() {
   const { organization, isLoaded } = useOrganization()
   const router = useRouter()
-  const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
+  const searchParams = useSearchParams()
+  const urlRestaurant = searchParams.get('restaurant')
+  const { setActiveRestaurantId } = useActiveRestaurant()
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string>(() => urlRestaurant || 'all')
   const [selectedType, setSelectedType] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('pending')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setSelectedRestaurant(urlRestaurant || 'all')
+  }, [urlRestaurant])
 
   // Charger les restaurants pour les filtres
   const { data: restaurantsData } = useRestaurants(1, 100)
@@ -268,7 +276,13 @@ export default function RecommendationsPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="rec-filter-restaurant">Restaurant</Label>
-                <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+                <Select
+                value={selectedRestaurant}
+                onValueChange={(v) => {
+                  setSelectedRestaurant(v)
+                  setActiveRestaurantId(v === 'all' ? null : v)
+                }}
+              >
                   <SelectTrigger id="rec-filter-restaurant" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par restaurant">
                     <SelectValue placeholder="Tous les restaurants" />
                   </SelectTrigger>

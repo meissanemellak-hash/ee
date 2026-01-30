@@ -5,7 +5,7 @@ import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Store, Plus, Edit, Trash2, TrendingUp, Bell, MapPin } from 'lucide-react'
+import { Store, Plus, Edit, Trash2, TrendingUp, Bell, MapPin, Upload } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -167,15 +167,23 @@ export default function RestaurantsPage() {
               </p>
             )}
           </div>
-          <Button
-            asChild
-            className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 shrink-0"
-          >
-            <Link href="/dashboard/restaurants/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Ajouter un restaurant
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button variant="outline" asChild className="shadow-sm">
+              <Link href="/dashboard/restaurants/import">
+                <Upload className="mr-2 h-4 w-4" />
+                Importer CSV
+              </Link>
+            </Button>
+            <Button
+              asChild
+              className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+            >
+              <Link href="/dashboard/restaurants/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Ajouter un restaurant
+              </Link>
+            </Button>
+          </div>
         </header>
 
       {restaurants.length === 0 ? (
@@ -193,12 +201,20 @@ export default function RestaurantsPage() {
               <li>Gestion des stocks et seuils d’alerte</li>
               <li>Tableau de bord par restaurant</li>
             </ul>
-            <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un restaurant">
-              <Link href="/dashboard/restaurants/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Ajouter un restaurant
-              </Link>
-            </Button>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button variant="outline" asChild aria-label="Importer des restaurants en CSV">
+                <Link href="/dashboard/restaurants/import">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Importer CSV
+                </Link>
+              </Button>
+              <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un restaurant">
+                <Link href="/dashboard/restaurants/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Ajouter un restaurant
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (

@@ -112,6 +112,52 @@ export async function requireOrganization() {
 }
 
 /**
+ * Récupère l'organisation par clerkOrgId si l'utilisateur en est membre.
+ * Utilisé quand la session n'a pas d'orgId mais que le client envoie clerkOrgId (ex. import).
+ */
+export async function getOrganizationByClerkIdIfMember(
+  userId: string,
+  clerkOrgId: string
+) {
+  try {
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const client = await clerkClient()
+    const memberships = await client.users.getOrganizationMembershipList({ userId })
+    const isMember = memberships.data?.some(
+      (m) => m.organization.id === clerkOrgId
+    )
+    if (!isMember) return null
+
+    let organization = await prisma.organization.findUnique({
+      where: { clerkOrgId },
+    })
+    if (organization) return organization
+
+    const clerkOrg = await client.organizations.getOrganization({ organizationId: clerkOrgId })
+    try {
+      organization = await prisma.organization.create({
+        data: {
+          name: clerkOrg.name,
+          clerkOrgId,
+          shrinkPct: 0.1,
+        },
+      })
+    } catch (dbError) {
+      if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+        organization = await prisma.organization.findUnique({
+          where: { clerkOrgId },
+        })
+      } else {
+        throw dbError
+      }
+    }
+    return organization
+  } catch {
+    return null
+  }
+}
+
+/**
  * Récupère l'utilisateur actuel avec son organisation
  */
 export async function getCurrentUserWithOrg() {

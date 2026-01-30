@@ -102,19 +102,23 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Calculer les statistiques
+    // Revenu basé sur le prix actuel du produit (quantity × unitPrice) pour refléter les changements de prix
+    const saleRevenue = (s: { quantity: number; amount: number; product: { unitPrice: number } }) =>
+      s.quantity * s.product.unitPrice
+
     const totalSales = sales.reduce((sum, s) => sum + s.quantity, 0)
-    const totalRevenue = sales.reduce((sum, s) => sum + s.amount, 0)
+    const totalRevenue = sales.reduce((sum, s) => sum + saleRevenue(s), 0)
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
     const averagePerDay = daysDiff > 0 ? totalSales / daysDiff : 0
 
     // Top produits
     const productMap = new Map<string, { quantity: number; revenue: number; name: string }>()
     for (const sale of sales) {
+      const rev = saleRevenue(sale)
       const existing = productMap.get(sale.productId) || { quantity: 0, revenue: 0, name: sale.product.name }
       productMap.set(sale.productId, {
         quantity: existing.quantity + sale.quantity,
-        revenue: existing.revenue + sale.amount,
+        revenue: existing.revenue + rev,
         name: existing.name,
       })
     }
@@ -132,10 +136,11 @@ export async function GET(request: NextRequest) {
     // Ventes par heure
     const salesByHourMap = new Map<number, { quantity: number; revenue: number }>()
     for (const sale of sales) {
+      const rev = saleRevenue(sale)
       const existing = salesByHourMap.get(sale.saleHour) || { quantity: 0, revenue: 0 }
       salesByHourMap.set(sale.saleHour, {
         quantity: existing.quantity + sale.quantity,
-        revenue: existing.revenue + sale.amount,
+        revenue: existing.revenue + rev,
       })
     }
 
@@ -150,11 +155,12 @@ export async function GET(request: NextRequest) {
     // Ventes par jour
     const salesByDayMap = new Map<string, { quantity: number; revenue: number }>()
     for (const sale of sales) {
+      const rev = saleRevenue(sale)
       const dateKey = sale.saleDate.toISOString().split('T')[0]
       const existing = salesByDayMap.get(dateKey) || { quantity: 0, revenue: 0 }
       salesByDayMap.set(dateKey, {
         quantity: existing.quantity + sale.quantity,
-        revenue: existing.revenue + sale.amount,
+        revenue: existing.revenue + rev,
       })
     }
 

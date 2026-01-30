@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useOrganization } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
+import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -58,10 +60,17 @@ const typeLabels: Record<string, string> = {
 
 export default function AlertsPage() {
   const { organization, isLoaded } = useOrganization()
-  const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
+  const searchParams = useSearchParams()
+  const urlRestaurant = searchParams.get('restaurant')
+  const { setActiveRestaurantId } = useActiveRestaurant()
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string>(() => urlRestaurant || 'all')
   const [selectedType, setSelectedType] = useState<string>('all')
   const [selectedSeverity, setSelectedSeverity] = useState<string>('all')
   const [showResolved, setShowResolved] = useState<boolean>(false)
+
+  useEffect(() => {
+    setSelectedRestaurant(urlRestaurant || 'all')
+  }, [urlRestaurant])
 
   // Charger les restaurants pour les filtres
   const { data: restaurantsData } = useRestaurants(1, 100)
@@ -316,7 +325,13 @@ export default function AlertsPage() {
             <div className="grid gap-4 md:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="alert-filter-restaurant">Restaurant</Label>
-                <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+                <Select
+                value={selectedRestaurant}
+                onValueChange={(v) => {
+                  setSelectedRestaurant(v)
+                  setActiveRestaurantId(v === 'all' ? null : v)
+                }}
+              >
                   <SelectTrigger id="alert-filter-restaurant" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par restaurant">
                     <SelectValue placeholder="Tous les restaurants" />
                   </SelectTrigger>

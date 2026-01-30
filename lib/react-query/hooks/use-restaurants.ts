@@ -213,3 +213,51 @@ export function useDeleteRestaurant() {
     },
   })
 }
+
+export function useImportRestaurants() {
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (data: { file: File }) => {
+      if (!organization?.id) throw new Error('Aucune organisation sélectionnée')
+
+      const formData = new FormData()
+      formData.append('file', data.file)
+      formData.append('clerkOrgId', organization.id)
+
+      const response = await fetch('/api/restaurants/import', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        const message = result.details || result.error || 'Erreur lors de l\'import'
+        throw new Error(typeof message === 'string' ? message : message[0] || result.error)
+      }
+
+      return result as {
+        success: boolean
+        imported: number
+        errors?: string[]
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['restaurants', organization?.id] })
+      toast({
+        title: 'Import réussi',
+        description: `${data.imported} restaurant${data.imported > 1 ? 's' : ''} importé${data.imported > 1 ? 's' : ''} avec succès${data.errors?.length ? ` (${data.errors.length} erreur${data.errors.length > 1 ? 's' : ''})` : ''}`,
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}

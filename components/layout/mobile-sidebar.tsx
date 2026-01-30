@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -63,6 +63,8 @@ const navigation = [
 export function MobileSidebar() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const activeRestaurantId = searchParams.get('restaurant')
 
   return (
     <>
@@ -97,11 +99,11 @@ export function MobileSidebar() {
               {navigation.map((item) => {
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
                 const Icon = item.icon
-                
+                const href = activeRestaurantId ? `${item.href}${item.href.includes('?') ? '&' : '?'}restaurant=${activeRestaurantId}` : item.href
                 return (
                   <Link
                     key={item.name}
-                    href={item.href}
+                    href={href}
                     onClick={() => setOpen(false)}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',

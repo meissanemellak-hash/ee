@@ -158,12 +158,19 @@ export default function IngredientsPage() {
               </p>
             )}
           </div>
-          <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 shrink-0">
-            <Link href="/dashboard/ingredients/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Ajouter un ingrédient
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button variant="outline" asChild className="shadow-sm">
+              <Link href="/dashboard/ingredients/import">
+                Importer CSV
+              </Link>
+            </Button>
+            <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
+              <Link href="/dashboard/ingredients/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Ajouter un ingrédient
+              </Link>
+            </Button>
+          </div>
         </header>
 
         <Card className="rounded-xl border shadow-sm bg-card">
@@ -301,7 +308,7 @@ export default function IngredientsPage() {
                           </div>
                         </div>
                       )}
-                      <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-3">
                         <div className="p-3.5 rounded-xl bg-muted/50 dark:bg-gray-800/50 border border-border/80">
                           <div className="flex items-center gap-2 mb-1">
                             <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" />
@@ -321,6 +328,15 @@ export default function IngredientsPage() {
                           </div>
                         </div>
                       </div>
+                      <Button
+                        variant="outline"
+                        className="w-full mt-3 border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl"
+                        asChild
+                      >
+                        <Link href={`/dashboard/ingredients/${ingredient.id}`}>
+                          Voir détail
+                        </Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

@@ -3,6 +3,7 @@
 import { UserButton, OrganizationSwitcher } from '@clerk/nextjs'
 import { MobileSidebar } from './mobile-sidebar'
 import { HeaderActivationHandler } from './header-activation-handler'
+import { RestaurantSwitcher } from './restaurant-switcher'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
@@ -24,6 +25,10 @@ export function Header() {
             />
           </div>
           
+          {/* Restaurant actif (filtre global) */}
+          <div className="min-w-0 max-w-[180px] sm:max-w-[220px]">
+            <RestaurantSwitcher />
+          </div>
           {/* Sélecteur d'organisation Clerk - Solution native et fiable */}
           <div className="hidden sm:block">
             <OrganizationSwitcher

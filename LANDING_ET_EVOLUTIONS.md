@@ -136,4 +136,33 @@ Détails et options (A, B, C) sont décrits dans la conversation ; à implément
 
 ---
 
+## 7. Avant la production – Rappels
+
+À faire avant de passer en production :
+
+1. **Calendly**
+   - Mettre en place Calendly (créer l’événement type « Démo »).
+   - Récupérer l’URL de l’événement (ex. `https://calendly.com/ton-username/demo`).
+   - Configurer dans le projet : ajouter dans `.env.local` la variable `NEXT_PUBLIC_CALENDLY_URL` avec cette URL (la page `/demo/merci` l’utilise pour le bouton « Choisir un créneau »).
+
+2. **API envoi du formulaire démo**
+   - Ajouter une API (ex. `POST /api/demo` ou appel depuis la page `/demo` ou `/demo/merci`) qui envoie le contenu du formulaire (nom, email, société, nombre de restaurants, douleurs, priorités, message) à chaque demande de démo.
+   - Options : envoi par email (Resend, Nodemailer, etc.) vers l’équipe commerciale, ou enregistrement en base de données pour suivi des leads.
+
+3. **Pages légales – Compléter avant production**
+   - **Mentions légales** (`/mentions-legales`) : remplacer tous les **[À compléter]** et **[contact@votredomaine.fr]** par les vraies informations (raison sociale, forme juridique, siège, RCS, SIRET, capital, TVA, hébergeur, responsable de la publication, email).
+   - **Politique de confidentialité** (`/confidentialite`) : remplacer **[À compléter]** et **[contact@votredomaine.fr]** (raison sociale, adresse, email DPO/contact). Vérifier les durées de conservation si vous les avez personnalisées.
+   - **Contact** (`/contact`) : remplacer l'email de contact par l'adresse réelle.
+
+4. **Vidéo de démonstration**
+   - Réaliser la vidéo de démo (écran + voix, 2–3 min : tableau de bord, restaurant, alertes, CTA).
+   - Héberger la vidéo (YouTube, Vimeo, etc.) et récupérer l’URL.
+   - Intégrer l’URL dans la landing (section « Aperçu du produit ») : remplacer le placeholder « Vidéo de démonstration – Disponible sur demande » par le lecteur vidéo.
+
+5. **Test du parcours onboarding**
+   - **Créer un nouveau compte** (nouvelle organisation / nouvel utilisateur) afin de tester le wizard d’onboarding de bout en bout avant la mise en production.
+   - Suivre le **guide étape par étape** : voir **[GUIDE_TEST_ONBOARDING.md](./GUIDE_TEST_ONBOARDING.md)** (création du compte, vérification de la redirection, test des 3 étapes du wizard, checklist finale, réinitialisation pour re-tester).
+
+---
+
 *Document généré pour garder trace de toutes les évolutions landing et parcours client.*

@@ -12,12 +12,13 @@ datasource db {
 
 // Organisation (entreprise cliente)
 model Organization {
-  id               String   @id @default(cuid())
-  name             String
-  clerkOrgId       String   @unique @map("clerk_org_id")
-  shrinkPct        Float    @default(0.1) @map("shrink_pct") // Pourcentage de shrink par défaut (10%)
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id                     String    @id @default(cuid())
+  name                   String
+  clerkOrgId             String    @unique @map("clerk_org_id")
+  shrinkPct              Float     @default(0.1) @map("shrink_pct") // Pourcentage de shrink par défaut (10%)
+  onboardingCompletedAt  DateTime? @map("onboarding_completed_at") // Date de fin du parcours d'onboarding
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   restaurants Restaurant[]
   products    Product[]

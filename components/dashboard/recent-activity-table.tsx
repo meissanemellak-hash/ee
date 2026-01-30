@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
-import { Loader2, ArrowRight, DollarSign, CheckCircle2, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Loader2, ArrowRight, Euro, CheckCircle2, AlertTriangle, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
@@ -21,7 +21,11 @@ interface Activity {
   icon: string
 }
 
-export function RecentActivityTable() {
+interface RecentActivityTableProps {
+  restaurantId?: string | null
+}
+
+export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) {
   const { organization, isLoaded } = useOrganization()
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,6 +41,7 @@ export function RecentActivityTable() {
         setLoading(true)
         const params = new URLSearchParams()
         params.append('clerkOrgId', organization.id)
+        if (restaurantId) params.append('restaurantId', restaurantId)
 
         const response = await fetch(`/api/activity/recent?${params.toString()}`)
         
@@ -65,7 +70,7 @@ export function RecentActivityTable() {
     }
 
     fetchActivities()
-  }, [organization?.id, isLoaded])
+  }, [organization?.id, isLoaded, restaurantId])
 
   const getActivityConfig = (type: Activity['type']) => {
     switch (type) {
@@ -74,7 +79,7 @@ export function RecentActivityTable() {
           borderColor: 'border-l-teal-500',
           bgColor: 'bg-teal-50/50 dark:bg-teal-900/10',
           textColor: 'text-teal-700 dark:text-teal-400',
-          icon: DollarSign,
+          icon: Euro,
           iconColor: 'text-teal-600 dark:text-teal-400',
         }
       case 'recommendation_accepted':

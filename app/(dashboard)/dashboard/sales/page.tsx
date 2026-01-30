@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { useOrganization } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
+import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Plus, Edit, Trash2, Calendar, Store, BarChart3, Loader2, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react'
+import { Plus, Edit, Trash2, Calendar, Store, BarChart3, Loader2, TrendingUp, Euro, ShoppingCart } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,14 +64,23 @@ interface Product {
 
 export default function SalesPage() {
   const { organization, isLoaded } = useOrganization()
+  const searchParams = useSearchParams()
+  const { setActiveRestaurantId } = useActiveRestaurant()
+  const urlRestaurant = searchParams.get('restaurant')
+
   const [page, setPage] = useState(1)
   const limit = 20
-  const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string>(() => urlRestaurant || 'all')
   const [selectedProduct, setSelectedProduct] = useState<string>('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null)
+
+  // Synchroniser le filtre restaurant avec l'URL (sélecteur header)
+  useEffect(() => {
+    setSelectedRestaurant(urlRestaurant || 'all')
+  }, [urlRestaurant])
 
   // Réinitialiser la page quand les filtres changent
   useEffect(() => {
@@ -93,9 +104,11 @@ export default function SalesPage() {
   const sales = data?.sales || []
   const deleteSale = useDeleteSale()
 
-  // Calculer les statistiques depuis toutes les ventes (pas seulement la page actuelle)
-  // Pour les stats, on pourrait faire une requête séparée, mais pour l'instant on calcule depuis la page
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0)
+  // Chiffre d'affaires basé sur le prix actuel du produit (quantity × unitPrice) pour refléter les changements de prix
+  const totalRevenue = sales.reduce(
+    (sum, sale) => sum + sale.quantity * (sale.product?.unitPrice ?? sale.amount / sale.quantity),
+    0
+  )
   const totalQuantity = sales.reduce((sum, sale) => sum + sale.quantity, 0)
 
   const handleDelete = async () => {
@@ -224,7 +237,7 @@ export default function SalesPage() {
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Chiffre d&apos;affaires</CardTitle>
-              <DollarSign className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <Euro className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(totalRevenue)}</div>
@@ -254,7 +267,13 @@ export default function SalesPage() {
             <div className="grid gap-4 md:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="sales-filter-restaurant">Restaurant</Label>
-                <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+                <Select
+                  value={selectedRestaurant}
+                  onValueChange={(v) => {
+                    setSelectedRestaurant(v)
+                    setActiveRestaurantId(v === 'all' ? null : v)
+                  }}
+                >
                   <SelectTrigger id="sales-filter-restaurant" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par restaurant">
                     <SelectValue placeholder="Tous les restaurants" />
                   </SelectTrigger>
