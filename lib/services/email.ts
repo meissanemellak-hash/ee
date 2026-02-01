@@ -1,7 +1,13 @@
 import { Resend } from 'resend'
 
-// Initialiser Resend avec la clé API
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Initialisation paresseuse pour éviter les erreurs au build (CI sans RESEND_API_KEY)
+function getResend(): Resend {
+  const key = process.env.RESEND_API_KEY
+  if (!key) {
+    throw new Error('Missing API key. Pass it to the constructor `new Resend("re_123")` or set RESEND_API_KEY.')
+  }
+  return new Resend(key)
+}
 
 /**
  * Envoie un email via Resend
@@ -18,6 +24,7 @@ export async function sendEmail({
   from?: string
 }) {
   try {
+    const resend = getResend()
     const { data, error } = await resend.emails.send({
       from,
       to: Array.isArray(to) ? to : [to],
