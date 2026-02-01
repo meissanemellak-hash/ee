@@ -16,7 +16,8 @@
     "dev:fresh": "rm -rf .next && next dev",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:backup": "node scripts/backup-db.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^5.0.0",

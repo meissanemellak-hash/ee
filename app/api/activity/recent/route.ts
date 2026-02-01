@@ -19,8 +19,6 @@ export async function GET(request: NextRequest) {
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    console.log('[GET /api/activity/recent] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
-
     let organization: any = null
 
     if (orgIdToUse) {
@@ -29,7 +27,6 @@ export async function GET(request: NextRequest) {
       })
       
       if (!organization) {
-        console.log('[GET /api/activity/recent] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
@@ -47,7 +44,6 @@ export async function GET(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              console.log(`[GET /api/activity/recent] ✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -69,8 +65,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('[GET /api/activity/recent] Organisation trouvée:', organization.name, organization.id)
-
     const restaurantId = searchParams.get('restaurantId')
     const restaurantWhere = restaurantId
       ? { organizationId: organization.id, id: restaurantId }
@@ -80,9 +74,6 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     thirtyDaysAgo.setHours(0, 0, 0, 0) // Début de journée
-
-    console.log('[GET /api/activity/recent] Recherche activités depuis:', thirtyDaysAgo.toISOString())
-    console.log('[GET /api/activity/recent] Organization ID:', organization.id)
 
     // 1. Ventes récentes - Récupérer les 30 ventes les plus récentes (sans filtre de date pour inclure toutes les ventes)
     let recentSales: any[] = []
@@ -109,14 +100,6 @@ export async function GET(request: NextRequest) {
         take: 30,
       })
 
-      console.log('[GET /api/activity/recent] Ventes trouvées:', recentSales.length)
-      if (recentSales.length > 0) {
-        console.log('[GET /api/activity/recent] Première vente:', {
-          date: recentSales[0].saleDate,
-          product: recentSales[0].product?.name,
-          restaurant: recentSales[0].restaurant?.name,
-        })
-      }
     } catch (error) {
       console.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des ventes:', error)
       // Continuer avec un tableau vide plutôt que de planter
@@ -147,7 +130,6 @@ export async function GET(request: NextRequest) {
         take: 10,
       })
 
-      console.log('[GET /api/activity/recent] Recommandations acceptées trouvées:', recentAcceptedRecommendations.length)
     } catch (error) {
       console.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des recommandations:', error)
       recentAcceptedRecommendations = []
@@ -176,7 +158,6 @@ export async function GET(request: NextRequest) {
         take: 10,
       })
 
-      console.log('[GET /api/activity/recent] Alertes créées trouvées:', recentAlerts.length)
     } catch (error) {
       console.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des alertes créées:', error)
       recentAlerts = []
@@ -206,7 +187,6 @@ export async function GET(request: NextRequest) {
         take: 10,
       })
 
-      console.log('[GET /api/activity/recent] Alertes résolues trouvées:', recentResolvedAlerts.length)
     } catch (error) {
       console.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des alertes résolues:', error)
       recentResolvedAlerts = []
@@ -290,8 +270,6 @@ export async function GET(request: NextRequest) {
     // Trier par date (plus récent en premier)
     activities.sort((a, b) => b.date.getTime() - a.date.getTime())
 
-    console.log('[GET /api/activity/recent] Total activités combinées:', activities.length)
-
     // Prendre les 20 plus récentes
     const recentActivities = activities.slice(0, 20)
 
@@ -300,8 +278,6 @@ export async function GET(request: NextRequest) {
       ...activity,
       date: activity.date.toISOString(),
     }))
-
-    console.log('[GET /api/activity/recent] Activités sérialisées à retourner:', serializedActivities.length)
 
     return NextResponse.json({
       activities: serializedActivities,

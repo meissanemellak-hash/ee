@@ -116,7 +116,7 @@ async function calculateIngredientNeeds(
   forecasts: ForecastData[]
 ): Promise<Map<string, IngredientNeed>> {
   const ingredientNeeds = new Map<string, IngredientNeed>()
-  const productIds = [...new Set(forecasts.map((f) => f.productId))]
+  const productIds = Array.from(new Set(forecasts.map((f) => f.productId)))
 
   if (productIds.length === 0) return ingredientNeeds
 

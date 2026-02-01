@@ -121,3 +121,14 @@ Ajoute les mêmes variables dans les paramètres de ton hébergeur :
 - `SENTRY_ORG`
 - `SENTRY_PROJECT`
 - `SENTRY_AUTH_TOKEN`
+
+---
+
+## Rappel : Après la mise en production
+
+Une fois déployé en production :
+
+1. Vérifie que les variables Sentry sont bien configurées sur l'hébergeur
+2. Provoque une erreur de test (ex. visite une page qui n'existe pas, ou une API qui échoue)
+3. Vérifie dans Sentry → **Issues** que l'erreur apparaît (peut prendre 1-2 minutes)
+4. Si l'erreur s'affiche, Sentry fonctionne correctement en production

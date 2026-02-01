@@ -39,3 +39,6 @@ next-env.d.ts
 
 # prisma
 /prisma/migrations
+
+# backups (fichiers locaux, ne pas committer)
+/backups
