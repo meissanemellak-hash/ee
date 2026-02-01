@@ -1,5 +1,6 @@
 import { clerkClient } from '@clerk/nextjs/server'
 import type { Role } from './roles'
+import { can, type Permission } from './roles'
 
 /** Clé metadata Clerk pour notre rôle custom (manager vs staff) */
 export const APP_ROLE_METADATA_KEY = 'appRole'
@@ -38,4 +39,17 @@ export async function getCurrentUserRole(
   } catch {
     return 'admin'
   }
+}
+
+/**
+ * Vérifie qu'un utilisateur a une permission, retourne 403 si non
+ */
+export async function requirePermission(
+  userId: string,
+  clerkOrgId: string,
+  permission: Permission
+): Promise<Role | null> {
+  const role = await getCurrentUserRole(userId, clerkOrgId)
+  if (can(role, permission)) return role
+  return null
 }

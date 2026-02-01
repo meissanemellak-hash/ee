@@ -33,6 +33,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useProducts, useDeleteProduct } from '@/lib/react-query/hooks/use-products'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { ProductListSkeleton } from '@/components/ui/skeletons/product-list-skeleton'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
@@ -53,6 +55,12 @@ interface Product {
 
 export default function ProductsPage() {
   const { organization, isLoaded } = useOrganization()
+  const { data: roleData } = useUserRole()
+  const currentRole = roleData ?? 'admin'
+  const canCreate = permissions.canCreateProduct(currentRole)
+  const canEdit = permissions.canEditProduct(currentRole)
+  const canDelete = permissions.canDeleteProduct(currentRole)
+
   const { activeRestaurantId } = useActiveRestaurant()
   const [page, setPage] = useState(1)
   const limit = 12
@@ -205,26 +213,32 @@ export default function ProductsPage() {
                   <Download className="mr-2 h-4 w-4" />
                   Exporter CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/products/import">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Importer CSV
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/products/import-bom">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Importer recettes (BOM)
-                  </Link>
-                </DropdownMenuItem>
+                {canCreate && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/products/import">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Importer CSV
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/products/import-bom">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Importer recettes (BOM)
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
-              <Link href="/dashboard/products/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Ajouter un produit
-              </Link>
-            </Button>
+            {canCreate && (
+              <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
+                <Link href="/dashboard/products/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Ajouter un produit
+                </Link>
+              </Button>
+            )}
           </div>
         </header>
 
@@ -285,12 +299,14 @@ export default function ProductsPage() {
                     <li>Recette (ingrédients et quantités)</li>
                     <li>Suivi des ventes par produit</li>
                   </ul>
-                  <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
-                    <Link href="/dashboard/products/new">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Ajouter un produit
-                    </Link>
-                  </Button>
+                  {canCreate && (
+                    <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
+                      <Link href="/dashboard/products/new">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Ajouter un produit
+                      </Link>
+                    </Button>
+                  )}
                 </>
               )}
             </CardContent>
@@ -320,20 +336,24 @@ export default function ProductsPage() {
                         )}
                       </div>
                       <div className="flex gap-1 ml-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Modifier ${product.name}`}>
-                          <Link href={`/dashboard/products/${product.id}/edit`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => openDeleteDialog(product)}
-                          aria-label={`Supprimer ${product.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Modifier ${product.name}`}>
+                            <Link href={`/dashboard/products/${product.id}/edit`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => openDeleteDialog(product)}
+                            aria-label={`Supprimer ${product.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardHeader>

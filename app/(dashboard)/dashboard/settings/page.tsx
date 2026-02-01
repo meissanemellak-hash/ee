@@ -21,6 +21,7 @@ import {
 import { useOrganizationData, useUpdateOrganization, useFixOrganizationId, useCurrentUser } from '@/lib/react-query/hooks/use-organization'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Skeleton } from '@/components/ui/skeleton'
+import { MembersSection } from '@/components/settings/members-section'
 
 function SettingsPageSkeleton() {
   return (
@@ -303,6 +304,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Section Membres (rôles admin, manager, staff) */}
+      <MembersSection />
 
       {/* Section Profil utilisateur */}
         <Card className="rounded-xl border shadow-sm bg-card">

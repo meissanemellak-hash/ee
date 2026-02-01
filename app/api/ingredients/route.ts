@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { requirePermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
 

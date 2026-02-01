@@ -20,6 +20,8 @@ import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import type { Report, ReportType } from '@/lib/services/reports'
 import { useGenerateReport } from '@/lib/react-query/hooks/use-reports'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 
 const severityLabels: Record<string, string> = {
@@ -53,6 +55,9 @@ const statusLabels: Record<string, string> = {
 
 export default function ReportsPage() {
   const { organization, isLoaded } = useOrganization()
+  const { data: roleData } = useUserRole()
+  const canGenerate = permissions.canGenerateReport(roleData ?? 'admin')
+
   const { toast } = useToast()
 
   // Dates par défaut (30 derniers jours)
@@ -364,23 +369,25 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <Button
-            onClick={handleGenerateReport}
-            disabled={generateReport.isPending}
-            className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
-          >
-            {generateReport.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Génération en cours...
-              </>
-            ) : (
-              <>
-                <FileText className="h-4 w-4 mr-2" />
-                Générer le rapport
-              </>
-            )}
-          </Button>
+          {canGenerate && (
+            <Button
+              onClick={handleGenerateReport}
+              disabled={generateReport.isPending}
+              className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+            >
+              {generateReport.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Génération en cours...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Générer le rapport
+                </>
+              )}
+            </Button>
+          )}
         </CardContent>
       </Card>
 

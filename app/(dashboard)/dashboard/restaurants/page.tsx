@@ -25,6 +25,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useRestaurants, useDeleteRestaurant } from '@/lib/react-query/hooks/use-restaurants'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { RestaurantListSkeleton } from '@/components/ui/skeletons/restaurant-list-skeleton'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
@@ -42,6 +44,12 @@ interface Restaurant {
 
 export default function RestaurantsPage() {
   const { organization, isLoaded } = useOrganization()
+  const { data: roleData } = useUserRole()
+  const currentRole = roleData ?? 'admin'
+  const canDelete = permissions.canDeleteRestaurant(currentRole)
+  const canCreate = permissions.canCreateRestaurant(currentRole)
+  const canEdit = permissions.canEditRestaurant(currentRole)
+
   const [page, setPage] = useState(1)
   const limit = 12
   const { data, isLoading, error, refetch } = useRestaurants(page, limit)
@@ -205,23 +213,27 @@ export default function RestaurantsPage() {
                   <Download className="mr-2 h-4 w-4" />
                   Exporter CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/restaurants/import">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Importer CSV
-                  </Link>
-                </DropdownMenuItem>
+                {canCreate && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/restaurants/import">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Importer CSV
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              asChild
-              className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
-            >
-              <Link href="/dashboard/restaurants/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Ajouter un restaurant
-              </Link>
-            </Button>
+            {canCreate && (
+              <Button
+                asChild
+                className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+              >
+                <Link href="/dashboard/restaurants/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Ajouter un restaurant
+                </Link>
+              </Button>
+            )}
           </div>
         </header>
 
@@ -254,20 +266,24 @@ export default function RestaurantsPage() {
                     <Download className="mr-2 h-4 w-4" />
                     Exporter CSV
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/restaurants/import">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Importer CSV
-                    </Link>
-                  </DropdownMenuItem>
+                  {canCreate && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/restaurants/import">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Importer CSV
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un restaurant">
-                <Link href="/dashboard/restaurants/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Ajouter un restaurant
-                </Link>
-              </Button>
+              {canCreate && (
+                <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un restaurant">
+                  <Link href="/dashboard/restaurants/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Ajouter un restaurant
+                  </Link>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -298,26 +314,30 @@ export default function RestaurantsPage() {
                     )}
                   </div>
                   <div className="flex gap-1 ml-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      asChild
-                      aria-label={`Modifier ${restaurant.name}`}
-                    >
-                      <Link href={`/dashboard/restaurants/${restaurant.id}/edit`}>
-                        <Edit className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => openDeleteDialog(restaurant)}
-                      aria-label={`Supprimer ${restaurant.name}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        asChild
+                        aria-label={`Modifier ${restaurant.name}`}
+                      >
+                        <Link href={`/dashboard/restaurants/${restaurant.id}/edit`}>
+                          <Edit className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => openDeleteDialog(restaurant)}
+                        aria-label={`Supprimer ${restaurant.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>

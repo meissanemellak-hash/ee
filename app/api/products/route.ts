@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { requirePermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { z } from 'zod'
@@ -317,6 +318,14 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    const allowed = await requirePermission(userId, orgIdToUse, 'products:create')
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Accès refusé. Seul un admin ou manager peut créer un produit.' },
+        { status: 403 }
+      )
+    }
+
     if (!organization) {
       console.error('[POST /api/products] Organisation non trouvée après synchronisation. orgIdToUse:', orgIdToUse)
       // Dernière tentative : chercher toutes les organisations de l'utilisateur

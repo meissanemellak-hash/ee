@@ -44,6 +44,8 @@ import {
   useDeleteInventoryItem,
   type InventoryItem,
 } from '@/lib/react-query/hooks/use-inventory'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function InventoryPageSkeleton() {
@@ -87,6 +89,11 @@ export default function InventoryPage() {
   const params = useParams()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
+  const { data: roleData } = useUserRole()
+  const currentRole = roleData ?? 'admin'
+  const canEdit = permissions.canEditInventory(currentRole)
+  const canImport = permissions.canImportInventory(currentRole)
+
   const restaurantId = params?.id as string | undefined
 
   const { data: restaurant, isLoading: loadingRestaurant, isError: errorRestaurant, refetch: refetchRestaurant } = useRestaurant(restaurantId)
@@ -367,12 +374,14 @@ export default function InventoryPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Exporter CSV
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={`/dashboard/restaurants/${restaurantId}/inventory/import`}>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Importer CSV
-                    </Link>
-                  </DropdownMenuItem>
+                  {canImport && (
+                    <DropdownMenuItem asChild>
+                      <Link href={`/dashboard/restaurants/${restaurantId}/inventory/import`}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Importer CSV
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button onClick={() => setShowAddForm(true)} className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un ingrédient à l'inventaire">
@@ -382,7 +391,7 @@ export default function InventoryPage() {
             </div>
           )}
           {/* Formulaire d'ajout (Style Sequence) */}
-          {showAddForm && (
+          {showAddForm && canEdit && (
             <Card className="mb-6 rounded-xl border-2 border-teal-200 dark:border-teal-900/30 bg-teal-50/50 dark:bg-teal-900/10" aria-labelledby="add-ingredient-title">
               <CardHeader>
                 <CardTitle id="add-ingredient-title" className="text-lg font-semibold flex items-center gap-2">
@@ -649,7 +658,7 @@ export default function InventoryPage() {
                                   <X className="h-4 w-4" />
                                 </Button>
                               </>
-                            ) : (
+                            ) : canEdit ? (
                               <>
                                 <Button
                                   size="sm"

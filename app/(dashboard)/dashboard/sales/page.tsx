@@ -36,6 +36,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useSales, useDeleteSale } from '@/lib/react-query/hooks/use-sales'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useProducts } from '@/lib/react-query/hooks/use-products'
 import { SaleListSkeleton } from '@/components/ui/skeletons/sale-list-skeleton'
@@ -240,12 +242,14 @@ export default function SalesPage() {
                   <Download className="h-4 w-4 mr-2" />
                   Exporter CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/sales/import">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importer CSV
-                  </Link>
-                </DropdownMenuItem>
+                {canCreate && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/sales/import">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Importer CSV
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard/sales/analyze">
                     <BarChart3 className="h-4 w-4 mr-2" />
@@ -254,12 +258,14 @@ export default function SalesPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
-              <Link href="/dashboard/sales/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Nouvelle vente
-              </Link>
-            </Button>
+            {canCreate && (
+              <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
+                <Link href="/dashboard/sales/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouvelle vente
+                </Link>
+              </Button>
+            )}
           </div>
         </header>
 
@@ -439,23 +445,27 @@ export default function SalesPage() {
                         </p>
                       </div>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Modifier la vente ${sale.product.name}`}>
-                          <Link href={`/dashboard/sales/${sale.id}/edit`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setSaleToDelete(sale)
-                            setDeleteDialogOpen(true)
-                          }}
-                          aria-label={`Supprimer la vente ${sale.product.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Modifier la vente ${sale.product.name}`}>
+                            <Link href={`/dashboard/sales/${sale.id}/edit`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => {
+                              setSaleToDelete(sale)
+                              setDeleteDialogOpen(true)
+                            }}
+                            aria-label={`Supprimer la vente ${sale.product.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </li>

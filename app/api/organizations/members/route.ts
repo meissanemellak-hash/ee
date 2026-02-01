@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     }
 
     const role = await getCurrentUserRole(userId, orgId)
-    const canView = role === 'admin' || role === 'manager'
+    const canView = role === 'admin'
     if (!canView) {
       return NextResponse.json(
         { error: 'Vous n\'avez pas accès à la liste des membres' },

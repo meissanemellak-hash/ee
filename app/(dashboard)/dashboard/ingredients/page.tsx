@@ -34,6 +34,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useIngredients, useDeleteIngredient } from '@/lib/react-query/hooks/use-ingredients'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { IngredientListSkeleton } from '@/components/ui/skeletons/ingredient-list-skeleton'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -54,6 +56,12 @@ interface Ingredient {
 
 export default function IngredientsPage() {
   const { organization, isLoaded } = useOrganization()
+  const { data: roleData } = useUserRole()
+  const currentRole = roleData ?? 'admin'
+  const canCreate = permissions.canCreateIngredient(currentRole)
+  const canEdit = permissions.canEditIngredient(currentRole)
+  const canDelete = permissions.canDeleteIngredient(currentRole)
+
   const searchParams = useSearchParams()
   const activeRestaurantId = searchParams.get('restaurant')
   const [search, setSearch] = useState('')
@@ -199,12 +207,14 @@ export default function IngredientsPage() {
                   <Download className="mr-2 h-4 w-4" />
                   Exporter CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/ingredients/import">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Importer CSV
-                  </Link>
-                </DropdownMenuItem>
+                {canCreate && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/ingredients/import">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Importer CSV
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
@@ -273,12 +283,14 @@ export default function IngredientsPage() {
                     <li>Utilisation dans les recettes produits</li>
                     <li>Suivi des stocks par restaurant</li>
                   </ul>
-                  <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
-                    <Link href="/dashboard/ingredients/new">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Ajouter un ingrédient
-                    </Link>
-                  </Button>
+                  {canCreate && (
+                    <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
+                      <Link href="/dashboard/ingredients/new">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Ajouter un ingrédient
+                      </Link>
+                    </Button>
+                  )}
                 </>
               )}
             </CardContent>
@@ -314,20 +326,24 @@ export default function IngredientsPage() {
                         </CardDescription>
                       </div>
                       <div className="flex gap-1 ml-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Modifier ${ingredient.name}`}>
-                          <Link href={`/dashboard/ingredients/${ingredient.id}/edit`}>
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => openDeleteDialog(ingredient)}
-                          aria-label={`Supprimer ${ingredient.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Modifier ${ingredient.name}`}>
+                            <Link href={`/dashboard/ingredients/${ingredient.id}/edit`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => openDeleteDialog(ingredient)}
+                            aria-label={`Supprimer ${ingredient.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardHeader>

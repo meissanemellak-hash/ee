@@ -6,6 +6,7 @@ import { APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
 
 const updateRoleSchema = z.object({
   role: z.enum(['admin', 'manager', 'staff']),
+  clerkOrgId: z.string().optional(),
 })
 
 /**
@@ -18,9 +19,28 @@ export async function PATCH(
   { params }: { params: { userId: string } }
 ) {
   try {
-    const { userId: currentUserId, orgId } = auth()
-    if (!currentUserId || !orgId) {
+    const { userId: currentUserId, orgId: authOrgId } = auth()
+    if (!currentUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const parsed = updateRoleSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
+
+    const { role: newRole, clerkOrgId: clerkOrgIdFromBody } = parsed.data
+    const orgId = authOrgId || clerkOrgIdFromBody
+
+    if (!orgId) {
+      return NextResponse.json(
+        { error: 'Aucune organisation sélectionnée' },
+        { status: 400 }
+      )
     }
 
     const role = await getCurrentUserRole(currentUserId, orgId)
@@ -35,17 +55,6 @@ export async function PATCH(
     if (!targetUserId) {
       return NextResponse.json({ error: 'userId requis' }, { status: 400 })
     }
-
-    const body = await request.json()
-    const parsed = updateRoleSchema.safeParse(body)
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      )
-    }
-
-    const { role: newRole } = parsed.data
 
     const client = await clerkClient()
 

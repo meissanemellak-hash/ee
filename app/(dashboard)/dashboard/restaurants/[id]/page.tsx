@@ -11,6 +11,8 @@ import { Edit, TrendingUp, Bell, Package, Warehouse, Store, MapPin } from 'lucid
 import { DeleteRestaurantButton } from '@/components/restaurants/delete-restaurant-button'
 import { useToast } from '@/hooks/use-toast'
 import { useRestaurant } from '@/lib/react-query/hooks/use-restaurants'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
@@ -76,6 +78,9 @@ export default function RestaurantDetailPage() {
   const params = useParams()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
+  const { data: roleData } = useUserRole()
+  const canDelete = permissions.canDeleteRestaurant(roleData ?? 'admin')
+
   const id = params?.id as string | undefined
   const { data: restaurant, isLoading, isError, error, refetch } = useRestaurant(id)
   const hasToastedError = useRef(false)
@@ -192,7 +197,9 @@ export default function RestaurantDetailPage() {
                 Modifier
               </Link>
             </Button>
-            <DeleteRestaurantButton restaurantId={restaurant.id} restaurantName={restaurant.name} />
+            {canDelete && (
+              <DeleteRestaurantButton restaurantId={restaurant.id} restaurantName={restaurant.name} />
+            )}
           </nav>
         </header>
 

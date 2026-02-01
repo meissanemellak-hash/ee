@@ -6,6 +6,7 @@ import { getCurrentUserRole, APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
 const inviteSchema = z.object({
   email: z.string().email('Email invalide'),
   role: z.enum(['admin', 'manager', 'staff']),
+  clerkOrgId: z.string().optional(),
 })
 
 /**
@@ -15,17 +16,9 @@ const inviteSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId } = auth()
-    if (!userId || !orgId) {
+    const { userId, orgId: authOrgId } = auth()
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const role = await getCurrentUserRole(userId, orgId)
-    if (!role || role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Seul un administrateur peut inviter des membres' },
-        { status: 403 }
-      )
     }
 
     const body = await request.json()
@@ -37,7 +30,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { email, role: inviteRole } = parsed.data
+    const { email, role: inviteRole, clerkOrgId: clerkOrgIdFromBody } = parsed.data
+    const orgId = authOrgId || clerkOrgIdFromBody
+
+    if (!orgId) {
+      return NextResponse.json(
+        { error: 'Aucune organisation sélectionnée' },
+        { status: 400 }
+      )
+    }
+
+    const role = await getCurrentUserRole(userId, orgId)
+    if (!role || role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Seul un administrateur peut inviter des membres' },
+        { status: 403 }
+      )
+    }
 
     const client = await clerkClient()
 

@@ -45,7 +45,10 @@ export function useInviteMember() {
       const response = await fetch('/api/organizations/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          clerkOrgId: organization?.id,
+        }),
       })
       if (!response.ok) {
         const err = await response.json()
@@ -86,7 +89,7 @@ export function useUpdateMemberRole() {
       const response = await fetch(`/api/organizations/members/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ role, clerkOrgId: organization?.id }),
       })
       if (!response.ok) {
         const err = await response.json()

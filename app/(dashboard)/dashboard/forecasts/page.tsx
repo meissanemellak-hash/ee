@@ -30,6 +30,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useForecasts, useGenerateForecasts, useDeleteForecast } from '@/lib/react-query/hooks/use-forecasts'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { ForecastListSkeleton } from '@/components/ui/skeletons/forecast-list-skeleton'
 
@@ -58,6 +60,10 @@ interface Restaurant {
 
 export default function ForecastsPage() {
   const { organization, isLoaded } = useOrganization()
+  const { data: roleData } = useUserRole()
+  const currentRole = roleData ?? 'admin'
+  const canGenerate = permissions.canGenerateForecast(currentRole)
+
   const searchParams = useSearchParams()
   const { setActiveRestaurantId } = useActiveRestaurant()
   const urlRestaurant = searchParams.get('restaurant')
@@ -217,6 +223,7 @@ export default function ForecastsPage() {
           )}
         </header>
 
+        {canGenerate && (
         <Card className="rounded-xl border shadow-sm border-2 border-teal-200/80 dark:border-teal-900/30 bg-teal-50/50 dark:bg-teal-900/10">
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -460,18 +467,20 @@ export default function ForecastsPage() {
                           {formatCurrency(forecast.forecastedQuantity * forecast.product.unitPrice)}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          setForecastToDelete(forecast)
-                          setDeleteDialogOpen(true)
-                        }}
-                        aria-label={`Supprimer la prévision ${forecast.product.name}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canGenerate && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setForecastToDelete(forecast)
+                            setDeleteDialogOpen(true)
+                          }}
+                          aria-label={`Supprimer la prévision ${forecast.product.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </li>
                 ))}

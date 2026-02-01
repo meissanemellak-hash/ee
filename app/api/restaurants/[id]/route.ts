@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { getCurrentUserRole } from '@/lib/auth-role'
+import { can } from '@/lib/roles'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 
@@ -213,6 +215,14 @@ export async function DELETE(
           details: "L'organisation n'a pas pu être trouvée. Veuillez rafraîchir la page.",
         },
         { status: 404 }
+      )
+    }
+
+    const role = await getCurrentUserRole(userId, orgIdToUse ?? organization.clerkOrgId)
+    if (!can(role, 'restaurants:delete')) {
+      return NextResponse.json(
+        { error: 'Seul un administrateur peut supprimer un restaurant' },
+        { status: 403 }
       )
     }
 

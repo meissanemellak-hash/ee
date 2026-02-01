@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { requirePermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { z } from 'zod'
@@ -254,7 +255,15 @@ export async function DELETE(
     }
 
     const searchParams = request.nextUrl.searchParams
-    const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
+    let clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
+    if (!clerkOrgIdFromQuery) {
+      try {
+        const body = await request.json()
+        clerkOrgIdFromQuery = (body as { clerkOrgId?: string })?.clerkOrgId ?? null
+      } catch {
+        /* body vide ou invalide */
+      }
+    }
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
     let organization: any = null
@@ -300,6 +309,17 @@ export async function DELETE(
     
     if (!organization) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    }
+
+    const orgId = orgIdToUse || organization.clerkOrgId
+    if (orgId) {
+      const allowed = await requirePermission(userId, orgId, 'products:delete')
+      if (!allowed) {
+        return NextResponse.json(
+          { error: 'Accès refusé. Seul un admin ou manager peut supprimer un produit.' },
+          { status: 403 }
+        )
+      }
     }
 
     // Vérifier que le produit existe et appartient à l'organisation
