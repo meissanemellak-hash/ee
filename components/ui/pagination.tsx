@@ -74,15 +74,17 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
         }
 
         const pageNumber = page as number
+        const isActive = currentPage === pageNumber
         return (
           <Button
             key={pageNumber}
-            variant={currentPage === pageNumber ? 'default' : 'outline'}
+            variant="outline"
             size="sm"
             onClick={() => onPageChange(pageNumber)}
             className={cn(
               'h-9 min-w-9 shadow-sm',
-              currentPage === pageNumber && 'shadow-md'
+              isActive &&
+                'bg-teal-600 hover:bg-teal-700 text-white border-teal-600 hover:border-teal-700 shadow-md'
             )}
           >
             {pageNumber}

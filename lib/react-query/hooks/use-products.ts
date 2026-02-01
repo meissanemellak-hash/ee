@@ -23,6 +23,7 @@ export function useProducts(
   filters?: {
     search?: string
     category?: string
+    restaurantId?: string | null
   }
 ) {
   const { organization } = useOrganization()
@@ -41,6 +42,7 @@ export function useProducts(
       if (filters?.category && filters.category !== 'all') {
         queryParams.append('category', filters.category)
       }
+      if (filters?.restaurantId) queryParams.append('restaurantId', filters.restaurantId)
       
       const response = await fetch(`/api/products?${queryParams.toString()}`)
       
@@ -362,7 +364,7 @@ export function useImportProducts() {
 
       if (!response.ok) {
         const message = result.details || result.error || 'Erreur lors de l\'import'
-        throw new Error(typeof message === 'string' ? message : message[0] || result.error)
+        throw new Error(typeof message === 'string' ? message : Array.isArray(message) ? message[0] || result.error : result.error)
       }
 
       return result as {
@@ -376,6 +378,69 @@ export function useImportProducts() {
       toast({
         title: 'Import réussi',
         description: `${data.imported} produit${data.imported > 1 ? 's' : ''} importé${data.imported > 1 ? 's' : ''} avec succès${data.errors?.length ? ` (${data.errors.length} erreur${data.errors.length > 1 ? 's' : ''})` : ''}`,
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useImportBom() {
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (data: { file: File }) => {
+      if (!organization?.id) throw new Error('Aucune organisation sélectionnée')
+
+      const formData = new FormData()
+      formData.append('file', data.file)
+      formData.append('clerkOrgId', organization.id)
+
+      const response = await fetch('/api/products/bom/import', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        const message = result.details || result.error || 'Erreur lors de l\'import'
+        throw new Error(typeof message === 'string' ? message : Array.isArray(message) ? message[0] || result.error : result.error)
+      }
+
+      return result as {
+        success: boolean
+        imported: number
+        created?: number
+        updated?: number
+        errors?: string[]
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['products', organization?.id] })
+      queryClient.invalidateQueries({ queryKey: ['product-ingredients', organization?.id] })
+      const created = data.created ?? 0
+      const updated = data.updated ?? 0
+      const msg =
+        updated > 0
+          ? `${data.imported} recette(s) importée(s) : ${created} créée(s), ${updated} mise(s) à jour`
+          : `${data.imported} recette(s) importée(s) avec succès`
+      const errorSuffix =
+        data.errors?.length
+          ? data.errors.length === 1
+            ? ` — Erreur ignorée : ${data.errors[0]}`
+            : ` — ${data.errors.length} erreurs ignorées : ${data.errors.slice(0, 2).join(' ; ')}${data.errors.length > 2 ? '…' : ''}`
+          : ''
+      toast({
+        title: 'Import réussi',
+        description: msg + errorSuffix,
       })
     },
     onError: (error: Error) => {

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Loader2, TrendingUp, Calendar, Store, Package, Trash2, Sparkles, X } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -88,7 +89,7 @@ export default function ForecastsPage() {
     endDate: endDate || undefined,
   })
 
-  const forecasts = data?.forecasts || []
+  const forecasts = (data?.forecasts || []) as Forecast[]
   const generateForecasts = useGenerateForecasts()
   const deleteForecast = useDeleteForecast()
 
@@ -203,6 +204,7 @@ export default function ForecastsPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Prévisions de ventes">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Prévisions' }]} className="mb-4" />
         <header className="pb-6 border-b border-border/60">
           <h1 className="text-3xl font-bold tracking-tight">Prévisions</h1>
           <p className="text-muted-foreground mt-1.5">

@@ -11,6 +11,8 @@ interface SalesChartData {
   sales: number
 }
 
+type SalesChartPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly'
+
 interface DashboardSalesChartProps {
   restaurantId?: string | null
 }

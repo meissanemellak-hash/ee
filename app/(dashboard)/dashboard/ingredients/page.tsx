@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { useOrganization } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import { formatCurrency } from '@/lib/utils'
-import { Search, Plus, Edit, Trash2, Beaker, Loader2, Package, TrendingUp, Building2 } from 'lucide-react'
+import { formatCurrency, exportToCsv } from '@/lib/utils'
+import { Search, Plus, Edit, Trash2, Beaker, Loader2, Package, TrendingUp, Building2, Download, ChevronDown, Upload } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,8 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useIngredients, useDeleteIngredient } from '@/lib/react-query/hooks/use-ingredients'
 import { IngredientListSkeleton } from '@/components/ui/skeletons/ingredient-list-skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useDebounce } from '@/hooks/use-debounce'
 
 interface Ingredient {
@@ -45,6 +54,8 @@ interface Ingredient {
 
 export default function IngredientsPage() {
   const { organization, isLoaded } = useOrganization()
+  const searchParams = useSearchParams()
+  const activeRestaurantId = searchParams.get('restaurant')
   const [search, setSearch] = useState('')
   const [selectedUnit, setSelectedUnit] = useState<string>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -56,10 +67,11 @@ export default function IngredientsPage() {
   const { data, isLoading, error, refetch } = useIngredients({
     search: debouncedSearch,
     unit: selectedUnit,
+    restaurantId: activeRestaurantId || undefined,
   })
 
-  const ingredients = data?.ingredients || []
-  const units = data?.units || []
+  const ingredients = (data?.ingredients || []) as Ingredient[]
+  const units = (data?.units || []) as string[]
   const deleteIngredient = useDeleteIngredient()
 
   const handleDelete = async () => {
@@ -77,18 +89,32 @@ export default function IngredientsPage() {
     setDeleteDialogOpen(true)
   }
 
+  const handleExportCsv = () => {
+    const csvData = ingredients.map((i) => ({
+      nom: i.name,
+      unite: i.unit,
+      cout_unitaire: i.costPerUnit,
+      taille_pack: i.packSize ?? '',
+      fournisseur: i.supplierName ?? '',
+    }))
+    const filename = `ingredients_${new Date().toISOString().slice(0, 10)}.csv`
+    exportToCsv(csvData, filename)
+  }
+
   if (!isLoaded) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-          <Card className="rounded-xl border shadow-sm bg-card">
-            <CardContent className="py-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Chargement de votre organisation...</p>
-            </CardContent>
-          </Card>
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Liste des ingrédients en cours de chargement">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Ingrédients' }]} className="mb-4" />
+          <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
+            <div>
+              <Skeleton className="h-9 w-48 mb-2" />
+              <Skeleton className="h-5 w-72" />
+            </div>
+          </header>
+          <IngredientListSkeleton />
         </div>
-      </div>
+      </main>
     )
   }
 
@@ -146,6 +172,7 @@ export default function IngredientsPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Liste des ingrédients">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Ingrédients' }]} className="mb-4" />
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Ingrédients</h1>
@@ -159,11 +186,27 @@ export default function IngredientsPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            <Button variant="outline" asChild className="shadow-sm">
-              <Link href="/dashboard/ingredients/import">
-                Importer CSV
-              </Link>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shadow-sm" aria-label="Import et export">
+                  <Download className="mr-2 h-4 w-4" />
+                  Import / export
+                  <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCsv} disabled={ingredients.length === 0}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Exporter CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/ingredients/import">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importer CSV
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
               <Link href="/dashboard/ingredients/new">
                 <Plus className="mr-2 h-4 w-4" />
@@ -333,7 +376,7 @@ export default function IngredientsPage() {
                         className="w-full mt-3 border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl"
                         asChild
                       >
-                        <Link href={`/dashboard/ingredients/${ingredient.id}`}>
+                        <Link href={activeRestaurantId ? `/dashboard/ingredients/${ingredient.id}?restaurant=${activeRestaurantId}` : `/dashboard/ingredients/${ingredient.id}`}>
                           Voir détail
                         </Link>
                       </Button>

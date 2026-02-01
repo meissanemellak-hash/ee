@@ -9,8 +9,8 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { Plus, Edit, Trash2, Calendar, Store, BarChart3, Loader2, TrendingUp, Euro, ShoppingCart } from 'lucide-react'
+import { formatCurrency, formatDate, exportToCsv } from '@/lib/utils'
+import { Plus, Edit, Trash2, Calendar, Store, BarChart3, Loader2, TrendingUp, Euro, ShoppingCart, Download, ChevronDown, Upload } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,10 +28,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useSales, useDeleteSale } from '@/lib/react-query/hooks/use-sales'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useProducts } from '@/lib/react-query/hooks/use-products'
 import { SaleListSkeleton } from '@/components/ui/skeletons/sale-list-skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
 
 interface Sale {
@@ -90,8 +98,8 @@ export default function SalesPage() {
   // Charger les restaurants et produits pour les filtres
   const { data: restaurantsData } = useRestaurants(1, 100)
   const { data: productsData } = useProducts(1, 100)
-  const restaurants = restaurantsData?.restaurants || []
-  const products = productsData?.products || []
+  const restaurants = (restaurantsData?.restaurants || []) as Restaurant[]
+  const products = (productsData?.products || []) as Product[]
 
   // Charger les ventes avec filtres
   const { data, isLoading, error, refetch } = useSales(page, limit, {
@@ -101,7 +109,7 @@ export default function SalesPage() {
     endDate: endDate || undefined,
   })
 
-  const sales = data?.sales || []
+  const sales = (data?.sales || []) as Sale[]
   const deleteSale = useDeleteSale()
 
   // Chiffre d'affaires basé sur le prix actuel du produit (quantity × unitPrice) pour refléter les changements de prix
@@ -121,18 +129,33 @@ export default function SalesPage() {
     })
   }
 
+  const handleExportCsv = () => {
+    const csvData = sales.map((s) => ({
+      restaurant: s.restaurant.name,
+      product: s.product.name,
+      quantity: s.quantity,
+      amount: s.amount,
+      date: s.saleDate,
+      hour: s.saleHour,
+    }))
+    const filename = `ventes_${new Date().toISOString().slice(0, 10)}.csv`
+    exportToCsv(csvData, filename)
+  }
+
   if (!isLoaded) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-          <Card className="rounded-xl border shadow-sm bg-card">
-            <CardContent className="py-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Chargement de votre organisation...</p>
-            </CardContent>
-          </Card>
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Liste des ventes en cours de chargement">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Ventes & Analyse' }]} className="mb-4" />
+          <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
+            <div>
+              <Skeleton className="h-9 w-48 mb-2" />
+              <Skeleton className="h-5 w-72" />
+            </div>
+          </header>
+          <SaleListSkeleton />
         </div>
-      </div>
+      </main>
     )
   }
 
@@ -190,6 +213,7 @@ export default function SalesPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Liste des ventes">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Ventes & Analyse' }]} className="mb-4" />
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Ventes</h1>
@@ -203,17 +227,33 @@ export default function SalesPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            <Button variant="outline" asChild className="shadow-sm">
-              <Link href="/dashboard/sales/import">
-                Importer CSV
-              </Link>
-            </Button>
-            <Button variant="outline" asChild className="shadow-sm">
-              <Link href="/dashboard/sales/analyze">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Voir l&apos;analyse
-              </Link>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shadow-sm" aria-label="Import, export et analyse">
+                  <Download className="h-4 w-4 mr-2" />
+                  Import / export
+                  <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCsv} disabled={sales.length === 0}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Exporter CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/sales/import">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importer CSV
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/sales/analyze">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Voir l&apos;analyse
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
               <Link href="/dashboard/sales/new">
                 <Plus className="h-4 w-4 mr-2" />

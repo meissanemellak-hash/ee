@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import type { Report, ReportType } from '@/lib/services/reports'
 import { useGenerateReport } from '@/lib/react-query/hooks/use-reports'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
@@ -233,6 +234,7 @@ export default function ReportsPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Rapports">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Rapports' }]} className="mb-4" />
         <header className="pb-6 border-b border-border/60">
           <h1 className="text-3xl font-bold tracking-tight">Rapports</h1>
           <p className="text-muted-foreground mt-1.5">
@@ -265,7 +267,7 @@ export default function ReportsPage() {
                     <BarChart3 className="h-4 w-4" />
                     <div>
                       <div className="font-medium">Rapport récapitulatif</div>
-                      <div className="text-xs text-muted-foreground">Vue d'ensemble complète</div>
+                      <div className="text-xs text-muted-foreground">Vue d&apos;ensemble complète</div>
                     </div>
                   </div>
                 </SelectItem>
@@ -291,7 +293,7 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4" />
                     <div>
-                      <div className="font-medium">Rapport d'inventaire</div>
+                      <div className="font-medium">Rapport d&apos;inventaire</div>
                       <div className="text-xs text-muted-foreground">État des stocks</div>
                     </div>
                   </div>
@@ -309,7 +311,7 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     <div>
-                      <div className="font-medium">Rapport d'alertes</div>
+                      <div className="font-medium">Rapport d&apos;alertes</div>
                       <div className="text-xs text-muted-foreground">Synthèse des alertes</div>
                     </div>
                   </div>
@@ -568,7 +570,7 @@ export default function ReportsPage() {
                     {restaurant.ingredients.length === 0 ? (
                       <div className="rounded-xl border border-border p-6 text-center text-muted-foreground">
                         <p>Aucun ingrédient trouvé pour ce restaurant.</p>
-                        <p className="text-sm mt-2">Créez des ingrédients dans la section "Ingrédients" pour les voir apparaître ici.</p>
+                        <p className="text-sm mt-2">Créez des ingrédients dans la section &quot;Ingrédients&quot; pour les voir apparaître ici.</p>
                       </div>
                     ) : (
                       <div className="rounded-xl border border-border overflow-hidden">

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import nextDynamic from 'next/dynamic'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { getCurrentOrganization } from '@/lib/auth'
 import { prisma } from '@/lib/db/prisma'
@@ -10,8 +11,26 @@ import { calculateExecutiveDashboardMetrics } from '@/lib/services/dashboard-met
 import { TrendingUp, TrendingDown, AlertTriangle, Package, CheckCircle2, ArrowRight } from 'lucide-react'
 import { ApplyRecommendationButton } from '@/components/dashboard/apply-recommendation-button'
 import { ReloadButton } from '@/components/dashboard/reload-button'
-import { DashboardSalesChart } from '@/components/dashboard/dashboard-sales-chart'
 import { RecentActivityTable } from '@/components/dashboard/recent-activity-table'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const DashboardSalesChart = nextDynamic(
+  () => import('@/components/dashboard/dashboard-sales-chart').then((m) => ({ default: m.DashboardSalesChart })),
+  {
+    loading: () => (
+      <Card className="rounded-xl border shadow-sm bg-card">
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-64 mt-2" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[300px] w-full rounded-lg" />
+        </CardContent>
+      </Card>
+    ),
+    ssr: false,
+  }
+)
 
 // Force dynamic rendering pour les pages avec authentification
 export const dynamic = 'force-dynamic'

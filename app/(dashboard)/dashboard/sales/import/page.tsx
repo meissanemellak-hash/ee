@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useImportSales } from '@/lib/react-query/hooks/use-sales'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 interface CSVRow {
   restaurant?: string
@@ -205,6 +206,7 @@ export default function ImportSalesPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Importer des ventes depuis un fichier CSV">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Ventes & Analyse', href: '/dashboard/sales' }, { label: 'Import' }]} />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des ventes">
             <Link href="/dashboard/sales" className="hover:opacity-80 transition-opacity">

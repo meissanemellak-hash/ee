@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { useIngredient, useUpdateIngredient } from '@/lib/react-query/hooks/use-ingredients'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 const UNITS = ['kg', 'g', 'L', 'mL', 'unité', 'pièce', 'paquet', 'boîte']
 
@@ -199,6 +200,13 @@ export default function EditIngredientPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Modifier l'ingrédient ${ingredient?.name ?? ''}`}>
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs
+          items={[
+            { label: 'Ingrédients', href: '/dashboard/ingredients' },
+            { label: ingredient?.name ?? '...', href: `/dashboard/ingredients/${id}` },
+            { label: 'Édition' },
+          ]}
+        />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des ingrédients">
             <Link href="/dashboard/ingredients" className="hover:opacity-80 transition-opacity">
@@ -220,7 +228,7 @@ export default function EditIngredientPage() {
 
         <Card className="rounded-xl border shadow-sm bg-card">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Informations de l’ingrédient</CardTitle>
+            <CardTitle className="text-lg font-semibold">Informations de l&apos;ingrédient</CardTitle>
             <CardDescription className="mt-1">
               Les champs marqués d’un * sont obligatoires. Enregistrez pour appliquer les modifications.
             </CardDescription>
@@ -228,10 +236,10 @@ export default function EditIngredientPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="edit-form-desc" noValidate>
             <p id="edit-form-desc" className="sr-only">
-              Formulaire de modification de l’ingrédient : nom, unité, coût par unité, taille du pack et fournisseur.
+              Formulaire de modification de l&apos;ingrédient : nom, unité, coût par unité, taille du pack et fournisseur.
             </p>
             <div className="space-y-2">
-              <Label htmlFor="name">Nom de l'ingrédient *</Label>
+              <Label htmlFor="name">Nom de l&apos;ingrédient *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -275,7 +283,7 @@ export default function EditIngredientPage() {
                 disabled={updateIngredient.isPending}
               />
               <p className="text-xs text-muted-foreground">
-                Coût d'achat par unité en euros.
+                Coût d&apos;achat par unité en euros.
               </p>
             </div>
 

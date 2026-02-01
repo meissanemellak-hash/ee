@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Loader2, ArrowLeft, Building2, Save } from 'lucide-react'
 import { useRestaurant, useUpdateRestaurant } from '@/lib/react-query/hooks/use-restaurants'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 export default function EditRestaurantPage() {
   const router = useRouter()
@@ -157,6 +158,13 @@ export default function EditRestaurantPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Modifier le restaurant ${restaurant?.name ?? ''}`}>
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs
+          items={[
+            { label: 'Restaurants', href: '/dashboard/restaurants' },
+            { label: restaurant?.name ?? '...', href: `/dashboard/restaurants/${id}` },
+            { label: 'Édition' },
+          ]}
+        />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des restaurants">
             <Link href="/dashboard/restaurants" className="hover:opacity-80 transition-opacity">

@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Loader2, ArrowLeft, Plus, Save } from 'lucide-react'
 import Link from 'next/link'
 import { useCreateProduct } from '@/lib/react-query/hooks/use-products'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -94,6 +95,7 @@ export default function NewProductPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Créer un nouveau produit">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Produits', href: '/dashboard/products' }, { label: 'Nouveau' }]} />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des produits">
             <Link href="/dashboard/products" className="hover:opacity-80 transition-opacity">

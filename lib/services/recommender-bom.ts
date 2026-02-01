@@ -38,6 +38,7 @@ interface RecommendationDetails {
     forecastDays: number
   }
   estimatedSavings?: number
+  reason?: string
 }
 
 /**
@@ -107,6 +108,7 @@ async function calculateProductForecast(
 
 /**
  * Convertit les forecasts produits en besoins ingrédients via les recettes
+ * Une seule requête Prisma pour tous les produits (évite N+1)
  */
 async function calculateIngredientNeeds(
   organizationId: string,
@@ -114,27 +116,28 @@ async function calculateIngredientNeeds(
   forecasts: ForecastData[]
 ): Promise<Map<string, IngredientNeed>> {
   const ingredientNeeds = new Map<string, IngredientNeed>()
+  const productIds = [...new Set(forecasts.map((f) => f.productId))]
 
-  // Pour chaque produit avec forecast
+  if (productIds.length === 0) return ingredientNeeds
+
+  // Une seule requête pour toutes les recettes (BOM) des produits concernés
+  const allProductIngredients = await prisma.productIngredient.findMany({
+    where: { productId: { in: productIds } },
+    include: { ingredient: true },
+  })
+
+  const byProductId = new Map<string, typeof allProductIngredients>()
+  for (const pi of allProductIngredients) {
+    const list = byProductId.get(pi.productId) ?? []
+    list.push(pi)
+    byProductId.set(pi.productId, list)
+  }
+
   for (const forecast of forecasts) {
-    // Récupérer les recettes (BOM) pour ce produit
-    const productIngredients = await prisma.productIngredient.findMany({
-      where: {
-        productId: forecast.productId,
-      },
-      include: {
-        ingredient: true,
-      },
-    })
-
-    // Pour chaque ingrédient dans la recette
+    const productIngredients = byProductId.get(forecast.productId) ?? []
     for (const productIngredient of productIngredients) {
       const ingredient = productIngredient.ingredient
-      
-      // Calculer la quantité nécessaire pour ce forecast
       const neededQuantity = forecast.forecastedQuantity * productIngredient.quantityNeeded
-
-      // Ajouter ou additionner à la map
       const existing = ingredientNeeds.get(ingredient.id)
       if (existing) {
         ingredientNeeds.set(ingredient.id, {

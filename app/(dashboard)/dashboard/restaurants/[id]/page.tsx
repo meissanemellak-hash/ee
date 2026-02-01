@@ -12,6 +12,7 @@ import { DeleteRestaurantButton } from '@/components/restaurants/delete-restaura
 import { useToast } from '@/hooks/use-toast'
 import { useRestaurant } from '@/lib/react-query/hooks/use-restaurants'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 function RestaurantDetailSkeleton() {
   return (
@@ -160,6 +161,12 @@ export default function RestaurantDetailPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Détail du restaurant ${restaurant.name}`}>
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs
+          items={[
+            { label: 'Restaurants', href: '/dashboard/restaurants' },
+            { label: restaurant.name },
+          ]}
+        />
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
           <div>
@@ -262,9 +269,9 @@ export default function RestaurantDetailPage() {
               Ingrédients suivis
             </p>
             <Button asChild variant="outline" size="sm" className="w-full shadow-sm border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20">
-              <Link href={`/dashboard/restaurants/${restaurant.id}/inventory`}>
+              <Link href={`/dashboard/restaurants/${restaurant.id}/inventory?restaurant=${restaurant.id}`}>
                 <Warehouse className="h-4 w-4 mr-2" />
-                Gérer l'inventaire
+                Gérer l&apos;inventaire
               </Link>
             </Button>
           </CardContent>

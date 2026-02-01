@@ -20,6 +20,8 @@ import {
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useProducts } from '@/lib/react-query/hooks/use-products'
 import { useCreateSale } from '@/lib/react-query/hooks/use-sales'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { SaleFormSkeleton } from '@/components/ui/skeletons/sale-form-skeleton'
 
 export default function NewSalePage() {
   const router = useRouter()
@@ -30,8 +32,8 @@ export default function NewSalePage() {
   const { data: productsData, isLoading: loadingProducts } = useProducts(1, 100)
   const createSale = useCreateSale()
   
-  const restaurants = restaurantsData?.restaurants || []
-  const products = productsData?.products || []
+  const restaurants = (restaurantsData?.restaurants || []) as { id: string; name: string }[]
+  const products = (productsData?.products || []) as { id: string; name: string; unitPrice: number }[]
   
   const [formData, setFormData] = useState({
     restaurantId: '',
@@ -109,20 +111,7 @@ export default function NewSalePage() {
   }
 
   if (!isLoaded || loadingData) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-          <Card className="rounded-xl border shadow-sm bg-card">
-            <CardContent className="py-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">
-                {!isLoaded ? 'Chargement de votre organisation...' : 'Chargement des données...'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
+    return <SaleFormSkeleton />
   }
 
   if (isLoaded && !organization?.id) {
@@ -147,6 +136,7 @@ export default function NewSalePage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Créer une nouvelle vente">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Ventes & Analyse', href: '/dashboard/sales' }, { label: 'Nouvelle vente' }]} />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des ventes">
             <Link href="/dashboard/sales" className="hover:opacity-80 transition-opacity">

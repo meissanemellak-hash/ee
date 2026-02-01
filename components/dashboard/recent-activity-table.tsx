@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
-import { Loader2, ArrowRight, Euro, CheckCircle2, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Loader2, ArrowRight, Euro, CheckCircle2, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale/fr'
+import { useToast } from '@/hooks/use-toast'
 
 interface Activity {
   id: string
@@ -25,52 +26,75 @@ interface RecentActivityTableProps {
   restaurantId?: string | null
 }
 
+const AUTO_REFRESH_INTERVAL_MS = 60 * 1000 // 60 secondes
+
 export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) {
   const { organization, isLoaded } = useOrganization()
+  const { toast } = useToast()
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchActivities = useCallback(async (isRefresh = false) => {
+    if (!organization?.id) return
+    if (!isRefresh) setLoading(true)
+    else setRefreshing(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams()
+      params.append('clerkOrgId', organization.id)
+      if (restaurantId) params.append('restaurantId', restaurantId)
+
+      const response = await fetch(`/api/activity/recent?${params.toString()}`)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const message = errorData.error || errorData.details || 'Impossible de charger les activités.'
+        setError(message)
+        toast({
+          title: 'Erreur de chargement',
+          description: message,
+          variant: 'destructive',
+        })
+        setActivities([])
+        return
+      }
+
+      const data = await response.json()
+      if (data.activities && Array.isArray(data.activities)) {
+        setActivities(data.activities)
+      } else {
+        setActivities([])
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Une erreur inattendue s\'est produite.'
+      setError(message)
+      toast({
+        title: 'Erreur de chargement',
+        description: message,
+        variant: 'destructive',
+      })
+      setActivities([])
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [organization?.id, restaurantId, toast])
 
   useEffect(() => {
     if (!isLoaded || !organization?.id) {
       setLoading(false)
       return
     }
+    fetchActivities(false)
+  }, [isLoaded, organization?.id, fetchActivities])
 
-    const fetchActivities = async () => {
-      try {
-        setLoading(true)
-        const params = new URLSearchParams()
-        params.append('clerkOrgId', organization.id)
-        if (restaurantId) params.append('restaurantId', restaurantId)
-
-        const response = await fetch(`/api/activity/recent?${params.toString()}`)
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error('[RecentActivityTable] API Error:', response.status, errorData)
-          throw new Error(errorData.error || 'Erreur lors du chargement des activités')
-        }
-
-        const data = await response.json()
-        console.log('[RecentActivityTable] API Response:', data)
-        console.log('[RecentActivityTable] Activities loaded:', data.activities?.length || 0)
-        
-        if (data.activities && Array.isArray(data.activities)) {
-          setActivities(data.activities)
-        } else {
-          console.warn('[RecentActivityTable] Invalid activities format:', data)
-          setActivities([])
-        }
-      } catch (error) {
-        console.error('[RecentActivityTable] Error fetching activities:', error)
-        setActivities([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchActivities()
-  }, [organization?.id, isLoaded, restaurantId])
+  useEffect(() => {
+    if (!isLoaded || !organization?.id) return
+    const interval = setInterval(() => fetchActivities(true), AUTO_REFRESH_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [isLoaded, organization?.id, fetchActivities])
 
   const getActivityConfig = (type: Activity['type']) => {
     switch (type) {
@@ -143,14 +167,35 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
               Dernières actions et événements de votre organisation
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/sales">
-              Voir tout <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchActivities(true)}
+              disabled={refreshing}
+              aria-label="Actualiser les activités"
+            >
+              {refreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="sr-only sm:not-sr-only sm:ml-2">Actualiser</span>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard/sales">
+                Voir tout <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
+        {error && (
+          <p className="text-sm text-destructive mb-3" role="alert">
+            {error}
+          </p>
+        )}
         {activities.length > 0 ? (
           <div className="space-y-3">
             {activities.slice(0, 10).map((activity) => {

@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useRecommendations, useGenerateBOMRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { RecommendationListSkeleton } from '@/components/ui/skeletons/recommendation-list-skeleton'
@@ -195,6 +196,7 @@ export default function RecommendationsPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Recommandations">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Recommandations' }]} className="mb-4" />
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Recommandations</h1>

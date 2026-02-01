@@ -107,6 +107,17 @@ export async function GET(request: NextRequest) {
     // Récupérer les paramètres de recherche et filtres
     const search = searchParams.get('search') || ''
     const unit = searchParams.get('unit') || ''
+    const restaurantId = searchParams.get('restaurantId') || ''
+    
+    // Vérifier que le restaurant appartient à l'organisation si restaurantId fourni
+    let validRestaurantId: string | null = null
+    if (restaurantId) {
+      const restaurant = await prisma.restaurant.findFirst({
+        where: { id: restaurantId, organizationId: organization.id },
+        select: { id: true },
+      })
+      validRestaurantId = restaurant?.id ?? null
+    }
     
     // Construire la requête avec filtres
     const where: any = {
@@ -134,7 +145,9 @@ export async function GET(request: NextRequest) {
         _count: {
           select: {
             productIngredients: true,
-            inventory: true,
+            inventory: validRestaurantId
+              ? { where: { restaurantId: validRestaurantId } }
+              : true,
           },
         },
       },

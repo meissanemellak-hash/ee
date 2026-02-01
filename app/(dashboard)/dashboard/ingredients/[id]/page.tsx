@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useRef, useMemo } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,15 +9,25 @@ import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
 import { Beaker, ArrowLeft, Edit, Warehouse, Store, Package } from 'lucide-react'
 import { useIngredientWithStock } from '@/lib/react-query/hooks/use-ingredients'
+import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 export default function IngredientDetailPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
   const id = params?.id as string | undefined
+  const activeRestaurantId = searchParams.get('restaurant')
   const { data: ingredient, isLoading, isError, error } = useIngredientWithStock(id)
+  const { data: restaurantsData } = useRestaurants(1, 100)
+  const restaurants = restaurantsData?.restaurants ?? []
+  const activeRestaurant = useMemo(
+    () => restaurants.find((r) => r.id === activeRestaurantId),
+    [restaurants, activeRestaurantId]
+  )
   const hasToastedError = useRef(false)
 
   useEffect(() => {
@@ -83,11 +93,20 @@ export default function IngredientDetailPage() {
     )
   }
 
-  const inventoryList = ingredient.inventory ?? []
+  const allInventory = ingredient.inventory ?? []
+  const inventoryList = activeRestaurantId
+    ? allInventory.filter((inv) => inv.restaurant.id === activeRestaurantId)
+    : allInventory
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Détail de l'ingrédient ${ingredient.name}`}>
       <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: 'Ingrédients', href: '/dashboard/ingredients' },
+            { label: ingredient.name },
+          ]}
+        />
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des ingrédients">
@@ -162,18 +181,37 @@ export default function IngredientDetailPage() {
             <CardContent>
               {inventoryList.length === 0 ? (
                 <div className="py-8 text-center space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Aucun stock configuré pour cet ingrédient.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    La gestion de l&apos;inventaire se fait par restaurant : ajoutez cet ingrédient à l&apos;inventaire depuis la page de chaque établissement.
-                  </p>
-                  <Button variant="outline" size="sm" asChild className="rounded-xl">
-                    <Link href="/dashboard/restaurants">
-                      <Store className="h-4 w-4 mr-2" />
-                      Voir les restaurants
-                    </Link>
-                  </Button>
+                  {activeRestaurantId ? (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Aucun stock pour <strong>{activeRestaurant?.name ?? 'ce restaurant'}</strong>.
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Ajoutez cet ingrédient à l&apos;inventaire de ce restaurant.
+                      </p>
+                      <Button variant="outline" size="sm" asChild className="rounded-xl border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20">
+                        <Link href={`/dashboard/restaurants/${activeRestaurantId}/inventory?restaurant=${activeRestaurantId}`}>
+                          <Warehouse className="h-4 w-4 mr-2" />
+                          Ajouter à l&apos;inventaire
+                        </Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Aucun stock configuré pour cet ingrédient.
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        La gestion de l&apos;inventaire se fait par restaurant : ajoutez cet ingrédient à l&apos;inventaire depuis la page de chaque établissement.
+                      </p>
+                      <Button variant="outline" size="sm" asChild className="rounded-xl">
+                        <Link href="/dashboard/restaurants">
+                          <Store className="h-4 w-4 mr-2" />
+                          Voir les restaurants
+                        </Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -203,7 +241,7 @@ export default function IngredientDetailPage() {
                     <span className="text-sm text-muted-foreground">Gérer l&apos;inventaire :</span>
                     {inventoryList.map((inv) => (
                       <Button key={inv.id} variant="outline" size="sm" className="rounded-xl border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20" asChild>
-                        <Link href={`/dashboard/restaurants/${inv.restaurant.id}/inventory`}>
+                        <Link href={`/dashboard/restaurants/${inv.restaurant.id}/inventory?restaurant=${inv.restaurant.id}`}>
                           {inv.restaurant.name}
                         </Link>
                       </Button>

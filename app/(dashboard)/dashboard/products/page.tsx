@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import { formatCurrency } from '@/lib/utils'
-import { Search, Plus, Edit, Trash2, Package, TrendingUp, Beaker, Tag, Loader2 } from 'lucide-react'
+import { formatCurrency, exportToCsv } from '@/lib/utils'
+import { Search, Plus, Edit, Trash2, Package, TrendingUp, Beaker, Tag, Loader2, Download, ChevronDown, Upload, FileText } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,10 +25,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useProducts, useDeleteProduct } from '@/lib/react-query/hooks/use-products'
 import { ProductListSkeleton } from '@/components/ui/skeletons/product-list-skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
 import { useDebounce } from '@/hooks/use-debounce'
+import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
 
 interface Product {
   id: string
@@ -44,6 +53,7 @@ interface Product {
 
 export default function ProductsPage() {
   const { organization, isLoaded } = useOrganization()
+  const { activeRestaurantId } = useActiveRestaurant()
   const [page, setPage] = useState(1)
   const limit = 12
   const [search, setSearch] = useState('')
@@ -57,15 +67,16 @@ export default function ProductsPage() {
   // Réinitialiser la page quand les filtres changent
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, selectedCategory])
+  }, [debouncedSearch, selectedCategory, activeRestaurantId])
 
   const { data, isLoading, error, refetch } = useProducts(page, limit, {
     search: debouncedSearch,
     category: selectedCategory,
+    restaurantId: activeRestaurantId || undefined,
   })
 
-  const products = data?.products || []
-  const categories = data?.categories || []
+  const products = (data?.products || []) as Product[]
+  const categories = (data?.categories || []) as string[]
   const deleteProduct = useDeleteProduct()
 
   const handleDelete = async () => {
@@ -83,18 +94,30 @@ export default function ProductsPage() {
     setDeleteDialogOpen(true)
   }
 
+  const handleExportCsv = () => {
+    const csvData = products.map((p) => ({
+      nom: p.name,
+      categorie: p.category ?? '',
+      prix_unitaire: p.unitPrice,
+    }))
+    const filename = `produits_${new Date().toISOString().slice(0, 10)}.csv`
+    exportToCsv(csvData, filename)
+  }
+
   if (!isLoaded) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-          <Card className="rounded-xl border shadow-sm bg-card">
-            <CardContent className="py-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Chargement de votre organisation...</p>
-            </CardContent>
-          </Card>
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Liste des produits en cours de chargement">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Produits' }]} className="mb-4" />
+          <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
+            <div>
+              <Skeleton className="h-9 w-48 mb-2" />
+              <Skeleton className="h-5 w-72" />
+            </div>
+          </header>
+          <ProductListSkeleton />
         </div>
-      </div>
+      </main>
     )
   }
 
@@ -152,6 +175,7 @@ export default function ProductsPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Liste des produits">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Produits' }]} className="mb-4" />
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Produits</h1>
@@ -165,11 +189,36 @@ export default function ProductsPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            <Button variant="outline" asChild className="shadow-sm">
-              <Link href="/dashboard/products/import">
-                Importer CSV
-              </Link>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shadow-sm" aria-label="Import et export">
+                  <Download className="mr-2 h-4 w-4" />
+                  Import / export
+                  <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={handleExportCsv}
+                  disabled={products.length === 0}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Exporter CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/products/import">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importer CSV
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/products/import-bom">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Importer recettes (BOM)
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
               <Link href="/dashboard/products/new">
                 <Plus className="mr-2 h-4 w-4" />

@@ -21,7 +21,6 @@ async function main() {
       clerkOrgId,
       name: 'Ma Chaîne de Restaurants', // Vous pouvez changer le nom plus tard
       shrinkPct: 0.1, // 10% de shrink par défaut
-      isDemo: false,
     },
   })
 

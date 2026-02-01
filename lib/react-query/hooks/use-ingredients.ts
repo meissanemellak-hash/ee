@@ -29,6 +29,7 @@ export interface IngredientsResponse {
 export function useIngredients(filters?: {
   search?: string
   unit?: string
+  restaurantId?: string | null
 }) {
   const { organization } = useOrganization()
 
@@ -44,6 +45,7 @@ export function useIngredients(filters?: {
       if (filters?.unit && filters.unit !== 'all') {
         queryParams.append('unit', filters.unit)
       }
+      if (filters?.restaurantId) queryParams.append('restaurantId', filters.restaurantId)
       
       const response = await fetch(`/api/ingredients?${queryParams.toString()}`)
       

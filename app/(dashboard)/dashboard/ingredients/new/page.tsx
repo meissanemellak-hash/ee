@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateIngredient } from '@/lib/react-query/hooks/use-ingredients'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 const UNITS = ['kg', 'g', 'L', 'mL', 'unité', 'pièce', 'paquet', 'boîte']
 
@@ -120,6 +121,7 @@ export default function NewIngredientPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Créer un nouvel ingrédient">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Ingrédients', href: '/dashboard/ingredients' }, { label: 'Nouveau' }]} />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des ingrédients">
             <Link href="/dashboard/ingredients" className="hover:opacity-80 transition-opacity">
@@ -149,10 +151,10 @@ export default function NewIngredientPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="form-desc" noValidate>
             <p id="form-desc" className="sr-only">
-              Formulaire de création d’un ingrédient : nom, unité, coût par unité, taille du pack et fournisseur.
+              Formulaire de création d&apos;un ingrédient : nom, unité, coût par unité, taille du pack et fournisseur.
             </p>
             <div className="space-y-2">
-              <Label htmlFor="name">Nom de l'ingrédient *</Label>
+              <Label htmlFor="name">Nom de l&apos;ingrédient *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -196,7 +198,7 @@ export default function NewIngredientPage() {
                 disabled={createIngredient.isPending}
               />
               <p className="text-xs text-muted-foreground">
-                Coût d'achat par unité en euros.
+                Coût d&apos;achat par unité en euros.
               </p>
             </div>
 

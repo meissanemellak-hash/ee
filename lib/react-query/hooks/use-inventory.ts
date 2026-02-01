@@ -159,3 +159,68 @@ export function useDeleteInventoryItem() {
     },
   })
 }
+
+export function useImportInventory(restaurantId: string | undefined) {
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (data: { file: File }) => {
+      if (!organization?.id) throw new Error('Aucune organisation sélectionnée')
+      if (!restaurantId) throw new Error('Restaurant requis')
+
+      const formData = new FormData()
+      formData.append('file', data.file)
+      formData.append('restaurantId', restaurantId)
+      formData.append('clerkOrgId', organization.id)
+
+      const response = await fetch('/api/inventory/import', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        const message = result.details || result.error || 'Erreur lors de l\'import'
+        throw new Error(typeof message === 'string' ? message : Array.isArray(message) ? message[0] || result.error : result.error)
+      }
+
+      return result as {
+        success: boolean
+        imported: number
+        created?: number
+        updated?: number
+        errors?: string[]
+      }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['inventory', organization?.id, restaurantId] })
+      queryClient.invalidateQueries({ queryKey: ['restaurant', restaurantId, organization?.id] })
+      const created = data.created ?? 0
+      const updated = data.updated ?? 0
+      const msg =
+        updated > 0
+          ? `${data.imported} ligne(s) importée(s) : ${created} créée(s), ${updated} mise(s) à jour`
+          : `${data.imported} ligne(s) importée(s) avec succès`
+      const errorSuffix =
+        data.errors?.length
+          ? data.errors.length === 1
+            ? ` — Erreur ignorée : ${data.errors[0]}`
+            : ` — ${data.errors.length} erreurs ignorées : ${data.errors.slice(0, 2).join(' ; ')}${data.errors.length > 2 ? '…' : ''}`
+          : ''
+      toast({
+        title: 'Import réussi',
+        description: msg + errorSuffix,
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}

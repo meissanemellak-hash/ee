@@ -14,10 +14,9 @@ import {
   Bell,
   Settings,
   FileText,
-  PackageCheck,
 } from 'lucide-react'
 
-const baseNavigation = [
+const navigation = [
   {
     name: 'Dashboard',
     href: '/dashboard',
@@ -70,30 +69,10 @@ const baseNavigation = [
   },
 ]
 
-type NavItem = (typeof baseNavigation)[number]
-
-/** Retourne la navigation : base + lien Inventaire (restaurant actif) si un restaurant est sélectionné */
-function getNavigation(activeRestaurantId: string | null): NavItem[] {
-  if (!activeRestaurantId) return baseNavigation
-  const inventaireItem: NavItem = {
-    name: 'Inventaire',
-    href: `/dashboard/restaurants/${activeRestaurantId}/inventory`,
-    icon: PackageCheck,
-  }
-  const alertesIndex = baseNavigation.findIndex((n) => n.name === 'Alertes')
-  const insertIndex = alertesIndex >= 0 ? alertesIndex + 1 : baseNavigation.length
-  return [
-    ...baseNavigation.slice(0, insertIndex),
-    inventaireItem,
-    ...baseNavigation.slice(insertIndex),
-  ]
-}
-
 export function Sidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const activeRestaurantId = searchParams.get('restaurant')
-  const navigation = getNavigation(activeRestaurantId)
 
   return (
     <div className="flex h-full w-64 flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-sm">
@@ -110,7 +89,10 @@ export function Sidebar() {
       {/* Navigation (Style Sequence Premium) */}
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+          // Dashboard: actif uniquement sur /dashboard exact (pas sur /dashboard/products, etc.)
+          const isActive = item.href === '/dashboard'
+            ? pathname === '/dashboard'
+            : pathname === item.href || pathname?.startsWith(item.href + '/')
           const Icon = item.icon
           const href = activeRestaurantId ? `${item.href}${item.href.includes('?') ? '&' : '?'}restaurant=${activeRestaurantId}` : item.href
           

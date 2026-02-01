@@ -37,6 +37,8 @@ import {
 } from '@/lib/react-query/hooks/use-products'
 import { useIngredients } from '@/lib/react-query/hooks/use-ingredients'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { formatRecipeQuantity } from '@/lib/utils'
 
 export default function EditProductPage() {
   const router = useRouter()
@@ -58,7 +60,7 @@ export default function EditProductPage() {
   const [ingredientToDelete, setIngredientToDelete] = useState<ProductIngredientItem | null>(null)
   const hasRedirected = useRef(false)
 
-  const ingredients = ingredientsData?.ingredients ?? []
+  const ingredients = (ingredientsData?.ingredients ?? []) as { id: string; name: string; unit: string }[]
 
   useEffect(() => {
     if (product) {
@@ -242,6 +244,13 @@ export default function EditProductPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Modifier le produit ${product?.name ?? ''}`}>
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs
+          items={[
+            { label: 'Produits', href: '/dashboard/products' },
+            { label: product?.name ?? '...' },
+            { label: 'Édition' },
+          ]}
+        />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des produits">
             <Link href="/dashboard/products" className="hover:opacity-80 transition-opacity">
@@ -380,7 +389,13 @@ export default function EditProductPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-foreground truncate">{pi.ingredient.name}</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {pi.quantityNeeded} {pi.ingredient.unit} par produit
+                        {(() => {
+                          const { value, unit } = formatRecipeQuantity(
+                            pi.quantityNeeded,
+                            pi.ingredient.unit
+                          )
+                          return `${value} ${unit} par produit`
+                        })()}
                       </p>
                     </div>
                     <Button

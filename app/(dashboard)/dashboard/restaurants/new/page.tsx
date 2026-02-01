@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, ArrowLeft, Plus, Save } from 'lucide-react'
 import { useCreateRestaurant } from '@/lib/react-query/hooks/use-restaurants'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 export default function NewRestaurantPage() {
   const router = useRouter()
@@ -81,6 +82,7 @@ export default function NewRestaurantPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Créer un nouveau restaurant">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Restaurants', href: '/dashboard/restaurants' }, { label: 'Nouveau' }]} />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des restaurants">
             <Link href="/dashboard/restaurants" className="hover:opacity-80 transition-opacity">

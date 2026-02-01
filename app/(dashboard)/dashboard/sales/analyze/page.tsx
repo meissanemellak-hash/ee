@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Loader2, TrendingUp, Package, Euro, Calendar, BarChart3 } from 'lucide-react'
 import Link from 'next/link'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import {
   Select,
   SelectContent,
@@ -191,6 +192,7 @@ export default function SalesAnalyzePage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Analyse des ventes">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Ventes & Analyse', href: '/dashboard/sales' }, { label: 'Analyse' }]} />
         <header className="pb-6 border-b border-border/60">
           <h1 className="text-3xl font-bold tracking-tight">Analyse des ventes</h1>
           <p className="text-muted-foreground mt-1.5">

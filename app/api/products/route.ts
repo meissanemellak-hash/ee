@@ -108,7 +108,18 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category') || ''
     const pageParam = searchParams.get('page')
     const limitParam = searchParams.get('limit')
+    const restaurantIdParam = searchParams.get('restaurantId') || ''
     const usePagination = pageParam !== null || limitParam !== null
+
+    // Vérifier que le restaurant appartient à l'organisation si restaurantId fourni
+    let validRestaurantId: string | null = null
+    if (restaurantIdParam) {
+      const restaurant = await prisma.restaurant.findFirst({
+        where: { id: restaurantIdParam, organizationId: organization.id },
+        select: { id: true },
+      })
+      validRestaurantId = restaurant?.id ?? null
+    }
     
     // Construire la requête avec filtres
     const where: any = {
@@ -158,7 +169,9 @@ export async function GET(request: NextRequest) {
             createdAt: true,
             _count: {
               select: {
-                sales: true,
+                sales: validRestaurantId
+                  ? { where: { restaurantId: validRestaurantId } }
+                  : true,
                 productIngredients: true,
               },
             },
@@ -187,7 +200,9 @@ export async function GET(request: NextRequest) {
       include: {
         _count: {
           select: {
-            sales: true,
+            sales: validRestaurantId
+              ? { where: { restaurantId: validRestaurantId } }
+              : true,
             productIngredients: true,
           },
         },

@@ -399,7 +399,7 @@ export async function generatePerformanceReport(
       totalRevenue,
       averageRevenuePerRestaurant: Math.round(averageRevenuePerRestaurant * 100) / 100,
     },
-    restaurants: restaurantStats.filter((r) => r.topProduct !== null),
+    restaurants: restaurantStats.filter((r): r is typeof r & { topProduct: NonNullable<typeof r.topProduct> } => r.topProduct !== null),
   }
 }
 

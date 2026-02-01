@@ -21,6 +21,7 @@ import {
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useProducts } from '@/lib/react-query/hooks/use-products'
 import { useSale, useUpdateSale } from '@/lib/react-query/hooks/use-sales'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 export default function EditSalePage() {
   const router = useRouter()
@@ -34,8 +35,8 @@ export default function EditSalePage() {
   const { data: sale, isLoading: loadingSale, error: saleError } = useSale(saleId)
   const updateSale = useUpdateSale()
 
-  const restaurants = restaurantsData?.restaurants || []
-  const products = productsData?.products || []
+  const restaurants = (restaurantsData?.restaurants || []) as { id: string; name: string }[]
+  const products = (productsData?.products || []) as { id: string; name: string; unitPrice: number }[]
   const loadingData = loadingRestaurants || loadingProducts
 
   const [formData, setFormData] = useState({
@@ -220,6 +221,7 @@ export default function EditSalePage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Modifier la vente">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Ventes & Analyse', href: '/dashboard/sales' }, { label: 'Édition' }]} />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des ventes">
             <Link href="/dashboard/sales" className="hover:opacity-80 transition-opacity">

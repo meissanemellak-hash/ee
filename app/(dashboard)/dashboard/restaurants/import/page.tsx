@@ -11,6 +11,7 @@ import { Upload, FileText, CheckCircle2, XCircle, Loader2, ArrowLeft, Download }
 import Link from 'next/link'
 import Papa from 'papaparse'
 import { useImportRestaurants } from '@/lib/react-query/hooks/use-restaurants'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 interface CSVRow {
   nom?: string
@@ -190,6 +191,7 @@ export default function ImportRestaurantsPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Importer des restaurants depuis un fichier CSV">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Restaurants', href: '/dashboard/restaurants' }, { label: 'Import' }]} />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour à la liste des restaurants">
             <Link href="/dashboard/restaurants">

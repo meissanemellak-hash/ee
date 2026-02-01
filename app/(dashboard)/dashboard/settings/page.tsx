@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useOrganizationData, useUpdateOrganization, useFixOrganizationId, useCurrentUser } from '@/lib/react-query/hooks/use-organization'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function SettingsPageSkeleton() {
@@ -74,7 +75,7 @@ export default function SettingsPage() {
   const updateOrganization = useUpdateOrganization()
   const fixOrgId = useFixOrganizationId()
 
-  const canEditName = membership?.role === 'org:admin' || membership?.role === 'org:creator' || organization?.createdBy === user?.id
+  const canEditName = membership?.role === 'org:admin' || membership?.role === 'org:creator' || (organization as { createdBy?: string } | null)?.createdBy === user?.id
 
   const [formData, setFormData] = useState({
     name: '',
@@ -178,6 +179,7 @@ export default function SettingsPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Paramètres">
       <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+        <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Paramètres' }]} className="mb-4" />
         <header className="pb-6 border-b border-border/60">
           <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
           <p className="text-muted-foreground mt-1.5">
@@ -203,21 +205,21 @@ export default function SettingsPage() {
             <Label htmlFor="org-name">Nom de l&apos;organisation</Label>
             <Input
               id="org-name"
-              aria-label="Nom de l'organisation"
+              aria-label="Nom de l&apos;organisation"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Nom de l'organisation"
+              placeholder="Nom de l&apos;organisation"
               disabled={!canEditName}
               className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900 transition-colors"
             />
             {!canEditName && (
               <p className="text-sm text-muted-foreground">
-                ⚠️ Seul le créateur de l'organisation ou un administrateur peut modifier le nom. 
+                ⚠️ Seul le créateur de l&apos;organisation ou un administrateur peut modifier le nom. 
                 Contactez le créateur ou demandez à être promu administrateur.
               </p>
             )}
             <p className="text-xs text-muted-foreground">
-              ℹ️ Le nom modifié sera utilisé dans toute l'application. 
+              ℹ️ Le nom modifié sera utilisé dans toute l&apos;application. 
               En cas de limitation technique avec Clerk, vous pouvez également mettre à jour le nom directement dans le dashboard Clerk.
             </p>
           </div>
@@ -260,7 +262,7 @@ export default function SettingsPage() {
                 )}
                 {organization?.id && orgData.clerkOrgId && organization.id !== orgData.clerkOrgId && (
                   <p className="text-amber-600 dark:text-amber-400 text-xs mt-2">
-                    ⚠️ Les IDs ne correspondent pas ! Utilisez le bouton "Corriger l'ID" pour synchroniser.
+                    ⚠️ Les IDs ne correspondent pas ! Utilisez le bouton &quot;Corriger l&apos;ID&quot; pour synchroniser.
                   </p>
                 )}
               </div>
@@ -291,9 +293,9 @@ export default function SettingsPage() {
                 variant="outline"
                 onClick={handleFixOrgId}
                 disabled={saving}
-                title="Corriger l'ID de l'organisation si il ne correspond pas à celui dans Clerk"
+                title="Corriger l&apos;ID de l&apos;organisation si il ne correspond pas à celui dans Clerk"
                 className="shadow-sm"
-                aria-label="Corriger l'ID de l'organisation"
+                aria-label="Corriger l&apos;ID de l&apos;organisation"
               >
                 🔧 Corriger l&apos;ID
               </Button>
@@ -363,7 +365,7 @@ export default function SettingsPage() {
                     {user.id && serverUserId && user.id === serverUserId && (
                       <div className="mt-2 p-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
                         <p className="text-xs text-teal-700 dark:text-teal-400">
-                          ✅ L'ID utilisateur est correct et correspond entre client et serveur
+                          ✅ L&apos;ID utilisateur est correct et correspond entre client et serveur
                         </p>
                       </div>
                     )}
@@ -374,11 +376,11 @@ export default function SettingsPage() {
                     ℹ️ Note importante :
                   </p>
                   <p className="text-xs text-teal-700 dark:text-teal-300">
-                    L'<strong>ID utilisateur</strong> (commence par <code>user_</code>) identifie <strong>votre compte personnel</strong> dans Clerk.
+                    L&apos;<strong>ID utilisateur</strong> (commence par <code>user_</code>) identifie <strong>votre compte personnel</strong> dans Clerk.
                     <br />
-                    L'<strong>ID organisation</strong> (commence par <code>org_</code>) identifie <strong>l'organisation</strong> dans Clerk.
+                    L&apos;<strong>ID organisation</strong> (commence par <code>org_</code>) identifie <strong>l&apos;organisation</strong> dans Clerk.
                     <br />
-                    <strong>Ces deux IDs sont différents par design</strong> - c'est normal et attendu. Un utilisateur peut appartenir à plusieurs organisations.
+                    <strong>Ces deux IDs sont différents par design</strong> - c&apos;est normal et attendu. Un utilisateur peut appartenir à plusieurs organisations.
                   </p>
                 </div>
               </div>
@@ -415,7 +417,7 @@ export default function SettingsPage() {
               <CardTitle className="text-lg font-semibold">Préférences</CardTitle>
             </div>
           <CardDescription className="mt-1">
-            Configurez vos préférences de notifications et d'affichage
+            Configurez vos préférences de notifications et d&apos;affichage
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -450,9 +452,9 @@ export default function SettingsPage() {
           <div className="rounded-lg border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1 flex-1">
-                <h4 className="font-semibold text-red-800 dark:text-red-400">Supprimer l'organisation</h4>
+                <h4 className="font-semibold text-red-800 dark:text-red-400">Supprimer l&apos;organisation</h4>
                 <p className="text-sm text-red-700 dark:text-red-300">
-                  Cette action est irréversible. Toutes les données de l'organisation seront définitivement supprimées.
+                  Cette action est irréversible. Toutes les données de l&apos;organisation seront définitivement supprimées.
                 </p>
               </div>
               <Button
@@ -478,7 +480,7 @@ export default function SettingsPage() {
               Cette action ne peut pas être annulée. Cela supprimera définitivement votre organisation
               et toutes les données associées (restaurants, produits, ventes, prévisions, etc.).
               <br /><br />
-              <strong>Cette fonctionnalité n'est pas encore implémentée.</strong>
+              <strong>Cette fonctionnalité n&apos;est pas encore implémentée.</strong>
               <br />
               Contactez le support pour supprimer votre organisation.
             </AlertDialogDescription>

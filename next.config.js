@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Optimisations pour éviter les problèmes de cache CSS
@@ -25,4 +27,20 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+const sentryOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+}
+
+// N'activer Sentry que si le DSN est configuré (évite les erreurs de build)
+const useSentry =
+  process.env.NEXT_PUBLIC_SENTRY_DSN &&
+  process.env.SENTRY_ORG &&
+  process.env.SENTRY_PROJECT
+
+module.exports = useSentry ? withSentryConfig(nextConfig, sentryOptions) : nextConfig

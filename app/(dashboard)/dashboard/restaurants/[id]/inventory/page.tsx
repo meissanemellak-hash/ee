@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Plus, Edit, Save, X, Package, AlertTriangle, ArrowLeft, Warehouse, TrendingUp, CheckCircle2 } from 'lucide-react'
+import { Loader2, Plus, Edit, Save, X, Package, AlertTriangle, ArrowLeft, Warehouse, TrendingUp, CheckCircle2, Upload, Download, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -17,6 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +33,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { exportToCsv } from '@/lib/utils'
 import { useRestaurant } from '@/lib/react-query/hooks/use-restaurants'
 import { useIngredients } from '@/lib/react-query/hooks/use-ingredients'
 import {
@@ -225,6 +233,18 @@ export default function InventoryPage() {
     refetchInventory()
   }
 
+  const handleExportCsv = () => {
+    const csvData = inventory.map((item) => ({
+      ingredient: item.ingredient.name,
+      stock_actuel: item.currentStock,
+      seuil_min: item.minThreshold,
+      seuil_max: item.maxThreshold ?? '',
+    }))
+    const safeName = (restaurant?.name ?? restaurantId ?? 'export').replace(/[^a-zA-Z0-9_-]/g, '_')
+    const filename = `inventaire_${safeName}_${new Date().toISOString().slice(0, 10)}.csv`
+    exportToCsv(csvData, filename)
+  }
+
   if (!isLoaded || loading) {
     return <InventoryPageSkeleton />
   }
@@ -294,6 +314,13 @@ export default function InventoryPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Inventaire - ${restaurant?.name ?? 'Restaurant'}`}>
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs
+          items={[
+            { label: 'Restaurants', href: '/dashboard/restaurants' },
+            { label: restaurant?.name ?? '...', href: `/dashboard/restaurants/${restaurantId}` },
+            { label: 'Inventaire' },
+          ]}
+        />
         <header className="flex items-center gap-4 pb-6 border-b border-border/60">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" asChild aria-label="Retour au détail du restaurant">
             <Link href={`/dashboard/restaurants/${restaurantId}`}>
@@ -315,22 +342,45 @@ export default function InventoryPage() {
 
         <Card className="rounded-xl border shadow-sm bg-card">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div>
             <div>
               <CardTitle id="inventory-title" className="text-lg font-semibold">Inventaire</CardTitle>
-              <CardDescription className="mt-1">
-                Gérez les stocks et les seuils d’alerte pour chaque ingrédient. Les champs marqués d’un * sont obligatoires.
+              <CardDescription className="mt-1">Gérez les stocks et les seuils d’alerte pour chaque ingrédient. Les champs marqués d’un * sont obligatoires.
               </CardDescription>
             </div>
-            {!showAddForm && (
-              <Button onClick={() => setShowAddForm(true)} className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 shrink-0" aria-label="Ajouter un ingrédient à l’inventaire">
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter un ingrédient
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent>
+          {/* Boutons en haut à droite du tableau */}
+          {!showAddForm && (
+            <div className="flex justify-end gap-2 mb-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="shadow-sm" aria-label="Import et export">
+                    <Download className="h-4 w-4 mr-2" />
+                    Import / export
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleExportCsv} disabled={inventory.length === 0}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Exporter CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/dashboard/restaurants/${restaurantId}/inventory/import`}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Importer CSV
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={() => setShowAddForm(true)} className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un ingrédient à l'inventaire">
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter un ingrédient
+              </Button>
+            </div>
+          )}
           {/* Formulaire d'ajout (Style Sequence) */}
           {showAddForm && (
             <Card className="mb-6 rounded-xl border-2 border-teal-200 dark:border-teal-900/30 bg-teal-50/50 dark:bg-teal-900/10" aria-labelledby="add-ingredient-title">
@@ -380,7 +430,7 @@ export default function InventoryPage() {
                     </Select>
                     {availableIngredients.length === 0 && Array.isArray(ingredients) && ingredients.length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        Tous vos ingrédients ont déjà un inventaire. Vous pouvez modifier un inventaire existant en cliquant sur l'icône de modification.
+                        Tous vos ingrédients ont déjà un inventaire. Vous pouvez modifier un inventaire existant en cliquant sur l&apos;icône de modification.
                       </p>
                     )}
                   </div>

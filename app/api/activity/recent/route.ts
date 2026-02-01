@@ -84,15 +84,12 @@ export async function GET(request: NextRequest) {
     console.log('[GET /api/activity/recent] Recherche activités depuis:', thirtyDaysAgo.toISOString())
     console.log('[GET /api/activity/recent] Organization ID:', organization.id)
 
-    // 1. Ventes récentes - Récupérer les ventes des 30 derniers jours
+    // 1. Ventes récentes - Récupérer les 30 ventes les plus récentes (sans filtre de date pour inclure toutes les ventes)
     let recentSales: any[] = []
     try {
       recentSales = await prisma.sale.findMany({
         where: {
           restaurant: restaurantWhere,
-          saleDate: {
-            gte: thirtyDaysAgo,
-          },
         },
         include: {
           product: {
@@ -156,14 +153,12 @@ export async function GET(request: NextRequest) {
       recentAcceptedRecommendations = []
     }
 
-    // 3. Alertes créées récentes
+    // 3. Alertes créées récentes (filtrées par restaurant si restaurantId fourni)
     let recentAlerts: any[] = []
     try {
       recentAlerts = await prisma.alert.findMany({
         where: {
-          restaurant: {
-            organizationId: organization.id,
-          },
+          restaurant: restaurantWhere,
           createdAt: {
             gte: thirtyDaysAgo,
           },
@@ -194,7 +189,7 @@ export async function GET(request: NextRequest) {
         where: {
           restaurant: restaurantWhere,
           resolved: true,
-          updatedAt: {
+          resolvedAt: {
             gte: thirtyDaysAgo,
           },
         },
@@ -206,7 +201,7 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: {
-          updatedAt: 'desc',
+          resolvedAt: 'desc',
         },
         take: 10,
       })
@@ -286,7 +281,7 @@ export async function GET(request: NextRequest) {
           title: `Alerte résolue : ${alert.type}`,
           description: alert.message,
           restaurantName: alert.restaurant.name,
-          date: alert.updatedAt,
+          date: alert.resolvedAt || alert.updatedAt,
           icon: '✓',
         })
       }

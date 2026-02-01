@@ -245,8 +245,7 @@ export async function PATCH(request: NextRequest) {
               
               console.log('[PATCH /api/organizations/update] 🔄 Tentative updateOrganization avec ID:', orgIdToUse)
               
-              const updatedClerkOrg = await client.organizations.updateOrganization({
-                organizationId: orgIdToUse,
+              const updatedClerkOrg = await client.organizations.updateOrganization(orgIdToUse, {
                 name: name.trim(),
               })
               
@@ -279,10 +278,9 @@ export async function PATCH(request: NextRequest) {
                 if (orgIdToUse === clerkOrg.id && organization.clerkOrgId !== clerkOrg.id) {
                   console.log('[PATCH /api/organizations/update] 🔄 Retry avec l\'ID de la DB:', organization.clerkOrgId)
                   try {
-                    const retryUpdatedClerkOrg = await client.organizations.updateOrganization({
-                      organizationId: organization.clerkOrgId,
-                      name: name.trim(),
-                    })
+const retryUpdatedClerkOrg = await client.organizations.updateOrganization(organization.clerkOrgId, {
+                        name: name.trim(),
+                      })
                     console.log('[PATCH /api/organizations/update] ✅ Nom mis à jour dans Clerk avec succès (retry DB ID):', retryUpdatedClerkOrg.name)
                     clerkUpdateSuccess = true
                   } catch (retryError: any) {
@@ -291,8 +289,7 @@ export async function PATCH(request: NextRequest) {
                     if (orgIdToUse === organization.clerkOrgId && clerkOrg.id !== organization.clerkOrgId) {
                       console.log('[PATCH /api/organizations/update] 🔄 Dernier retry avec l\'ID de Clerk:', clerkOrg.id)
                       try {
-                        const finalRetry = await client.organizations.updateOrganization({
-                          organizationId: clerkOrg.id,
+                        const finalRetry = await client.organizations.updateOrganization(clerkOrg.id, {
                           name: name.trim(),
                         })
                         console.log('[PATCH /api/organizations/update] ✅ Nom mis à jour dans Clerk avec succès (retry Clerk ID):', finalRetry.name)

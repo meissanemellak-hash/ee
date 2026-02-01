@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatDateTime } from '@/lib/utils'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useAlerts, useGenerateAlerts, useUpdateAlertStatus } from '@/lib/react-query/hooks/use-alerts'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { AlertListSkeleton } from '@/components/ui/skeletons/alert-list-skeleton'
@@ -193,6 +194,7 @@ export default function AlertsPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Alertes">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Alertes' }]} className="mb-4" />
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Alertes</h1>

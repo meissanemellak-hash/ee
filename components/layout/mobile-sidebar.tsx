@@ -97,7 +97,10 @@ export function MobileSidebar() {
             </div>
             <nav className="flex-1 space-y-1 px-3 py-4">
               {navigation.map((item) => {
-                const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+                // Dashboard: actif uniquement sur /dashboard exact
+                const isActive = item.href === '/dashboard'
+                  ? pathname === '/dashboard'
+                  : pathname === item.href || pathname?.startsWith(item.href + '/')
                 const Icon = item.icon
                 const href = activeRestaurantId ? `${item.href}${item.href.includes('?') ? '&' : '?'}restaurant=${activeRestaurantId}` : item.href
                 return (

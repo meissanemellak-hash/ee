@@ -24,9 +24,6 @@ export default function RootLayout({
     <ClerkProvider>
       <ReactQueryProvider>
         <html lang="fr" suppressHydrationWarning>
-          <head>
-            <link rel="preload" href="/favicon.ico" as="image" />
-          </head>
           <body className={inter.className} suppressHydrationWarning>
             {children}
             <Toaster />

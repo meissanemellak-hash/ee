@@ -5,7 +5,15 @@ import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Store, Plus, Edit, Trash2, TrendingUp, Bell, MapPin, Upload } from 'lucide-react'
+import { exportToCsv } from '@/lib/utils'
+import { Store, Plus, Edit, Trash2, TrendingUp, Bell, MapPin, Upload, Download, ChevronDown } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +26,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useRestaurants, useDeleteRestaurant } from '@/lib/react-query/hooks/use-restaurants'
 import { RestaurantListSkeleton } from '@/components/ui/skeletons/restaurant-list-skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
 
 interface Restaurant {
@@ -36,7 +45,7 @@ export default function RestaurantsPage() {
   const [page, setPage] = useState(1)
   const limit = 12
   const { data, isLoading, error, refetch } = useRestaurants(page, limit)
-  const restaurants = data?.restaurants || []
+  const restaurants = (data?.restaurants || []) as Restaurant[]
   const deleteRestaurant = useDeleteRestaurant()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [restaurantToDelete, setRestaurantToDelete] = useState<Restaurant | null>(null)
@@ -56,17 +65,31 @@ export default function RestaurantsPage() {
     setDeleteDialogOpen(true)
   }
 
+  const handleExportCsv = () => {
+    const csvData = restaurants.map((r) => ({
+      nom: r.name,
+      adresse: r.address ?? '',
+      fuseau: r.timezone,
+    }))
+    const filename = `restaurants_${new Date().toISOString().slice(0, 10)}.csv`
+    exportToCsv(csvData, filename)
+  }
+
   if (!isLoaded) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-          <Card className="rounded-xl border shadow-sm">
-            <CardContent className="py-16 text-center">
-              <p className="text-muted-foreground">Chargement de votre organisation...</p>
-            </CardContent>
-          </Card>
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Liste des restaurants en cours de chargement">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+          <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Restaurants' }]} className="mb-4" />
+          <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
+            <div>
+              <Skeleton className="h-9 w-48 mb-2" />
+              <Skeleton className="h-5 w-72" />
+            </div>
+            <Skeleton className="h-10 w-40 shrink-0" />
+          </header>
+          <RestaurantListSkeleton />
         </div>
-      </div>
+      </main>
     )
   }
 
@@ -152,6 +175,7 @@ export default function RestaurantsPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
       <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Restaurants' }]} className="mb-4" />
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
           <div>
@@ -168,12 +192,27 @@ export default function RestaurantsPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            <Button variant="outline" asChild className="shadow-sm">
-              <Link href="/dashboard/restaurants/import">
-                <Upload className="mr-2 h-4 w-4" />
-                Importer CSV
-              </Link>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="shadow-sm" aria-label="Import et export">
+                  <Download className="mr-2 h-4 w-4" />
+                  Import / export
+                  <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCsv} disabled={restaurants.length === 0}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Exporter CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/restaurants/import">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importer CSV
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               asChild
               className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
@@ -202,12 +241,27 @@ export default function RestaurantsPage() {
               <li>Tableau de bord par restaurant</li>
             </ul>
             <div className="flex flex-wrap justify-center gap-3">
-              <Button variant="outline" asChild aria-label="Importer des restaurants en CSV">
-                <Link href="/dashboard/restaurants/import">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Importer CSV
-                </Link>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" aria-label="Import et export">
+                    <Download className="mr-2 h-4 w-4" />
+                    Import / export
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center">
+                  <DropdownMenuItem onClick={handleExportCsv} disabled={restaurants.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exporter CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/restaurants/import">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Importer CSV
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un restaurant">
                 <Link href="/dashboard/restaurants/new">
                   <Plus className="mr-2 h-4 w-4" />
@@ -340,7 +394,7 @@ export default function RestaurantsPage() {
               Cette action est irréversible. Le restaurant &quot;{restaurantToDelete?.name}&quot; et toutes ses données (ventes, inventaire, alertes) seront définitivement supprimés.
               {restaurantToDelete && (restaurantToDelete._count?.sales || 0) > 0 && (
                 <span className="block mt-2 text-destructive font-medium">
-                  Ce restaurant contient {restaurantToDelete._count.sales} vente(s) enregistrée(s).
+                  Ce restaurant contient {restaurantToDelete._count?.sales ?? 0} vente(s) enregistrée(s).
                 </span>
               )}
             </AlertDialogDescription>
