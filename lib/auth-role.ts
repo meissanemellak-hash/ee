@@ -1,0 +1,41 @@
+import { clerkClient } from '@clerk/nextjs/server'
+import type { Role } from './roles'
+
+/** Clé metadata Clerk pour notre rôle custom (manager vs staff) */
+export const APP_ROLE_METADATA_KEY = 'appRole'
+
+/**
+ * Récupère le rôle de l'utilisateur dans l'organisation
+ * Option A : metadata Clerk sur le membership
+ * - Clerk admin → admin
+ * - Clerk member + appRole=manager → manager
+ * - Clerk member + appRole=staff ou non défini → staff
+ * - Pas de membership ou erreur → admin (rétrocompatibilité, ne casse pas les users existants)
+ */
+export async function getCurrentUserRole(
+  userId: string,
+  clerkOrgId: string
+): Promise<Role> {
+  try {
+    const client = await clerkClient()
+    const memberships = await client.users.getOrganizationMembershipList({
+      userId,
+    })
+    const membership = memberships.data?.find(
+      (m) => m.organization.id === clerkOrgId
+    )
+    if (!membership) return 'admin'
+
+    const clerkRole = membership.role
+    const appRole = (membership.publicMetadata as Record<string, unknown>)?.[
+      APP_ROLE_METADATA_KEY
+    ] as string | undefined
+
+    if (clerkRole === 'org:admin' || clerkRole === 'admin') return 'admin'
+    if (appRole === 'manager') return 'manager'
+    if (appRole === 'staff') return 'staff'
+    return 'manager'
+  } catch {
+    return 'admin'
+  }
+}
