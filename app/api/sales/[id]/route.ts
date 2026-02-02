@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
@@ -189,6 +190,9 @@ export async function PATCH(
       )
     }
 
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'sales:edit')
+    if (forbidden) return forbidden
+
     // Vérifier que la vente existe et appartient à l'organisation
     const existing = await prisma.sale.findFirst({
       where: {
@@ -365,6 +369,9 @@ export async function DELETE(
         { status: 404 }
       )
     }
+
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'sales:delete')
+    if (forbidden) return forbidden
 
     // Vérifier que la vente existe et appartient à l'organisation
     const sale = await prisma.sale.findFirst({

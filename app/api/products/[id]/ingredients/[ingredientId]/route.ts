@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 
@@ -73,6 +74,9 @@ export async function DELETE(
         { status: 404 }
       )
     }
+
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'products:edit')
+    if (forbidden) return forbidden
 
     // Vérifier que le produit appartient à l'organisation
     const product = await prisma.product.findFirst({

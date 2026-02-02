@@ -10,6 +10,8 @@ import { formatCurrency } from '@/lib/utils'
 import { Beaker, ArrowLeft, Edit, Warehouse, Store, Package } from 'lucide-react'
 import { useIngredientWithStock } from '@/lib/react-query/hooks/use-ingredients'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
@@ -21,6 +23,9 @@ export default function IngredientDetailPage() {
   const { organization, isLoaded } = useOrganization()
   const id = params?.id as string | undefined
   const activeRestaurantId = searchParams.get('restaurant')
+  const { data: roleData } = useUserRole()
+  const currentRole = roleData ?? 'staff'
+  const canEdit = permissions.canEditIngredient(currentRole)
   const { data: ingredient, isLoading, isError, error } = useIngredientWithStock(id)
   const { data: restaurantsData } = useRestaurants(1, 100)
   const restaurants = restaurantsData?.restaurants ?? []
@@ -124,12 +129,14 @@ export default function IngredientDetailPage() {
               </div>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="shrink-0 rounded-xl border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300" asChild>
-            <Link href={`/dashboard/ingredients/${ingredient.id}/edit`}>
-              <Edit className="h-4 w-4 mr-2" />
-              Modifier
-            </Link>
-          </Button>
+          {canEdit && (
+            <Button variant="outline" size="sm" className="shrink-0 rounded-xl border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300" asChild>
+              <Link href={`/dashboard/ingredients/${ingredient.id}/edit`}>
+                <Edit className="h-4 w-4 mr-2" />
+                Modifier
+              </Link>
+            </Button>
+          )}
         </header>
 
         <div className="grid gap-6 md:grid-cols-2">

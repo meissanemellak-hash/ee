@@ -79,7 +79,9 @@ export default function RestaurantDetailPage() {
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
   const { data: roleData } = useUserRole()
-  const canDelete = permissions.canDeleteRestaurant(roleData ?? 'admin')
+  const currentRole = roleData ?? 'staff'
+  const canEdit = permissions.canEditRestaurant(currentRole)
+  const canDelete = permissions.canDeleteRestaurant(currentRole)
 
   const id = params?.id as string | undefined
   const { data: restaurant, isLoading, isError, error, refetch } = useRestaurant(id)
@@ -191,12 +193,14 @@ export default function RestaurantDetailPage() {
             </div>
           </div>
           <nav className="flex flex-wrap gap-2 shrink-0" aria-label="Actions du restaurant">
+            {canEdit && (
             <Button variant="outline" asChild className="shadow-sm border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20" aria-label={`Modifier ${restaurant.name}`}>
               <Link href={`/dashboard/restaurants/${restaurant.id}/edit`}>
                 <Edit className="h-4 w-4 mr-2" />
                 Modifier
               </Link>
             </Button>
+            )}
             {canDelete && (
               <DeleteRestaurantButton restaurantId={restaurant.id} restaurantName={restaurant.name} />
             )}

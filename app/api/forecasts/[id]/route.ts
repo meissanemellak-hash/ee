@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 
@@ -184,6 +185,9 @@ export async function DELETE(
         { status: 404 }
       )
     }
+
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'forecasts:generate')
+    if (forbidden) return forbidden
 
     // Vérifier que la prévision existe et appartient à l'organisation
     const forecast = await prisma.forecast.findFirst({

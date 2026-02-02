@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { z } from 'zod'
-import { getCurrentUserRole } from '@/lib/auth-role'
-import { APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
+import { checkApiPermission, APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
 
 const updateRoleSchema = z.object({
   role: z.enum(['admin', 'manager', 'staff']),
@@ -43,13 +42,8 @@ export async function PATCH(
       )
     }
 
-    const role = await getCurrentUserRole(currentUserId, orgId)
-    if (role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Seul un administrateur peut modifier les rôles' },
-        { status: 403 }
-      )
-    }
+    const forbidden = await checkApiPermission(currentUserId, orgId, 'users:invite')
+    if (forbidden) return forbidden
 
     const targetUserId = params.userId
     if (!targetUserId) {

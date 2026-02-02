@@ -20,6 +20,7 @@
     "db:backup": "node scripts/backup-db.mjs"
   },
   "dependencies": {
+    "@clerk/localizations": "^3.35.3",
     "@clerk/nextjs": "^5.0.0",
     "@prisma/client": "^5.7.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",

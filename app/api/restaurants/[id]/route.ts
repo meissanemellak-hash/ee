@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { getCurrentUserRole } from '@/lib/auth-role'
-import { can } from '@/lib/roles'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 
@@ -218,13 +217,9 @@ export async function DELETE(
       )
     }
 
-    const role = await getCurrentUserRole(userId, orgIdToUse ?? organization.clerkOrgId)
-    if (!can(role, 'restaurants:delete')) {
-      return NextResponse.json(
-        { error: 'Seul un administrateur peut supprimer un restaurant' },
-        { status: 403 }
-      )
-    }
+    const clerkOrgId = orgIdToUse ?? organization.clerkOrgId
+    const forbidden = await checkApiPermission(userId, clerkOrgId, 'restaurants:delete')
+    if (forbidden) return forbidden
 
     const restaurant = await prisma.restaurant.findFirst({
       where: {

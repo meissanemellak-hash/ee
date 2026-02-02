@@ -208,8 +208,9 @@ export default function ForecastsPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Prévisions de ventes">
-      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+    <>
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Prévisions de ventes">
+        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
         <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Prévisions' }]} className="mb-4" />
         <header className="pb-6 border-b border-border/60">
           <h1 className="text-3xl font-bold tracking-tight">Prévisions</h1>
@@ -308,6 +309,7 @@ export default function ForecastsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="rounded-xl border shadow-sm bg-card">
@@ -516,7 +518,8 @@ export default function ForecastsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   )
 }

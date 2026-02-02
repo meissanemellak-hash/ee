@@ -23,6 +23,7 @@ export type Permission =
   | 'sales:create'
   | 'sales:edit'
   | 'sales:delete'
+  | 'sales:import'
   | 'inventory:view'
   | 'inventory:edit'
   | 'inventory:import'
@@ -59,6 +60,7 @@ const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
     'sales:create',
     'sales:edit',
     'sales:delete',
+    'sales:import',
     'inventory:view',
     'inventory:edit',
     'inventory:import',
@@ -92,6 +94,7 @@ const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
     'sales:create',
     'sales:edit',
     'sales:delete',
+    'sales:import',
     'inventory:view',
     'inventory:edit',
     'inventory:import',
@@ -149,6 +152,7 @@ export const permissions = {
   canCreateSale: (role: Role | undefined) => can(role, 'sales:create'),
   canEditSale: (role: Role | undefined) => can(role, 'sales:edit'),
   canDeleteSale: (role: Role | undefined) => can(role, 'sales:delete'),
+  canImportSales: (role: Role | undefined) => can(role, 'sales:import'),
   canViewInventory: (role: Role | undefined) => can(role, 'inventory:view'),
   canEditInventory: (role: Role | undefined) => can(role, 'inventory:edit'),
   canImportInventory: (role: Role | undefined) => can(role, 'inventory:import'),

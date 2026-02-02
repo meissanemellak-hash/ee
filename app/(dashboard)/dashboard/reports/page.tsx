@@ -56,7 +56,7 @@ const statusLabels: Record<string, string> = {
 export default function ReportsPage() {
   const { organization, isLoaded } = useOrganization()
   const { data: roleData } = useUserRole()
-  const canGenerate = permissions.canGenerateReport(roleData ?? 'admin')
+  const canGenerate = permissions.canGenerateReport(roleData ?? 'staff')
 
   const { toast } = useToast()
 

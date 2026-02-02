@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { requirePermission } from '@/lib/auth-role'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { z } from 'zod'
@@ -252,6 +252,9 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
+    const forbidden = await checkApiPermission(userId, orgIdToUse, 'products:create')
+    if (forbidden) return forbidden
+
     // Récupérer ou créer l'organisation
     let organization = await prisma.organization.findUnique({
       where: { clerkOrgId: orgIdToUse },
@@ -316,14 +319,6 @@ export async function POST(request: NextRequest) {
           }, { status: 500 })
         }
       }
-    }
-    
-    const allowed = await requirePermission(userId, orgIdToUse, 'products:create')
-    if (!allowed) {
-      return NextResponse.json(
-        { error: 'Accès refusé. Seul un admin ou manager peut créer un produit.' },
-        { status: 403 }
-      )
     }
 
     if (!organization) {

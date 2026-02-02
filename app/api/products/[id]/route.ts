@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { requirePermission } from '@/lib/auth-role'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { z } from 'zod'
@@ -311,16 +311,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    const orgId = orgIdToUse || organization.clerkOrgId
-    if (orgId) {
-      const allowed = await requirePermission(userId, orgId, 'products:delete')
-      if (!allowed) {
-        return NextResponse.json(
-          { error: 'Accès refusé. Seul un admin ou manager peut supprimer un produit.' },
-          { status: 403 }
-        )
-      }
-    }
+    const clerkOrgId = orgIdToUse || organization.clerkOrgId
+    const forbidden = await checkApiPermission(userId, clerkOrgId, 'products:delete')
+    if (forbidden) return forbidden
 
     // Vérifier que le produit existe et appartient à l'organisation
     const product = await prisma.product.findFirst({

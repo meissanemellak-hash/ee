@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 
@@ -73,6 +74,9 @@ export async function PATCH(
         { status: 404 }
       )
     }
+
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'inventory:edit')
+    if (forbidden) return forbidden
 
     // Récupérer l'inventaire et vérifier qu'il appartient à l'organisation
     const inventory = await prisma.inventory.findUnique({
@@ -198,6 +202,9 @@ export async function DELETE(
         { status: 404 }
       )
     }
+
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'inventory:edit')
+    if (forbidden) return forbidden
 
     // Récupérer l'inventaire et vérifier qu'il appartient à l'organisation
     const inventory = await prisma.inventory.findUnique({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
@@ -265,6 +266,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       )
     }
+
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'sales:create')
+    if (forbidden) return forbidden
 
     // Vérifier que le restaurant appartient à l'organisation
     const restaurant = await prisma.restaurant.findFirst({

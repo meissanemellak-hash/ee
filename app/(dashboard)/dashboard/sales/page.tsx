@@ -114,6 +114,13 @@ export default function SalesPage() {
   const sales = (data?.sales || []) as Sale[]
   const deleteSale = useDeleteSale()
 
+  const { data: roleData } = useUserRole()
+  const currentRole = roleData ?? 'staff'
+  const canCreate = permissions.canCreateSale(currentRole)
+  const canEdit = permissions.canEditSale(currentRole)
+  const canDelete = permissions.canDeleteSale(currentRole)
+  const canImportSales = permissions.canImportSales(currentRole)
+
   // Chiffre d'affaires basé sur le prix actuel du produit (quantity × unitPrice) pour refléter les changements de prix
   const totalRevenue = sales.reduce(
     (sum, sale) => sum + sale.quantity * (sale.product?.unitPrice ?? sale.amount / sale.quantity),
@@ -242,7 +249,7 @@ export default function SalesPage() {
                   <Download className="h-4 w-4 mr-2" />
                   Exporter CSV
                 </DropdownMenuItem>
-                {canCreate && (
+                {canImportSales && (
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/sales/import">
                       <Upload className="h-4 w-4 mr-2" />

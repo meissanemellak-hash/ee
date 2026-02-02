@@ -57,7 +57,7 @@ interface Ingredient {
 export default function IngredientsPage() {
   const { organization, isLoaded } = useOrganization()
   const { data: roleData } = useUserRole()
-  const currentRole = roleData ?? 'admin'
+  const currentRole = roleData ?? 'staff'
   const canCreate = permissions.canCreateIngredient(currentRole)
   const canEdit = permissions.canEditIngredient(currentRole)
   const canDelete = permissions.canDeleteIngredient(currentRole)
@@ -217,12 +217,14 @@ export default function IngredientsPage() {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
-              <Link href="/dashboard/ingredients/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Ajouter un ingrédient
-              </Link>
-            </Button>
+            {canCreate && (
+              <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
+                <Link href="/dashboard/ingredients/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Ajouter un ingrédient
+                </Link>
+              </Button>
+            )}
           </div>
         </header>
 

@@ -20,6 +20,8 @@ import { formatCurrency } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useRecommendations, useGenerateBOMRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { RecommendationListSkeleton } from '@/components/ui/skeletons/recommendation-list-skeleton'
 
 interface Recommendation {
@@ -64,6 +66,10 @@ export default function RecommendationsPage() {
 
   const generateRecommendations = useGenerateBOMRecommendations()
   const updateStatus = useUpdateRecommendationStatus()
+
+  const { data: roleData } = useUserRole()
+  const currentRole = roleData ?? 'staff'
+  const canAccept = permissions.canAcceptRecommendation(currentRole)
 
   // Calculer les statistiques
   const safeRecommendations = Array.isArray(recommendations) ? recommendations : []
@@ -549,6 +555,7 @@ export default function RecommendationsPage() {
                         </div>
                       )}
 
+                      {canAccept && (
                       <div className="flex gap-2 pt-4 border-t">
                         {recommendation.status === 'pending' && (
                           <>
@@ -582,6 +589,7 @@ export default function RecommendationsPage() {
                           </Button>
                         )}
                       </div>
+                      )}
                     </div>
                   )}
 

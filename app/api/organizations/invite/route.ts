@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { z } from 'zod'
-import { getCurrentUserRole, APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
+import { checkApiPermission, APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
 
 const inviteSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -40,13 +40,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const role = await getCurrentUserRole(userId, orgId)
-    if (!role || role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Seul un administrateur peut inviter des membres' },
-        { status: 403 }
-      )
-    }
+    const forbidden = await checkApiPermission(userId, orgId, 'users:invite')
+    if (forbidden) return forbidden
 
     const client = await clerkClient()
 

@@ -20,6 +20,8 @@ import { formatDateTime } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useAlerts, useGenerateAlerts, useUpdateAlertStatus } from '@/lib/react-query/hooks/use-alerts'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { AlertListSkeleton } from '@/components/ui/skeletons/alert-list-skeleton'
 
 interface Alert {
@@ -87,6 +89,10 @@ export default function AlertsPage() {
 
   const generateAlerts = useGenerateAlerts()
   const updateAlertStatus = useUpdateAlertStatus()
+
+  const { data: roleData } = useUserRole()
+  const currentRole = roleData ?? 'staff'
+  const canResolve = permissions.canResolveAlert(currentRole)
 
   // Calculer les statistiques
   const stats = useMemo(() => ({
@@ -493,8 +499,9 @@ export default function AlertsPage() {
               <CardContent>
                 <div className="flex justify-between items-start gap-4">
                   <p className="flex-1 text-sm">{alert.message}</p>
-                  <div className="ml-4 flex-shrink-0">
-                    {alert.resolved ? (
+                  {canResolve && (
+                    <div className="ml-4 flex-shrink-0">
+                      {alert.resolved ? (
                       <Button
                         size="sm"
                         variant="outline"
@@ -529,8 +536,9 @@ export default function AlertsPage() {
                           </>
                         )}
                       </Button>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

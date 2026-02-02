@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { requirePermission } from '@/lib/auth-role'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 
@@ -191,16 +191,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const orgId = orgIdToUse || organization.clerkOrgId
-    if (orgId) {
-      const allowed = await requirePermission(userId, orgId, 'restaurants:create')
-      if (!allowed) {
-        return NextResponse.json(
-          { error: 'Accès refusé. Seul un admin ou manager peut créer un restaurant.' },
-          { status: 403 }
-        )
-      }
-    }
+    const clerkOrgId = orgIdToUse || organization.clerkOrgId
+    const forbidden = await checkApiPermission(userId, clerkOrgId, 'restaurants:create')
+    if (forbidden) return forbidden
 
     if (!name) {
       return NextResponse.json(

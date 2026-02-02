@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
 import Papa from 'papaparse'
@@ -30,6 +31,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'sales:import')
+    if (forbidden) return forbidden
 
     if (!file || !restaurantId) {
       return NextResponse.json(

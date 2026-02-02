@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server'
 import { clerkClient } from '@clerk/nextjs/server'
 import type { Role } from './roles'
 import { can, type Permission } from './roles'
@@ -52,4 +53,24 @@ export async function requirePermission(
   const role = await getCurrentUserRole(userId, clerkOrgId)
   if (can(role, permission)) return role
   return null
+}
+
+/**
+ * Vérifie une permission pour une route API.
+ * Retourne null si autorisé, ou une NextResponse 403 à retourner si non autorisé.
+ */
+export async function checkApiPermission(
+  userId: string,
+  clerkOrgId: string,
+  permission: Permission
+): Promise<NextResponse | null> {
+  const role = await requirePermission(userId, clerkOrgId, permission)
+  if (role) return null
+  return NextResponse.json(
+    {
+      error: 'Accès refusé',
+      details: 'Cette action est réservée aux managers et administrateurs. Contactez votre administrateur si vous avez besoin de ces droits.',
+    },
+    { status: 403 }
+  )
 }

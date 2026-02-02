@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { runAllAlerts, createTestAlerts } from '@/lib/services/alerts'
@@ -319,6 +320,9 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'alerts:resolve')
+    if (forbidden) return forbidden
 
     // Vérifier que l'alerte appartient à l'organisation
     const alert = await prisma.alert.findFirst({

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import Link from 'next/link'
 import { Loader2, Save, Building2, User, Bell, Shield, Trash2, AlertCircle, LogOut } from 'lucide-react'
 import {
   AlertDialog,
@@ -19,6 +20,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useOrganizationData, useUpdateOrganization, useFixOrganizationId, useCurrentUser } from '@/lib/react-query/hooks/use-organization'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MembersSection } from '@/components/settings/members-section'
@@ -71,12 +74,16 @@ export default function SettingsPage() {
 
   const { data: orgData, isLoading: loadingOrg, isError: orgError, refetch: refetchOrg } = useOrganizationData()
   const { data: currentUserData } = useCurrentUser()
+  const { data: roleData, isFetched: roleFetched } = useUserRole()
   const serverUserId = currentUserData?.userId ?? null
 
   const updateOrganization = useUpdateOrganization()
   const fixOrgId = useFixOrganizationId()
 
-  const canEditName = membership?.role === 'org:admin' || membership?.role === 'org:creator' || (organization as { createdBy?: string } | null)?.createdBy === user?.id
+  const currentRole = roleData ?? 'staff'
+  const canViewSettings = permissions.canViewSettings(currentRole)
+  const canEditSettings = permissions.canEditSettings(currentRole)
+  const canEditName = canEditSettings && (membership?.role === 'org:admin' || membership?.role === 'org:creator' || (organization as { createdBy?: string } | null)?.createdBy === user?.id)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -121,6 +128,28 @@ export default function SettingsPage() {
   }
 
   const saving = updateOrganization.isPending || fixOrgId.isPending
+
+  if (!roleFetched || !canViewSettings) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Paramètres">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Vous n&apos;avez pas accès à cette page. Seuls les administrateurs et managers peuvent consulter les paramètres.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard">Retour au tableau de bord</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
 
   if (!orgLoaded || !userLoaded || (loadingOrg && !orgData)) {
     return <SettingsPageSkeleton />
