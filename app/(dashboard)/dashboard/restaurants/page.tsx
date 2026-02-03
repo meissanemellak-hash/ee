@@ -45,7 +45,7 @@ interface Restaurant {
 export default function RestaurantsPage() {
   const { organization, isLoaded } = useOrganization()
   const { data: roleData } = useUserRole()
-  const currentRole = roleData ?? 'admin'
+  const currentRole = roleData ?? 'staff'
   const canDelete = permissions.canDeleteRestaurant(currentRole)
   const canCreate = permissions.canCreateRestaurant(currentRole)
   const canEdit = permissions.canEditRestaurant(currentRole)

@@ -3,38 +3,39 @@
 ## ✅ Ce qui est fait
 
 1. ✅ **React Query configuré** - Provider, cache, hooks
-2. ✅ **Hooks créés** - Restaurants, Products, Sales
+2. ✅ **Hooks créés** - Restaurants, Products, Sales, Ingredients (et autres : forecasts, reports, alerts, recommendations)
 3. ✅ **Skeletons** - Composants de chargement
 4. ✅ **Pagination** - Composant réutilisable
 5. ✅ **Page Restaurants migrée** - Exemple fonctionnel
+6. ✅ **Phase 1 terminée** - Products, Sales et Ingredients migrés vers React Query (pagination, skeletons, gestion d’erreurs)
 
 ## 📋 Plan d'action priorisé
 
-### 🎯 PHASE 1 : Migrer les pages principales (Priorité HAUTE)
+### 🎯 PHASE 1 : Migrer les pages principales ✅ TERMINÉE
 
-#### 1.1 Page Products (2-3h)
+#### 1.1 Page Products ✅
 **Pourquoi** : Page très utilisée, beaucoup de données
-- [ ] Migrer vers `useProducts()` avec pagination
-- [ ] Ajouter `ProductListSkeleton`
-- [ ] Implémenter la pagination
-- [ ] Optimiser l'API `/api/products` avec select et pagination
+- [x] Migrer vers `useProducts()` avec pagination
+- [x] Ajouter `ProductListSkeleton`
+- [x] Implémenter la pagination
+- [x] Optimiser l’usage de l’API avec pagination
 
 **Impact** : ⭐⭐⭐⭐⭐ (Très élevé - page centrale)
 
-#### 1.2 Page Sales (2-3h)
+#### 1.2 Page Sales ✅
 **Pourquoi** : Page critique avec filtres complexes
-- [ ] Migrer vers `useSales()` avec filtres
-- [ ] Ajouter `SaleListSkeleton`
-- [ ] Implémenter la pagination
-- [ ] Optimiser l'API `/api/sales` avec select et pagination
+- [x] Migrer vers `useSales()` avec filtres
+- [x] Ajouter `SaleListSkeleton`
+- [x] Implémenter la pagination
+- [x] Filtres et API alignés
 
 **Impact** : ⭐⭐⭐⭐⭐ (Très élevé - données importantes)
 
-#### 1.3 Page Ingredients (1-2h)
+#### 1.3 Page Ingredients ✅
 **Pourquoi** : Page simple, bon pour tester
-- [ ] Créer `useIngredients()` hook
-- [ ] Migrer la page
-- [ ] Ajouter skeleton
+- [x] Créer `useIngredients()` hook
+- [x] Migrer la page
+- [x] Skeleton / gestion d’erreurs
 
 **Impact** : ⭐⭐⭐ (Moyen)
 
@@ -42,9 +43,9 @@
 
 #### 2.1 Optimistic Updates (2h)
 **Pourquoi** : UX premium - l'UI se met à jour instantanément
-- [ ] Implémenter optimistic updates pour les mutations
-- [ ] Rollback automatique en cas d'erreur
-- [ ] Exemple : Suppression de restaurant
+- [x] Implémenter optimistic updates pour les mutations (suppression vente + prévision)
+- [x] Rollback automatique en cas d'erreur
+- [x] Suppression de restaurant (optimistic + rollback)
 
 **Impact** : ⭐⭐⭐⭐ (Élevé - meilleure UX)
 
@@ -102,32 +103,28 @@
 
 ### Pages à migrer
 - [x] Restaurants ✅
-- [ ] Products ⏳
-- [ ] Sales ⏳
-- [ ] Ingredients ⏳
-- [ ] Forecasts ⏳
-- [ ] Recommendations ⏳
-- [ ] Alerts ⏳
-- [ ] Reports ⏳
+- [x] Products ✅
+- [x] Sales ✅
+- [x] Ingredients ✅
+- [x] Forecasts ✅ (utilise `useForecasts`)
+- [x] Recommendations ✅ (utilise `useRecommendations`)
+- [x] Alerts ✅ (utilise `useAlerts`)
+- [x] Reports ✅ (utilise `useGenerateReport` + `useRestaurants`)
 
-### Hooks à créer
+### Hooks disponibles
 - [x] useRestaurants ✅
-- [x] useProducts ✅ (créé mais pas utilisé)
-- [x] useSales ✅ (créé mais pas utilisé)
-- [ ] useIngredients ⏳
-- [ ] useForecasts ⏳
-- [ ] useRecommendations ⏳
-- [ ] useAlerts ⏳
+- [x] useProducts ✅ (utilisé)
+- [x] useSales ✅ (utilisé)
+- [x] useIngredients ✅ (utilisé)
+- [x] useForecasts ✅ (utilisé)
+- [x] useRecommendations ✅ (utilisé)
+- [x] useAlerts ✅ (utilisé)
+- [x] useReports ✅ (useGenerateReport utilisé sur la page Rapports)
 
-## 🚀 Commencer maintenant ?
+## 🚀 Suite possible (Option C – UX/Performance)
 
-**Je recommande de commencer par la page Products** car :
-- ✅ Hook déjà créé (`useProducts`)
-- ✅ Skeleton déjà créé (`ProductListSkeleton`)
-- ✅ Page très utilisée
-- ✅ Impact immédiat sur la performance
+**Phase 1 et pages Forecasts/Recommendations/Alerts/Reports sont à jour.** Prefetch page suivante + au hover en place sur Products et Sales. Optimistic delete restaurant en place. Error boundary dashboard en place (`app/(dashboard)/dashboard/error.tsx`).
 
-**Souhaitez-vous que je commence par :**
-1. **Migrer la page Products** vers React Query ?
-2. **Migrer la page Sales** vers React Query ?
-3. **Autre chose** ?
+**Encore possible (sans casser le code) :**
+1. **Phase 2.2 – Infinite scroll** : optionnel, sur Sales ou Products avec `useInfiniteQuery`.
+2. **Autre** : fiabilité (Sentry, backups), monétisation (Stripe), etc. — voir `CHECKLIST_AVANT_PRODUCTION.md` et `ROADMAP_PRODUCTION.md`.

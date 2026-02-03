@@ -2,6 +2,8 @@
 
 Ce guide t’aide à vérifier que les backups sont bien configurés et fonctionnent.
 
+**Vérification rapide** : depuis la racine du projet, lance `npm run db:verif-backups` pour contrôler DATABASE_URL, pg_dump et le dossier backups.
+
 ---
 
 ## Étape 1 : Vérifier pg_dump (prérequis)

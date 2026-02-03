@@ -32,7 +32,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { useProducts, useDeleteProduct } from '@/lib/react-query/hooks/use-products'
+import { useQueryClient } from '@tanstack/react-query'
+import { useProducts, useDeleteProduct, getProductsListQueryOptions } from '@/lib/react-query/hooks/use-products'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
 import { ProductListSkeleton } from '@/components/ui/skeletons/product-list-skeleton'
@@ -77,15 +78,26 @@ export default function ProductsPage() {
     setPage(1)
   }, [debouncedSearch, selectedCategory, activeRestaurantId])
 
-  const { data, isLoading, error, refetch } = useProducts(page, limit, {
+  const queryClient = useQueryClient()
+  const filters = {
     search: debouncedSearch,
     category: selectedCategory,
     restaurantId: activeRestaurantId || undefined,
-  })
+  }
+  const { data, isLoading, error, refetch } = useProducts(page, limit, filters)
 
   const products = (data?.products || []) as Product[]
   const categories = (data?.categories || []) as string[]
+  const totalPages = data?.totalPages ?? 0
   const deleteProduct = useDeleteProduct()
+
+  // Prefetch page suivante pour une navigation plus fluide (Phase 2 UX)
+  useEffect(() => {
+    if (!organization?.id || !data || page >= totalPages || totalPages <= 1) return
+    queryClient.prefetchQuery(
+      getProductsListQueryOptions(organization.id, page + 1, limit, filters)
+    )
+  }, [organization?.id, data, page, totalPages, limit, queryClient, debouncedSearch, selectedCategory, activeRestaurantId])
 
   const handleDelete = async () => {
     if (!productToDelete) return
@@ -338,7 +350,10 @@ export default function ProductsPage() {
                       <div className="flex gap-1 ml-2">
                         {canEdit && (
                           <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Modifier ${product.name}`}>
-                            <Link href={`/dashboard/products/${product.id}/edit`}>
+                            <Link
+                              href={`/dashboard/products/${product.id}/edit`}
+                              onMouseEnter={() => organization?.id && queryClient.prefetchQuery(getProductQueryOptions(organization.id, product.id))}
+                            >
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>

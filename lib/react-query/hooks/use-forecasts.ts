@@ -164,19 +164,38 @@ export function useDeleteForecast() {
 
       return response.json()
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['forecasts', organization?.id] })
-      toast({
-        title: 'Prévision supprimée',
-        description: 'La prévision a été supprimée avec succès.',
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['forecasts', organization?.id] })
+      const previous = queryClient.getQueriesData<{ forecasts: Forecast[] }>({
+        queryKey: ['forecasts', organization?.id],
       })
+      queryClient.setQueriesData(
+        { queryKey: ['forecasts', organization?.id] },
+        (old: { forecasts: Forecast[] } | undefined) => {
+          if (!old?.forecasts) return old
+          return { ...old, forecasts: old.forecasts.filter((f) => f.id !== id) }
+        }
+      )
+      return { previous }
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _id, context: { previous?: [unknown, unknown][] } | undefined) => {
+      if (context?.previous) {
+        context.previous.forEach(([queryKey, data]) => queryClient.setQueryData(queryKey as unknown[], data))
+      }
       toast({
         title: 'Erreur',
         description: error.message,
         variant: 'destructive',
       })
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Prévision supprimée',
+        description: 'La prévision a été supprimée avec succès.',
+      })
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['forecasts', organization?.id] })
     },
   })
 }

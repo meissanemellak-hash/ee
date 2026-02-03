@@ -201,8 +201,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const clerkOrgId = orgIdToUse || organization.clerkOrgId
-    const forbidden = await checkApiPermission(userId, clerkOrgId, 'inventory:edit')
+    const effectiveOrgId = orgIdToUse || organization.clerkOrgId
+    const forbidden = await checkApiPermission(userId, effectiveOrgId, 'inventory:edit')
     if (forbidden) return forbidden
 
     // Vérifier que le restaurant et l'ingrédient appartiennent à l'organisation

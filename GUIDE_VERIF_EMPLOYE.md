@@ -18,6 +18,34 @@ Ce guide permet de vérifier que les restrictions du rôle **Employé** (staff) 
 3. **Se connecter** avec cet utilisateur et ouvrir le dashboard : `http://localhost:3000/dashboard`.
 
 ---
+## Validation immédiate (aujourd’hui)
+
+À faire dans l’ordre, en une session. Cocher au fur et à mesure.
+
+### Prérequis (une seule fois)
+- [ ] Dans Clerk : utilisateur de test a **Public metadata** → clé `appRole` (ou `role`) = **`staff`**.
+- [ ] Se déconnecter puis se reconnecter avec cet utilisateur.
+- [ ] Ouvrir `http://localhost:3000/dashboard`.
+
+### Checklist rapide (ordre de vérification)
+- [ ] **Menu** : « Paramètres » absent ; tous les autres liens présents.
+- [ ] **Dashboard** : page OK, pas de boutons créer/modifier/supprimer.
+- [ ] **Restaurants** : liste OK ; pas de bouton « Ajouter », pas d’icônes Modifier/Supprimer/Import.
+- [ ] **Détail restaurant** (cliquer sur un restaurant) : pas de bouton Modifier ni Supprimer.
+- [ ] **Inventaire** (lien Inventaire depuis un restaurant) : pas « Ajouter un ingrédient », pas Import CSV, pas édition/suppression des lignes.
+- [ ] **Produits** : pas Ajouter/Modifier/Supprimer/Import CSV ni Import BOM.
+- [ ] **Ingrédients** : pas Ajouter/Modifier/Supprimer/Import CSV.
+- [ ] **Détail ingrédient** (Voir détail) : pas de bouton Modifier.
+- [ ] **Ventes** : bouton « Nouvelle vente » **présent** ; pas Modifier/Supprimer sur les lignes ; pas « Importer CSV » dans le menu.
+- [ ] **Prévisions** : pas de bloc « Générer des prévisions », pas de bouton Supprimer sur les prévisions.
+- [ ] **Recommandations** : pas Accepter / Rejeter / Remettre en attente.
+- [ ] **Alertes** : pas Résoudre / Réactiver.
+- [ ] **Rapports** : pas de bouton « Générer le rapport ».
+- [ ] **Paramètres** : taper `http://localhost:3000/dashboard/settings` → message d’accès refusé (pas le formulaire).
+
+Si un point échoue : vérifier que l’API `/api/user/role` renvoie `role: "staff"` et que les composants utilisent `useUserRole()` + `permissions.*` (`lib/roles.ts`).
+
+---
 
 ## 1. Menu latéral (sidebar)
 

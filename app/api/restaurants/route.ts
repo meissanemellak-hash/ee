@@ -191,8 +191,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const clerkOrgId = orgIdToUse || organization.clerkOrgId
-    const forbidden = await checkApiPermission(userId, clerkOrgId, 'restaurants:create')
+    const forbidden = await checkApiPermission(userId, orgIdToUse || organization.clerkOrgId, 'restaurants:create')
     if (forbidden) return forbidden
 
     if (!name) {

@@ -203,11 +203,11 @@
 **Estimation** : 3-4 jours
 
 #### 3.2 UX/UI Polish
-- [ ] **Onboarding** pour nouveaux clients
-  - [ ] Wizard de configuration (3-4 étapes)
-  - [ ] Créer organisation → premier restaurant → premier produit → import ventes
+- [x] **Onboarding** pour nouveaux clients ✅ (en place)
+  - [x] Wizard 3 étapes (Bienvenue → Découvrir → Prêt) + redirection si non complété
+  - [ ] Optionnel plus tard : créer premier restaurant / produit dans le wizard
   - [ ] Tooltips et help text
-  - [ ] Skip optionnel
+  - [ ] Skip optionnel (actuellement obligatoire pour accéder au dashboard)
   
 - [ ] **Tooltips et help text** partout
   - [ ] Icônes d'aide sur les KPIs

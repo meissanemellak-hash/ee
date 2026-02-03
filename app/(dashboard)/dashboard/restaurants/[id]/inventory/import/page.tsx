@@ -12,6 +12,8 @@ import Link from 'next/link'
 import Papa from 'papaparse'
 import { useRestaurant } from '@/lib/react-query/hooks/use-restaurants'
 import { useImportInventory } from '@/lib/react-query/hooks/use-inventory'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
@@ -27,6 +29,9 @@ export default function ImportInventoryPage() {
 
   const { data: restaurant, isLoading: loadingRestaurant } = useRestaurant(restaurantId)
   const importInventory = useImportInventory(restaurantId)
+  const { data: roleData, isFetched: roleFetched } = useUserRole()
+  const currentRole = roleData ?? 'staff'
+  const canImport = permissions.canImportInventory(currentRole)
 
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<Record<string, string>[]>([])
@@ -172,6 +177,30 @@ export default function ImportInventoryPage() {
               <p className="text-muted-foreground">Restaurant introuvable.</p>
               <Button asChild variant="outline" className="mt-4">
                 <Link href="/dashboard/restaurants">Retour aux restaurants</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (!roleFetched || !canImport) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Import d&apos;inventaire</h1>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Vous n&apos;avez pas accès à cette page. L&apos;import est réservé aux managers et administrateurs.
+              </p>
+              <Button asChild variant="outline">
+                <Link href={restaurantId ? `/dashboard/restaurants/${restaurantId}/inventory` : '/dashboard/restaurants'}>
+                  Retour à l&apos;inventaire
+                </Link>
               </Button>
             </CardContent>
           </Card>

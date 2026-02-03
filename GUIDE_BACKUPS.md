@@ -67,17 +67,49 @@ Le fichier est créé dans `backups/` avec un horodatage, ex. :
 
 ### Sauvegarde programmée (cron)
 
-Pour un backup quotidien à 2h du matin :
+**Option A – Script fourni (recommandé)**  
+Le script `scripts/cron-backup.sh` se place dans le bon répertoire et lance `npm run db:backup`. Aucun changement dans le code de backup.
 
-```bash
-crontab -e
-```
+1. Rends le script exécutable (déjà fait si tu viens de le créer) :
+   ```bash
+   chmod +x scripts/cron-backup.sh
+   ```
+2. Ouvre ta crontab :
+   ```bash
+   crontab -e
+   ```
+3. Ajoute une ligne (remplace par le **chemin absolu** vers ton projet) :
+   ```
+   0 2 * * * /chemin/vers/Officiel\ IA\ Restaurant\ manager\ saas/scripts/cron-backup.sh
+   ```
+   Exemple Mac :
+   ```
+   0 2 * * * /Users/ton-user/Officiel\ IA\ Restaurant\ manager\ saas/scripts/cron-backup.sh
+   ```
+   → Backup tous les jours à 2h du matin.
 
-Ajoute :
+**Option B – Ligne directe**  
+Sans script, avec le chemin absolu du projet :
 
 ```
 0 2 * * * cd /chemin/vers/projet && npm run db:backup
 ```
+
+**Si cron ne trouve pas `npm`**  
+Cron utilise un PATH minimal. Ajoute en première ligne de ta crontab (ajuster selon ton installation) :
+```
+PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin
+```
+
+### Sauvegarde programmée (GitHub Actions)
+
+Le workflow `.github/workflows/backup-db.yml` lance un backup tous les jours à 2h UTC et garde l’artifact 14 jours. **Aucun changement** dans le script `backup-db.mjs`.
+
+1. Sur GitHub : **Settings** du dépôt → **Secrets and variables** → **Actions** → **New repository secret**.
+2. Nom : `DATABASE_URL`. Valeur : ta chaîne de connexion (celle de `.env.local`, ex. `postgresql://...`).
+3. Push le workflow (déjà dans le repo) : au prochain push sur `main`, le backup planifié est actif.
+4. Lancer à la main : **Actions** → **Backup DB** → **Run workflow**.
+5. Télécharger un backup : **Actions** → clic sur un run **Backup DB** → section **Artifacts**, télécharger `db-backup-XXX`.
 
 ---
 

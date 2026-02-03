@@ -35,7 +35,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { useSales, useDeleteSale } from '@/lib/react-query/hooks/use-sales'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSales, useDeleteSale, getSalesListQueryOptions } from '@/lib/react-query/hooks/use-sales'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
@@ -103,16 +104,26 @@ export default function SalesPage() {
   const restaurants = (restaurantsData?.restaurants || []) as Restaurant[]
   const products = (productsData?.products || []) as Product[]
 
-  // Charger les ventes avec filtres
-  const { data, isLoading, error, refetch } = useSales(page, limit, {
+  const queryClient = useQueryClient()
+  const salesFilters = {
     restaurantId: selectedRestaurant,
     productId: selectedProduct,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
-  })
+  }
+  const { data, isLoading, error, refetch } = useSales(page, limit, salesFilters)
 
   const sales = (data?.sales || []) as Sale[]
+  const totalPages = data?.totalPages ?? 0
   const deleteSale = useDeleteSale()
+
+  // Prefetch page suivante pour une navigation plus fluide (Phase 2 UX)
+  useEffect(() => {
+    if (!organization?.id || !data || page >= totalPages || totalPages <= 1) return
+    queryClient.prefetchQuery(
+      getSalesListQueryOptions(organization.id, page + 1, limit, salesFilters)
+    )
+  }, [organization?.id, data, page, totalPages, limit, queryClient, selectedRestaurant, selectedProduct, startDate, endDate])
 
   const { data: roleData } = useUserRole()
   const currentRole = roleData ?? 'staff'
@@ -454,7 +465,10 @@ export default function SalesPage() {
                       <div className="flex gap-1">
                         {canEdit && (
                           <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Modifier la vente ${sale.product.name}`}>
-                            <Link href={`/dashboard/sales/${sale.id}/edit`}>
+                            <Link
+                              href={`/dashboard/sales/${sale.id}/edit`}
+                              onMouseEnter={() => organization?.id && queryClient.prefetchQuery(getSaleQueryOptions(organization.id, sale.id))}
+                            >
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>

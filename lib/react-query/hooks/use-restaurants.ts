@@ -196,6 +196,31 @@ export function useDeleteRestaurant() {
       const text = await response.text()
       return text ? (JSON.parse(text) as { success: boolean }) : { success: true }
     },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['restaurants', organization?.id] })
+      const previous = queryClient.getQueriesData<RestaurantsResponse>({
+        queryKey: ['restaurants', organization?.id],
+      })
+      queryClient.setQueriesData<RestaurantsResponse>(
+        { queryKey: ['restaurants', organization?.id] },
+        (old) => {
+          if (!old?.restaurants) return old
+          const restaurants = old.restaurants.filter((r) => r.id !== id)
+          return { ...old, restaurants, total: Math.max(0, (old.total ?? 0) - 1) }
+        }
+      )
+      return { previous }
+    },
+    onError: (error: Error, _id, context: { previous?: [unknown, RestaurantsResponse | undefined][] } | undefined) => {
+      if (context?.previous) {
+        context.previous.forEach(([queryKey, data]) => queryClient.setQueryData(queryKey as unknown[], data))
+      }
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['restaurants', organization?.id] })
       queryClient.invalidateQueries({ queryKey: ['restaurant', id, organization?.id] })
@@ -204,12 +229,8 @@ export function useDeleteRestaurant() {
         description: 'Le restaurant a été supprimé avec succès.',
       })
     },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erreur',
-        description: error.message,
-        variant: 'destructive',
-      })
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['restaurants', organization?.id] })
     },
   })
 }

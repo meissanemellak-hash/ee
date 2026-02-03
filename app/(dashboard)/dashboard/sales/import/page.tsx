@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/select'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useImportSales } from '@/lib/react-query/hooks/use-sales'
+import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
+import { permissions } from '@/lib/roles'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
 interface CSVRow {
@@ -39,6 +41,9 @@ export default function ImportSalesPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { organization, isLoaded } = useOrganization()
+  const { data: roleData, isFetched: roleFetched } = useUserRole()
+  const currentRole = roleData ?? 'staff'
+  const canImport = permissions.canImportSales(currentRole)
   const [restaurantId, setRestaurantId] = useState<string>('')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<CSVRow[]>([])
@@ -171,6 +176,28 @@ export default function ImportSalesPage() {
           </Card>
         </div>
       </div>
+    )
+  }
+
+  if (!roleFetched || !canImport) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Import de ventes</h1>
+          </header>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center space-y-4">
+              <p className="text-muted-foreground">
+                Vous n&apos;avez pas accès à cette page. L&apos;import est réservé aux managers et administrateurs.
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/sales">Retour aux ventes</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     )
   }
 

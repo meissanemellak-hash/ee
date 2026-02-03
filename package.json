@@ -17,7 +17,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:backup": "node scripts/backup-db.mjs"
+    "db:backup": "node scripts/backup-db.mjs",
+    "db:verif-backups": "node scripts/verif-backups.mjs"
   },
   "dependencies": {
     "@clerk/localizations": "^3.35.3",

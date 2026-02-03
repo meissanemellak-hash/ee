@@ -217,8 +217,7 @@ export async function DELETE(
       )
     }
 
-    const clerkOrgId = orgIdToUse ?? organization.clerkOrgId
-    const forbidden = await checkApiPermission(userId, clerkOrgId, 'restaurants:delete')
+    const forbidden = await checkApiPermission(userId, orgIdToUse ?? organization.clerkOrgId, 'restaurants:delete')
     if (forbidden) return forbidden
 
     const restaurant = await prisma.restaurant.findFirst({

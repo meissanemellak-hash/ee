@@ -17,42 +17,33 @@ export interface ProductsResponse {
   total: number
 }
 
-export function useProducts(
-  page: number = 1,
-  limit: number = 50,
-  filters?: {
-    search?: string
-    category?: string
-    restaurantId?: string | null
-  }
-) {
-  const { organization } = useOrganization()
+export type ProductsListFilters = {
+  search?: string
+  category?: string
+  restaurantId?: string | null
+}
 
-  return useQuery({
-    queryKey: ['products', organization?.id, page, limit, filters],
+/** Options de requête pour la liste produits (utilisées par useProducts et prefetch). */
+export function getProductsListQueryOptions(
+  organizationId: string | undefined,
+  page: number,
+  limit: number,
+  filters?: ProductsListFilters
+) {
+  return {
+    queryKey: ['products', organizationId, page, limit, filters] as const,
     queryFn: async () => {
-      if (!organization?.id) return { products: [], total: 0, categories: [] }
-      
+      if (!organizationId) return { products: [], total: 0, categories: [] }
       const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
+      queryParams.append('clerkOrgId', organizationId)
       queryParams.append('page', page.toString())
       queryParams.append('limit', limit.toString())
-      
       if (filters?.search) queryParams.append('search', filters.search)
-      if (filters?.category && filters.category !== 'all') {
-        queryParams.append('category', filters.category)
-      }
+      if (filters?.category && filters.category !== 'all') queryParams.append('category', filters.category)
       if (filters?.restaurantId) queryParams.append('restaurantId', filters.restaurantId)
-      
       const response = await fetch(`/api/products?${queryParams.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch products')
-      }
-      
+      if (!response.ok) throw new Error('Failed to fetch products')
       const data = await response.json()
-      
-      // Support des deux formats : nouveau (avec pagination) et ancien (sans pagination)
       if (data.products && Array.isArray(data.products)) {
         return {
           products: data.products,
@@ -63,40 +54,46 @@ export function useProducts(
           totalPages: data.totalPages || Math.ceil((data.total || data.products.length) / (data.limit || limit)),
         }
       }
-      
-      return {
-        products: [],
-        total: 0,
-        categories: [],
-        page,
-        limit,
-        totalPages: 0,
-      }
+      return { products: [], total: 0, categories: [], page, limit, totalPages: 0 }
     },
+  }
+}
+
+export function useProducts(
+  page: number = 1,
+  limit: number = 50,
+  filters?: ProductsListFilters
+) {
+  const { organization } = useOrganization()
+  return useQuery({
+    ...getProductsListQueryOptions(organization?.id, page, limit, filters),
     enabled: !!organization?.id,
   })
 }
 
-export function useProduct(id: string | undefined) {
-  const { organization } = useOrganization()
-
-  return useQuery({
-    queryKey: ['product', id, organization?.id],
-    queryFn: async () => {
-      if (!id || !organization?.id) return null
-      
+/** Options de requête pour un produit (utilisées par useProduct et prefetch au hover). */
+export function getProductQueryOptions(organizationId: string | undefined, id: string | undefined) {
+  return {
+    queryKey: ['product', id, organizationId] as const,
+    queryFn: async (): Promise<Product | null> => {
+      if (!id || !organizationId) return null
       const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
+      queryParams.append('clerkOrgId', organizationId)
       const response = await fetch(`/api/products/${id}?${queryParams.toString()}`)
-      
       if (!response.ok) {
         if (response.status === 404) return null
         throw new Error('Failed to fetch product')
       }
-      
       const data = await response.json() as { product: Product }
       return data.product
     },
+  }
+}
+
+export function useProduct(id: string | undefined) {
+  const { organization } = useOrganization()
+  return useQuery({
+    ...getProductQueryOptions(organization?.id, id),
     enabled: !!id && !!organization?.id,
   })
 }
