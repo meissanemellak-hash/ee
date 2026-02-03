@@ -1,0 +1,43 @@
+# Backup DB quotidien (Supabase) via pg_dump.
+# À faire une fois : ajouter le secret DATABASE_URL (Settings → Secrets and variables → Actions).
+name: Backup DB
+
+on:
+  schedule:
+    # Tous les jours à 9h Paris (8h UTC en hiver, 7h en été → 8h UTC = 9h Paris CET, 10h Paris CEST)
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Lancer à la main si besoin
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Create .env.local for backup script
+        run: echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env.local
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run backup
+        run: npm run db:backup
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_number }}
+          path: backups/*.sql
+          retention-days: 14
