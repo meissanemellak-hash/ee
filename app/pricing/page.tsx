@@ -1,9 +1,14 @@
+import { redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CheckoutButton } from '@/components/pricing/checkout-button'
 import { STRIPE_PLANS } from '@/lib/stripe'
+import { getCurrentOrganization } from '@/lib/auth'
+import { prisma } from '@/lib/db/prisma'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: 'Tarifs - AI Operations',
@@ -29,7 +34,26 @@ function formatPrice(amount: number) {
 }
 
 export default async function PricingPage() {
-  const { userId } = auth()
+  const { userId, orgId } = auth()
+
+  // Si l'utilisateur est connecté et son organisation a déjà un abonnement actif (ex. employé invité), redirection immédiate vers le dashboard (pas d'affichage de la page Tarifs)
+  if (userId && orgId && process.env.STRIPE_SECRET_KEY) {
+    const organization = await getCurrentOrganization()
+    if (organization) {
+      const sub = await prisma.subscription.findUnique({
+        where: { organizationId: organization.id },
+        select: { status: true, currentPeriodEnd: true },
+      })
+      const now = new Date()
+      const hasActiveSubscription =
+        sub &&
+        (sub.status === 'active' || sub.status === 'trialing') &&
+        (!sub.currentPeriodEnd || sub.currentPeriodEnd > now)
+      if (hasActiveSubscription) {
+        redirect('/dashboard')
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-muted/25">

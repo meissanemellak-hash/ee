@@ -66,14 +66,40 @@ STRIPE_PRICE_PRO=price_xxxxxxxxxxxxxxxx
 
 Sans webhook, le paiement Stripe fonctionne mais l’app ne saura pas que le client a payé → il restera bloqué sur `/pricing`. Pour que l’abonnement soit enregistré en base :
 
-1. Installe la Stripe CLI : [https://stripe.com/docs/stripe-cli](https://stripe.com/docs/stripe-cli) (ou `brew install stripe/stripe-cli/stripe` sur Mac).
-2. Dans un **second terminal** : `stripe login`.
-3. Puis :  
-   `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
-4. La CLI affiche un **webhook signing secret** du type `whsec_...`. Copie-le.
-5. Dans `.env.local`, ajoute (ou décommente) :  
-   `STRIPE_WEBHOOK_SECRET=whsec_...`
-6. Redémarre `npm run dev` (terminal 1). Garde `stripe listen` ouvert (terminal 2) pendant tes tests.
+1. **Ouvre un second terminal** (laisse `npm run dev` tourner dans le premier).
+2. Si tu n’as pas encore la Stripe CLI :  
+   `brew install stripe/stripe-cli/stripe`  
+   Puis connecte-toi une fois :  
+   `stripe login`  
+   (une page navigateur s’ouvre pour autoriser la CLI.)
+3. Lance l’écoute du webhook (à garder ouvert pendant tes tests) :  
+   ```bash
+   stripe listen --forward-to localhost:3000/api/webhooks/stripe
+   ```
+4. Dans la sortie du terminal, tu verras une ligne du type :  
+   `Ready! Your webhook signing secret is whsec_xxxxxxxxxxxxxxxx`  
+   **Copie** tout le secret `whsec_...` (sans les espaces).
+5. Ouvre `.env.local` et ajoute (ou décommente et colle le secret) :  
+   `STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxx`
+6. **Redémarre** le serveur Next.js (terminal 1 : Ctrl+C puis `npm run dev`). Garde **`stripe listen`** ouvert dans le second terminal pendant que tu testes le paiement.
+
+---
+
+## Test rapide : Stripe est-il bien configuré ?
+
+Pour vérifier que Stripe fonctionne (paiement en mode test), suis ces étapes dans l’ordre.
+
+| # | Action |
+|---|--------|
+| 1 | Vérifier que `.env.local` contient `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO` et `STRIPE_WEBHOOK_SECRET` (sans `#`). |
+| 2 | Lancer l’app : `npm run dev`. Dans un **autre terminal**, lancer : `stripe listen --forward-to localhost:3000/api/webhooks/stripe` (garde-le ouvert). |
+| 3 | Clerk : créer une organisation de test → **Members** → **Invite member** avec ton email. |
+| 4 | Ouvrir l’email d’invitation → **Accepter l’invitation** → créer un mot de passe (ou Google). |
+| 5 | Aller sur [http://localhost:3000/pricing](http://localhost:3000/pricing) → cliquer **Souscrire**. |
+| 6 | Sur Stripe Checkout (mode test), utiliser la carte : **4242 4242 4242 4242**, date **12/34**, CVC **123**, code postal **75001**. Valider. |
+| 7 | Tu dois être renvoyé vers l’app puis pouvoir accéder à [http://localhost:3000/dashboard](http://localhost:3000/dashboard). Si tu es encore redirigé vers `/pricing`, vérifier que `stripe listen` tourne et que `STRIPE_WEBHOOK_SECRET` est le bon. |
+
+**Résultat attendu :** paiement accepté, accès au dashboard. Stripe est bien configuré.
 
 ---
 
