@@ -3,7 +3,10 @@ import * as React from "react"
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+/** Délai avant de retirer le toast du DOM après fermeture (animation de sortie). */
+const TOAST_REMOVE_DELAY = 1000
+/** Durée d'affichage avant fermeture automatique (succès et erreur). */
+const TOAST_DURATION = 5000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -155,6 +158,11 @@ function toast({ ...props }: Toast) {
       },
     },
   })
+
+  // Fermeture automatique après quelques secondes
+  setTimeout(() => {
+    dispatch({ type: "DISMISS_TOAST", toastId: id })
+  }, TOAST_DURATION)
 
   return {
     id: id,

@@ -64,3 +64,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Footer page connexion : "Vous n'avez pas encore de compte ? Demander une démo" sur une seule ligne */
+.sign-in-footer-single-line div:has(a[href*="/demo"]) {
+  white-space: nowrap;
+}
+.sign-in-footer-single-line a[href*="/demo"] {
+  white-space: nowrap;
+}

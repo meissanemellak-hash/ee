@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
+import { getImportToastTitleAndErrorDetail } from '@/lib/utils'
 
 export interface Ingredient {
   id: string
@@ -300,10 +301,11 @@ export function useImportIngredients() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['ingredients', organization?.id] })
-      toast({
-        title: 'Import réussi',
-        description: `${data.imported} ingrédient${data.imported > 1 ? 's' : ''} importé${data.imported > 1 ? 's' : ''} avec succès${data.errors?.length ? ` (${data.errors.length} erreur${data.errors.length > 1 ? 's' : ''})` : ''}`,
-      })
+      const { title, errorDetail } = getImportToastTitleAndErrorDetail(data.errors)
+      const description = errorDetail
+        ? `${data.imported} ingrédient${data.imported > 1 ? 's' : ''} importé${data.imported > 1 ? 's' : ''}, ${data.errors!.length} erreur${data.errors!.length > 1 ? 's' : ''} : ${errorDetail}`
+        : `${data.imported} ingrédient${data.imported > 1 ? 's' : ''} importé${data.imported > 1 ? 's' : ''} avec succès`
+      toast({ title, description })
     },
     onError: (error: Error) => {
       toast({

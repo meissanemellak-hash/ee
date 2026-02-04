@@ -80,3 +80,24 @@ export function exportToCsv<T extends Record<string, unknown>>(
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/**
+ * Retourne le titre du toast d'import et le détail des erreurs (pour affichage).
+ * - Titre : "Import terminé" s'il y a des erreurs, "Import réussi" sinon.
+ * - errorDetail : première(s) erreur(s) formatées, ou null si aucune.
+ */
+export function getImportToastTitleAndErrorDetail(
+  errors: string[] | undefined
+): { title: string; errorDetail: string | null } {
+  const hasErrors = errors && errors.length > 0
+  const title = hasErrors ? 'Import terminé' : 'Import réussi'
+  if (!hasErrors) return { title, errorDetail: null }
+  const n = errors!.length
+  const errorDetail =
+    n === 1
+      ? errors![0]
+      : n <= 2
+        ? errors!.slice(0, 2).join(' ; ')
+        : errors!.slice(0, 2).join(' ; ') + ` ; et ${n - 2} autre${n - 2 > 1 ? 's' : ''}`
+  return { title, errorDetail }
+}

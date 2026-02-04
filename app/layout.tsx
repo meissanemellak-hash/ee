@@ -8,6 +8,18 @@ import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
+// Override "S'inscrire" par "Demander une démo" sur la page de connexion
+const localization = {
+  ...frFR,
+  signIn: {
+    ...frFR.signIn,
+    start: {
+      ...frFR.signIn?.start,
+      actionLink: 'Demander une démo',
+    },
+  },
+}
+
 export const metadata: Metadata = {
   title: 'AI Operations Manager - Chaînes de Fast-Casual',
   description: 'Optimisez les opérations de votre chaîne de restaurants',
@@ -22,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider localization={frFR}>
+    <ClerkProvider localization={localization}>
       <ReactQueryProvider>
         <html lang="fr" suppressHydrationWarning>
           <body className={inter.className} suppressHydrationWarning>

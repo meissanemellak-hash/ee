@@ -6,6 +6,16 @@
 
 ---
 
+## À faire avant la prod (rappels)
+
+- [ ] **Nom de domaine** : avoir un domaine pour l’app (ex. app.tonnom.com ou tonnom.com) et le configurer sur l’hébergeur.
+- [ ] **Mail pro** : utiliser une adresse email professionnelle (ex. contact@tonnom.com) pour Clerk, support, Stripe, etc. (plus de confiance qu’un Gmail perso).
+- [ ] **Webhook Stripe en prod** : dans le Dashboard Stripe (mode **Live**), créer un endpoint webhook avec l’URL `https://ton-domaine.com/api/webhooks/stripe`, sélectionner les événements (customer.subscription.*, invoice.payment_*), puis mettre le **Signing secret** dans les variables d’environnement de prod (`STRIPE_WEBHOOK_SECRET`). Sans ça, les abonnements réels ne sont pas enregistrés en base.
+- [ ] Variables Stripe en prod : `STRIPE_SECRET_KEY` (clé Live), `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO` (ou les price IDs utilisés).
+- [ ] **Clerk – Redirection après invitation** : dans le Dashboard Clerk (Configure → Paths / Redirect URLs), configurer la redirection après acceptation d’invitation vers **`/pricing`** (URL de prod, ex. `https://ton-domaine.com/pricing`), pour que le client atterrisse sur la page de souscription après avoir cliqué sur « Accepter l’invitation » ou « cliquez ici » dans l’email.
+
+---
+
 ## Documentation (Aide utilisateur)
 
 - [ ] Créer le workspace Notion avec les articles essentiels

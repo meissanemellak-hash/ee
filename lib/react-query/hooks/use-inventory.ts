@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
+import { getImportToastTitleAndErrorDetail } from '@/lib/utils'
 
 export interface InventoryItemIngredient {
   id: string
@@ -204,14 +205,10 @@ export function useImportInventory(restaurantId: string | undefined) {
         updated > 0
           ? `${data.imported} ligne(s) importée(s) : ${created} créée(s), ${updated} mise(s) à jour`
           : `${data.imported} ligne(s) importée(s) avec succès`
-      const errorSuffix =
-        data.errors?.length
-          ? data.errors.length === 1
-            ? ` — Erreur ignorée : ${data.errors[0]}`
-            : ` — ${data.errors.length} erreurs ignorées : ${data.errors.slice(0, 2).join(' ; ')}${data.errors.length > 2 ? '…' : ''}`
-          : ''
+      const { title, errorDetail } = getImportToastTitleAndErrorDetail(data.errors)
+      const errorSuffix = errorDetail ? ` — ${data.errors!.length === 1 ? 'Erreur :' : 'Erreurs :'} ${errorDetail}` : ''
       toast({
-        title: 'Import réussi',
+        title,
         description: msg + errorSuffix,
       })
     },

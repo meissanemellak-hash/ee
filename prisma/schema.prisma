@@ -20,9 +20,10 @@ model Organization {
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
-  restaurants Restaurant[]
-  products    Product[]
-  ingredients Ingredient[]
+  restaurants    Restaurant[]
+  products       Product[]
+  ingredients    Ingredient[]
+  subscription   Subscription?
 
   @@map("organizations")
 }
@@ -191,4 +192,24 @@ model Alert {
   @@index([restaurantId, resolved])
   @@index([severity])
   @@map("alerts")
+}
+
+// Abonnement Stripe (une subscription par organisation)
+model Subscription {
+  id                     String    @id @default(cuid())
+  organizationId         String    @unique @map("organization_id")
+  stripeCustomerId       String?   @map("stripe_customer_id")
+  stripeSubscriptionId   String?   @map("stripe_subscription_id")
+  status                 String    // active, trialing, canceled, past_due, etc.
+  plan                   String?   // starter, pro, enterprise ou price id
+  currentPeriodStart     DateTime? @map("current_period_start")
+  currentPeriodEnd       DateTime? @map("current_period_end")
+  cancelAtPeriodEnd      Boolean   @default(false) @map("cancel_at_period_end")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([stripeSubscriptionId])
+  @@map("subscriptions")
 }

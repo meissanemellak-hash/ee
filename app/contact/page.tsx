@@ -42,7 +42,7 @@ export default function ContactPage() {
             </li>
           </ul>
           <p className="mt-4 text-sm text-muted-foreground">
-            Nous nous engageons à vous répondre sous 48 h ouvrées. Pour une démo ou un devis, vous pouvez également utiliser les boutons ci-dessous pour créer un compte ou demander une démo.
+            Nous nous engageons à vous répondre sous 48 h ouvrées. Pour une démo ou un devis, remplissez le formulaire de demande de démo ci-dessous ou envoyez-nous un email.
           </p>
         </section>
 
@@ -50,10 +50,7 @@ export default function ContactPage() {
           <h2 className="text-lg font-semibold text-foreground">Actions rapides</h2>
           <div className="mt-4 flex flex-col sm:flex-row gap-4">
             <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
-              <Link href="/sign-up?intent=demo">Demander une démo</Link>
-            </Button>
-            <Button asChild variant="outline" className="border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400">
-              <Link href="/sign-up">Créer un compte</Link>
+              <Link href="/demo">Demander une démo</Link>
             </Button>
             <Button asChild variant="ghost" className="text-muted-foreground">
               <a href="mailto:contact@ai-operations.fr">Envoyer un email</a>

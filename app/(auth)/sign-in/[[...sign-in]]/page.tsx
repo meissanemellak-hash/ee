@@ -7,8 +7,18 @@ export default function SignInPage() {
       role="main"
       aria-label="Connexion"
     >
-      <div className="w-full max-w-md">
-        <SignIn routing="hash" />
+      <div className="w-full max-w-md sign-in-footer-single-line">
+        <SignIn
+          routing="hash"
+          signUpUrl="/demo"
+          localization={{
+            signIn: {
+              start: {
+                actionLink: 'Demander une démo',
+              },
+            },
+          }}
+        />
       </div>
     </main>
   )

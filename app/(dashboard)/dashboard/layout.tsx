@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { getCurrentOrganization } from '@/lib/auth'
+import { prisma } from '@/lib/db/prisma'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { Suspense } from 'react'
@@ -64,6 +65,22 @@ export default async function DashboardLayout({
     // L'organisation existe dans Clerk mais n'est pas encore dans la DB
     // La synchronisation se fera automatiquement au prochain appel
     // On laisse passer pour éviter les boucles de redirection
+  }
+
+  // Protection abonnement : si Stripe est configuré et que l'org n'a pas d'abonnement actif, rediriger vers /pricing (pas de période d'essai)
+  if (process.env.STRIPE_SECRET_KEY && organization) {
+    const sub = await prisma.subscription.findUnique({
+      where: { organizationId: organization.id },
+      select: { status: true, currentPeriodEnd: true },
+    })
+    const now = new Date()
+    const hasActiveSubscription =
+      sub &&
+      (sub.status === 'active' || sub.status === 'trialing') &&
+      (!sub.currentPeriodEnd || sub.currentPeriodEnd > now)
+    if (!hasActiveSubscription) {
+      redirect('/pricing')
+    }
   }
 
   const onboardingCompleted = organization

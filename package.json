@@ -18,6 +18,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:backup": "node scripts/backup-db.mjs",
+    "db:restore": "node scripts/restore-db.mjs",
     "db:verif-backups": "node scripts/verif-backups.mjs"
   },
   "dependencies": {
@@ -45,6 +46,7 @@
     "react-dom": "^18.2.0",
     "recharts": "^2.10.3",
     "resend": "^6.8.0",
+    "stripe": "^14.25.0",
     "svix": "^1.15.0",
     "tailwind-merge": "^2.1.0",
     "tailwindcss-animate": "^1.0.7",
