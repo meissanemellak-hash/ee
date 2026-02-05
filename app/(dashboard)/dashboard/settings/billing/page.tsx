@@ -116,14 +116,9 @@ export default async function BillingPage() {
               {subscription?.stripeCustomerId ? (
                 <BillingClientSection />
               ) : (
-                <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
-                  <Link href="/pricing">Choisir un plan</Link>
-                </Button>
-              )}
-              {subscription?.stripeCustomerId && (
-                <Button asChild variant="outline">
-                  <Link href="/pricing">Changer de plan</Link>
-                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Demandez à votre administrateur un lien de souscription pour activer votre accès.
+                </p>
               )}
             </div>
           </CardContent>

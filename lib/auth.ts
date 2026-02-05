@@ -99,6 +99,64 @@ export async function getCurrentOrganization() {
 }
 
 /**
+ * Garantit qu'une organisation Clerk existe en base (pour le super-admin, ex. génération lien paiement).
+ * À appeler avec un clerkOrgId : si l'org n'est pas en DB, on la crée depuis Clerk puis on la retourne.
+ */
+export async function ensureOrganizationInDb(clerkOrgId: string) {
+  let organization = await prisma.organization.findUnique({
+    where: { clerkOrgId },
+  })
+  if (organization) return organization
+
+  let attempts = 0
+  const maxAttempts = 3
+
+  while (attempts < maxAttempts && !organization) {
+    try {
+      const { clerkClient } = await import('@clerk/nextjs/server')
+      const client = await clerkClient()
+      const clerkOrg = await client.organizations.getOrganization({ organizationId: clerkOrgId })
+      try {
+        organization = await prisma.organization.create({
+          data: {
+            name: clerkOrg.name,
+            clerkOrgId,
+            shrinkPct: 0.1,
+          },
+        })
+        console.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk (admin)`)
+        break
+      } catch (dbError) {
+        if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+          organization = await prisma.organization.findUnique({
+            where: { clerkOrgId },
+          })
+          if (organization) break
+        } else {
+          throw dbError
+        }
+      }
+    } catch (error) {
+      attempts++
+      const isRateLimit =
+        (error as any)?.status === 429 ||
+        (error as any)?.statusCode === 429 ||
+        (error instanceof Error && error.message?.includes('Too Many Requests')) ||
+        (error as any)?.code === 'too_many_requests'
+      if (isRateLimit && attempts < maxAttempts) {
+        const delay = Math.min(1000 * Math.pow(2, attempts - 1), 5000)
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        continue
+      }
+      console.error('❌ ensureOrganizationInDb:', error)
+      throw error
+    }
+  }
+
+  return organization
+}
+
+/**
  * Vérifie que l'utilisateur appartient à une organisation
  */
 export async function requireOrganization() {

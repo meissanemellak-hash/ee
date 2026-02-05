@@ -13,6 +13,7 @@
 - [ ] **Webhook Stripe en prod** : dans le Dashboard Stripe (mode **Live**), créer un endpoint webhook avec l’URL `https://ton-domaine.com/api/webhooks/stripe`, sélectionner les événements (customer.subscription.*, invoice.payment_*), puis mettre le **Signing secret** dans les variables d’environnement de prod (`STRIPE_WEBHOOK_SECRET`). Sans ça, les abonnements réels ne sont pas enregistrés en base.
 - [ ] Variables Stripe en prod : `STRIPE_SECRET_KEY` (clé Live), `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO` (ou les price IDs utilisés).
 - [ ] **Clerk – Redirection après invitation** : dans le Dashboard Clerk (Configure → Paths / Redirect URLs), configurer la redirection après acceptation d’invitation vers **`/pricing`** (URL de prod, ex. `https://ton-domaine.com/pricing`). Le nouveau client verra la page Tarifs ; l’employé (dont l’organisation a déjà un abonnement) sera redirigé automatiquement vers le dashboard.
+- [ ] **Clerk – Page « compléter le profil » en français (optionnel)** : si tu veux que la page après « Accepter l’invitation » soit en français (au lieu de la page hébergée Clerk en anglais), mettre en place l’**option 2** : redirection vers une page de ton app (ex. `/accept-invitation`) qui affiche le formulaire avec les composants Clerk — nécessite le nom de domaine en prod. Voir la conversation / doc pour le détail.
 
 ---
 

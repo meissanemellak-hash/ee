@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation'
 import { auth, clerkClient } from '@clerk/nextjs/server'
-import { getCurrentOrganization } from '@/lib/auth'
-import { prisma } from '@/lib/db/prisma'
+import { getCurrentOrganization, ensureOrganizationInDb } from '@/lib/auth'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { Suspense } from 'react'
 import { DashboardSyncWrapper } from '@/components/dashboard/dashboard-sync-wrapper'
 import { OnboardingRedirectGuard } from '@/components/dashboard/onboarding-redirect-guard'
+import { OnboardingRedirectOrContent } from '@/components/dashboard/onboarding-redirect-or-content'
 
 // Force dynamic rendering pour les pages avec authentification
 export const dynamic = 'force-dynamic'
@@ -50,36 +50,16 @@ export default async function DashboardLayout({
     }
   }
 
-  // SOLUTION PROPRE ET RADICALE :
-  // Si orgId existe dans Clerk, on fait confiance que l'organisation existe
-  // getCurrentOrganization() synchronisera automatiquement depuis Clerk
-  // Même si la synchronisation échoue temporairement (rate limit), on laisse passer
-  // car l'organisation existe dans Clerk et la synchronisation se fera au prochain appel
-  const organization = await getCurrentOrganization()
-  
-  // Si l'organisation n'est pas trouvée, on laisse quand même passer
-  // car orgId existe dans Clerk, donc l'organisation existe vraiment
-  // La synchronisation se fera automatiquement au prochain appel de getCurrentOrganization()
-  // On ne redirige JAMAIS vers setup si orgId existe (évite les boucles)
-  if (!organization) {
-    // L'organisation existe dans Clerk mais n'est pas encore dans la DB
-    // La synchronisation se fera automatiquement au prochain appel
-    // On laisse passer pour éviter les boucles de redirection
-  }
+  // getCurrentOrganization() synchronise l'org depuis Clerk si besoin
+  let organization = await getCurrentOrganization()
 
-  // Protection abonnement : si Stripe est configuré et que l'org n'a pas d'abonnement actif, rediriger vers /pricing (pas de période d'essai)
-  if (process.env.STRIPE_SECRET_KEY && organization) {
-    const sub = await prisma.subscription.findUnique({
-      where: { organizationId: organization.id },
-      select: { status: true, currentPeriodEnd: true },
-    })
-    const now = new Date()
-    const hasActiveSubscription =
-      sub &&
-      (sub.status === 'active' || sub.status === 'trialing') &&
-      (!sub.currentPeriodEnd || sub.currentPeriodEnd > now)
-    if (!hasActiveSubscription) {
-      redirect('/pricing')
+  // Si org null alors qu'on a un orgId (ex. rate limit), on réessaie une fois pour éviter
+  // d'afficher l'onboarding à un employé ou quand l'onboarding est déjà fait (faux positifs).
+  if (!organization && orgId) {
+    try {
+      organization = await ensureOrganizationInDb(orgId)
+    } catch {
+      // Garder null ; on ne redirige pas vers l'onboarding sans certitude
     }
   }
 
@@ -87,22 +67,45 @@ export default async function DashboardLayout({
     ? !!organization.onboardingCompletedAt
     : null
 
+  const dashboardContent = (
+    <div className="flex h-screen overflow-hidden">
+      <Suspense fallback={null}>
+        <DashboardSyncWrapper />
+      </Suspense>
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto bg-muted/40">
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+
+  // Si l'onboarding n'est pas fait : sur /dashboard on affiche "Redirection..." (le guard
+  // redirige vers /dashboard/onboarding) ; sur /dashboard/onboarding on affiche le contenu (wizard).
+  if (onboardingCompleted === false) {
+    return (
+      <OnboardingRedirectGuard onboardingCompleted={false}>
+        <OnboardingRedirectOrContent
+          fallback={
+            <div className="flex h-screen items-center justify-center bg-muted/25" aria-busy="true">
+              <p className="text-sm text-muted-foreground">Redirection vers la configuration...</p>
+            </div>
+          }
+        >
+          {dashboardContent}
+        </OnboardingRedirectOrContent>
+      </OnboardingRedirectGuard>
+    )
+  }
+
+  // Onboarding fait ou inconnu : afficher le dashboard. Admin et employés arrivent directement ici.
   return (
     <OnboardingRedirectGuard onboardingCompleted={onboardingCompleted}>
-      <div className="flex h-screen overflow-hidden">
-        <Suspense fallback={null}>
-          <DashboardSyncWrapper />
-        </Suspense>
-        <div className="hidden lg:block">
-          <Sidebar />
-        </div>
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-y-auto bg-muted/40">
-            {children}
-          </main>
-        </div>
-      </div>
+      {dashboardContent}
     </OnboardingRedirectGuard>
   )
 }

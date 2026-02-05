@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         organizationId: organization.id,
       },
       success_url: `${appUrl}/dashboard/settings/billing?success=1`,
-      cancel_url: `${appUrl}/pricing?canceled=1`,
+      cancel_url: `${appUrl}/dashboard/settings/billing?canceled=1`,
       allow_promotion_codes: true,
     })
 

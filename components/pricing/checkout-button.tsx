@@ -27,7 +27,7 @@ export function CheckoutButton({ plan, label = 'Choisir ce plan', className }: P
       const data = await res.json()
       if (!res.ok) {
         if (res.status === 401) {
-          router.push(`/sign-in?redirect_url=${encodeURIComponent('/pricing')}`)
+          router.push(`/sign-in?redirect_url=${encodeURIComponent('/dashboard')}`)
           return
         }
         alert(data.error ?? 'Erreur lors de la création de la session')

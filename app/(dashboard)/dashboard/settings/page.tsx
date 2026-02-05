@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
-import { Loader2, Save, Building2, User, Bell, Shield, Trash2, AlertCircle, LogOut } from 'lucide-react'
+import { Loader2, Save, Building2, User, Bell, Shield, Trash2, AlertCircle, LogOut, Link2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,6 +71,7 @@ export default function SettingsPage() {
   const hasToastedError = useRef(false)
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   const { data: orgData, isLoading: loadingOrg, isError: orgError, refetch: refetchOrg } = useOrganizationData()
   const { data: currentUserData } = useCurrentUser()
@@ -98,6 +99,13 @@ export default function SettingsPage() {
       })
     }
   }, [orgData])
+
+  useEffect(() => {
+    fetch('/api/user/is-super-admin')
+      .then((res) => res.json())
+      .then((data) => setIsSuperAdmin(!!data?.isSuperAdmin))
+      .catch(() => setIsSuperAdmin(false))
+  }, [])
 
   useEffect(() => {
     if (orgError && !hasToastedError.current) {
@@ -467,6 +475,31 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Section Admin - Lien de paiement (super-admin uniquement) */}
+      {isSuperAdmin && (
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center" aria-hidden="true">
+                <Link2 className="h-4 w-4 text-white" />
+              </div>
+              <CardTitle className="text-lg font-semibold">Lien de paiement (admin)</CardTitle>
+            </div>
+            <CardDescription className="mt-1">
+              Générez un lien Stripe Plan Pro pour une organisation et envoyez-le au client après la visio.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
+              <Link href="/dashboard/settings/lien-paiement">
+                <Link2 className="h-4 w-4 mr-2" aria-hidden="true" />
+                Générer un lien de paiement
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Section Danger Zone */}
         <Card className="rounded-xl border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10">

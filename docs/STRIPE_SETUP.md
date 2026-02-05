@@ -36,13 +36,17 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxx
 STRIPE_PRICE_STARTER=price_xxxxxxxxxxxxxxxx
 STRIPE_PRICE_PRO=price_xxxxxxxxxxxxxxxx
 STRIPE_PRICE_ENTERPRISE=price_xxxxxxxxxxxxxxxx
+
+# Admin : email du super-admin (accès à /dashboard/admin/lien-paiement pour générer les liens de paiement)
+SUPER_ADMIN_EMAIL=ton@email.com
 ```
 
 - **STRIPE_SECRET_KEY** : clé secrète Stripe (Developers → API keys).
 - **STRIPE_WEBHOOK_SECRET** : obtenu à l’étape 4 (webhook).
 - **STRIPE_PRICE_*** : IDs des prix créés à l’étape 2 (Starter, Pro, Enterprise).
+- **SUPER_ADMIN_EMAIL** : email de l’administrateur qui peut générer les liens de paiement (page back-office).
 
-Sans ces variables, l’app fonctionne mais les boutons « Choisir ce plan » renverront une erreur et le webhook ne sera pas actif.
+Sans ces variables, l’app fonctionne mais le webhook et la génération de liens admin ne seront pas actifs.
 
 ---
 
@@ -70,11 +74,12 @@ npx prisma db push
 
 ---
 
-## Comportement de l’app
+## Comportement de l’app (nouveau processus)
 
-- **Sans Stripe configuré** (variables absentes) : pas de redirection vers `/pricing`, le dashboard reste accessible ; la page Tarifs et la facturation affichent un message d’erreur si on tente un paiement.
-- **Avec Stripe configuré** : après 14 jours d’essai (à partir de la création de l’organisation), les utilisateurs sans abonnement actif sont redirigés vers `/pricing`.
-- **Page Facturation** (`/dashboard/settings/billing`) : plan actuel, renouvellement, bouton « Gérer l’abonnement » (Stripe Customer Portal) et lien « Choisir un plan » vers `/pricing`.
+- **Flux client** : après la visio, l’admin crée l’organisation et envoie l’invitation Clerk. Il génère un lien de paiement (Plan Pro) depuis **/dashboard/admin/lien-paiement** et l’envoie au client. Le client paie sur Stripe ; le webhook crée l’abonnement pour cette organisation. Le client accepte l’invitation et accède au dashboard.
+- **Page Admin** (`/dashboard/admin/lien-paiement`) : réservée au super-admin (email dans `SUPER_ADMIN_EMAIL`). Liste des organisations et bouton « Générer le lien Plan Pro » par organisation. L’URL générée est à copier et envoyer au client.
+- **Page Facturation** (`/dashboard/settings/billing`) : plan actuel, renouvellement, bouton « Gérer l’abonnement » (Stripe Customer Portal). Sans abonnement : message invitant à demander un lien de souscription à l’administrateur.
+- **Route /pricing** : redirige vers l’accueil (ancienne page Tarifs retirée).
 
 ---
 
@@ -84,8 +89,8 @@ npx prisma db push
 |--------|------------------|
 | Config Stripe | `lib/stripe.ts` |
 | Webhook | `app/api/webhooks/stripe/route.ts` |
-| Création session Checkout | `app/api/stripe/create-checkout-session/route.ts` |
+| Création session Checkout (utilisateur courant) | `app/api/stripe/create-checkout-session/route.ts` |
+| Génération lien paiement (admin) | `app/api/admin/create-checkout-link/route.ts` |
 | Portail facturation | `app/api/stripe/create-portal-session/route.ts` |
-| Page Tarifs | `app/pricing/page.tsx` |
+| Page Admin lien paiement | `app/(dashboard)/dashboard/admin/lien-paiement/page.tsx` |
 | Page Facturation | `app/(dashboard)/dashboard/settings/billing/page.tsx` |
-| Protection dashboard | `app/(dashboard)/dashboard/layout.tsx` (redirection si pas d’abonnement) |

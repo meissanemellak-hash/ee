@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react'
 const BILLING_PATH = '/dashboard/settings/billing'
 
 /**
- * Redirige vers /pricing si l'organisation n'a pas d'abonnement actif.
- * N'intervient pas sur la page Facturation pour permettre de souscrire.
+ * Redirige vers le dashboard si l'organisation n'a pas d'abonnement actif.
+ * N'intervient pas sur la page Facturation.
  */
 export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -28,7 +28,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
         if (cancelled) return
         setChecked(true)
         if (!data.active) {
-          router.replace('/pricing')
+          router.replace('/dashboard')
         }
       })
       .catch(() => setChecked(true))
