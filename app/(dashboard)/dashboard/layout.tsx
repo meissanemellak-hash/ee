@@ -63,9 +63,13 @@ export default async function DashboardLayout({
     }
   }
 
+  // Org présente : on utilise onboardingCompletedAt. Org absente mais orgId présent (ex. premier
+  // membre, synchro pas encore faite) : on considère l'onboarding non fait pour rediriger vers le wizard.
   const onboardingCompleted = organization
     ? !!organization.onboardingCompletedAt
-    : null
+    : orgId
+      ? false
+      : null
 
   const dashboardContent = (
     <div className="flex h-screen overflow-hidden">

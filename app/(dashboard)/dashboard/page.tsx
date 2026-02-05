@@ -12,6 +12,7 @@ import { TrendingUp, TrendingDown, AlertTriangle, Package, CheckCircle2, ArrowRi
 import { ApplyRecommendationButton } from '@/components/dashboard/apply-recommendation-button'
 import { ReloadButton } from '@/components/dashboard/reload-button'
 import { RecentActivityTable } from '@/components/dashboard/recent-activity-table'
+import { DashboardOnboardingCheck } from '@/components/dashboard/dashboard-onboarding-check'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const DashboardSalesChart = nextDynamic(
@@ -129,6 +130,7 @@ export default async function DashboardPage(props: PageProps) {
   const metrics = await calculateExecutiveDashboardMetrics(organization.id, restaurantId)
 
   return (
+    <DashboardOnboardingCheck>
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Dashboard">
       <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
         <header className="pb-6 border-b border-border/60">
@@ -367,5 +369,6 @@ export default async function DashboardPage(props: PageProps) {
         )}
       </div>
     </main>
+    </DashboardOnboardingCheck>
   )
 }
