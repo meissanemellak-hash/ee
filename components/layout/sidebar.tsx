@@ -52,9 +52,12 @@ export function Sidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const activeRestaurantId = searchParams.get('restaurant')
-  const { data: role } = useUserRole()
+  const { data: role, isLoading: roleLoading } = useUserRole()
   const currentRole = role ?? 'staff'
-  const visibleNav = navigation.filter((item) => canView(item.permission, currentRole))
+  // Afficher tous les liens (dont Paramètres) pendant le chargement du rôle pour éviter le délai visuel
+  const visibleNav = roleLoading || role === undefined
+    ? navigation
+    : navigation.filter((item) => canView(item.permission, currentRole))
 
   return (
     <div className="flex h-full w-64 flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-sm">

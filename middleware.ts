@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
 
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
@@ -12,19 +13,27 @@ const isPublicRoute = createRouteMatcher([
   '/demo',
   '/demo/merci',
   '/api/webhooks(.*)',
-  '/dashboard/setup(.*)', // Permettre l'accès à la page setup
 ])
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth()
-  
+  const pathname = req.nextUrl.pathname
+
+  // Pages supprimées : redirection vers le dashboard
+  if (pathname === '/dashboard/onboarding' || pathname.startsWith('/dashboard/onboarding/')) {
+    return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
+  if (pathname === '/dashboard/setup' || pathname.startsWith('/dashboard/setup/')) {
+    return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
+
   // Si l'utilisateur est connecté et essaie d'accéder à sign-in, ne pas protéger
   // Clerk gérera la redirection automatiquement
-  if (userId && req.nextUrl.pathname.startsWith('/sign-in')) {
+  if (userId && pathname.startsWith('/sign-in')) {
     return
   }
-  
-  // Ne pas protéger les routes publiques (y compris /dashboard/setup)
+
+  // Ne pas protéger les routes publiques
   if (!isPublicRoute(req)) {
     await auth().protect()
   }

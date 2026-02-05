@@ -56,9 +56,11 @@ export function MobileSidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const activeRestaurantId = searchParams.get('restaurant')
-  const { data: role } = useUserRole()
+  const { data: role, isLoading: roleLoading } = useUserRole()
   const currentRole = role ?? 'staff'
-  const visibleNav = navigation.filter((item) => canView(item.permission, currentRole))
+  const visibleNav = roleLoading || role === undefined
+    ? navigation
+    : navigation.filter((item) => canView(item.permission, currentRole))
 
   return (
     <>

@@ -75,7 +75,7 @@ export default function SettingsPage() {
 
   const { data: orgData, isLoading: loadingOrg, isError: orgError, refetch: refetchOrg } = useOrganizationData()
   const { data: currentUserData } = useCurrentUser()
-  const { data: roleData, isFetched: roleFetched } = useUserRole()
+  const { data: roleData, isFetched: roleFetched, isLoading: roleLoading } = useUserRole()
   const serverUserId = currentUserData?.userId ?? null
 
   const updateOrganization = useUpdateOrganization()
@@ -85,6 +85,9 @@ export default function SettingsPage() {
   const canViewSettings = permissions.canViewSettings(currentRole)
   const canEditSettings = permissions.canEditSettings(currentRole)
   const canEditName = canEditSettings && (membership?.role === 'org:admin' || membership?.role === 'org:creator' || (organization as { createdBy?: string } | null)?.createdBy === user?.id)
+
+  // Ne pas afficher "accès refusé" tant que le rôle n'est pas chargé (évite le flash admin→refusé au rechargement)
+  const roleKnown = roleFetched && !roleLoading
 
   const [formData, setFormData] = useState({
     name: '',
@@ -137,7 +140,12 @@ export default function SettingsPage() {
 
   const saving = updateOrganization.isPending || fixOrgId.isPending
 
-  if (!roleFetched || !canViewSettings) {
+  // Attendre que le rôle soit chargé avant de décider (évite "accès refusé" au rechargement pour admin/manager)
+  if (!roleKnown) {
+    return <SettingsPageSkeleton />
+  }
+
+  if (!canViewSettings) {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Paramètres">
         <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-6">
@@ -215,8 +223,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Paramètres">
-      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+    <main className="bg-muted/25" role="main" aria-label="Paramètres">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 pb-10 space-y-8">
         <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Paramètres' }]} className="mb-4" />
         <header className="pb-6 border-b border-border/60">
           <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>

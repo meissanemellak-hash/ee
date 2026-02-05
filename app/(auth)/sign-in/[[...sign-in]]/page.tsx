@@ -11,6 +11,7 @@ export default function SignInPage() {
         <SignIn
           routing="hash"
           signUpUrl="/demo"
+          signInFallbackRedirectUrl="/dashboard"
           localization={{
             signIn: {
               start: {

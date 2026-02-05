@@ -6,6 +6,35 @@
 
 ---
 
+## Rappel production – Mails Clerk (tous les templates)
+
+> **En production**, pour **tous** les e-mails Clerk (Account Locked, Reset password, Invitation, Verification, etc.) :
+>
+> 1. **Champ « From »**  
+>    Utiliser une adresse sur **ton propre domaine**, ex. `noreply@ton-domaine.com` ou `ne-pas-repondre@ton-domaine.com`, **pas** la valeur par défaut type `noreply@accounts.dev`.  
+>    → Meilleure délivrabilité, confiance, moins de risque de spam.
+>
+> 2. **Champ « Reply-to »**  
+>    Renseigner une adresse de réponse sur ton domaine (ex. `support`, `contact` ou `aide`) pour que les réponses des utilisateurs arrivent dans une boîte que tu consultes, ex. `support@ton-domaine.com`.  
+>    → Les réponses ne partent pas dans le vide.
+>
+> **Où** : Clerk Dashboard → Configure → Customization → Emails → chaque template (Security, Verification, Organization, etc.). Configurer l’envoi avec ton domaine dans Clerk (ou via ton fournisseur d’e-mails) avant la mise en prod.
+
+- [ ] **Clerk – From des e-mails** : pour chaque template, définir le **From** sur ton domaine (ex. `noreply@ton-domaine.com`) en production.
+- [ ] **Clerk – Reply-to des e-mails** : pour chaque template, définir le **Reply-to** sur ton domaine (ex. `support` → `support@ton-domaine.com`) en production.
+
+**Mails Clerk en « Read only » (body non modifiable) – à envoyer en français via Resend :**
+
+| Template Clerk | Action |
+|----------------|--------|
+| **Compte verrouillé** (Account Locked) | Désactiver « Delivered by Clerk » dans Clerk. Écouter le webhook `emails` et envoyer le mail en français via Resend (même style visuel que les autres mails). |
+
+*(Pour l’instant, seul ce template est non modifiable. Si d’autres apparaissent en read-only, les ajouter ici.)*
+
+- [ ] **Clerk – Compte verrouillé** : 1) Dans Clerk → Configure → Emails → Compte verrouillé, désactiver « Delivered by Clerk ». 2) Dans Clerk → Webhooks, s’assurer que l’endpoint pointe vers `https://ton-domaine.com/api/webhooks/clerk` et qu’il est abonné à l’événement **email** (ex. `email.created` — à vérifier dans l’Event Catalog). 3) En prod, définir `EMAIL_FROM` (ex. `noreply@ton-domaine.com`) et optionnellement `NEXT_PUBLIC_APP_NAME` pour le pied de page du mail.
+
+---
+
 ## À faire avant la prod (rappels)
 
 - [ ] **Nom de domaine** : avoir un domaine pour l’app (ex. app.tonnom.com ou tonnom.com) et le configurer sur l’hébergeur.
