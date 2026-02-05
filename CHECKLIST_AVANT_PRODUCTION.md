@@ -31,7 +31,7 @@
 
 *(Pour l’instant, seul ce template est non modifiable. Si d’autres apparaissent en read-only, les ajouter ici.)*
 
-- [ ] **Clerk – Compte verrouillé** : 1) Dans Clerk → Configure → Emails → Compte verrouillé, désactiver « Delivered by Clerk ». 2) Dans Clerk → Webhooks, s’assurer que l’endpoint pointe vers `https://ton-domaine.com/api/webhooks/clerk` et qu’il est abonné à l’événement **email** (ex. `email.created` — à vérifier dans l’Event Catalog). 3) En prod, définir `EMAIL_FROM` (ex. `noreply@ton-domaine.com`) et optionnellement `NEXT_PUBLIC_APP_NAME` pour le pied de page du mail.
+- [ ] **Clerk – Compte verrouillé** : Suivre le guide [docs/GUIDE_WEBHOOK_CLERK_MAIL_COMPTE_VERROUILLE.md](./docs/GUIDE_WEBHOOK_CLERK_MAIL_COMPTE_VERROUILLE.md) (URL webhook publique, événement email, désactiver « Delivered by Clerk », `EMAIL_FROM` en prod).
 
 ---
 
