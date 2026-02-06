@@ -78,7 +78,31 @@ export default function IngredientDetailPage() {
     )
   }
 
-  if (isLoading || !ingredient) {
+  if (!isLoading && !ingredient) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+          <Breadcrumbs items={[{ label: 'Ingrédients', href: '/dashboard/ingredients' }, { label: 'Introuvable' }]} />
+          <Card className="rounded-xl border shadow-sm border-amber-200 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10">
+            <CardContent className="py-12 text-center space-y-4">
+              <div className="mx-auto w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <Beaker className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h2 className="text-lg font-semibold">Ingrédient introuvable</h2>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                Cet ingrédient n’existe pas, a été supprimé ou vous n’y avez pas accès.
+              </p>
+              <Button asChild variant="outline" className="border-amber-300 dark:border-amber-800">
+                <Link href="/dashboard/ingredients">Retour aux ingrédients</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  if (isLoading) {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
         <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">

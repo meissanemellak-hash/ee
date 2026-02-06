@@ -81,12 +81,13 @@ export function MobileSidebar() {
           />
           <div className="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r lg:hidden">
             <div className="flex h-16 items-center border-b px-6">
-              <h1 className="text-xl font-bold text-primary">AI Operations</h1>
+              <h2 className="text-xl font-bold text-primary">AI Operations</h2>
               <Button
                 variant="ghost"
                 size="icon"
                 className="ml-auto"
                 onClick={() => setOpen(false)}
+                aria-label="Fermer le menu"
               >
                 <X className="h-6 w-6" />
               </Button>

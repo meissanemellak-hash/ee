@@ -55,10 +55,10 @@ Analyse effectuée sans reprendre ce qui est déjà en place (onboarding supprim
 
 ## 5. Synthèse des actions recommandées
 
-| Priorité | Action |
-|----------|--------|
-| **Haute** | Corriger la page ingrédient `[id]` : afficher « Ingrédient introuvable » au lieu du skeleton quand `!isLoading && !ingredient`. |
-| **Moyenne** | Ajouter `app/not-found.tsx` (404 en français, lien dashboard, style app). |
-| **Basse** | Améliorer `global-error.tsx` (lien accueil / réessayer, sans casser le layout). |
+| Priorité | Action | Statut |
+|----------|--------|--------|
+| **Haute** | Corriger la page ingrédient `[id]` : afficher « Ingrédient introuvable » au lieu du skeleton quand `!isLoading && !ingredient`. | ✅ Fait |
+| **Moyenne** | Ajouter `app/not-found.tsx` (404 en français, lien dashboard, style app). | ✅ Déjà en place |
+| **Basse** | Améliorer `global-error.tsx` (lien accueil / réessayer, sans casser le layout). | Optionnel |
 
 Le reste (empty states, gestion erreur sur les autres détails, toasts) est déjà en place. Aucune modification proposée qui casserait le code existant.

@@ -97,4 +97,17 @@ Nouvelle passe : accessibilité clavier/lecteurs d’écran, cohérence des feed
 
 ---
 
-*Document généré pour servir de base aux améliorations sans casser le code existant. Toutes les actions des sections 5 et 6 ont été implémentées.*
+## 7. Dernière passe (analyse complète)
+
+Sans répéter ce qui est déjà en place (onboarding/setup supprimés, paramètres, scroll, mails Clerk, etc.) :
+
+| Élément | Action | Statut |
+|--------|--------|--------|
+| Page ingrédient `[id]` (404) | Afficher « Ingrédient introuvable » + lien retour au lieu du skeleton quand l’API renvoie 404. | ✅ Fait |
+| Menu mobile (accessibilité) | `aria-label` et `aria-expanded` sur le bouton menu, `aria-label` sur le bouton fermer du tiroir. Titre du tiroir en `h2` pour hiérarchie. | ✅ Fait |
+
+Aucune autre anomalie bloquante repérée. Les mutations ont un `onError` avec toast, les listes ont des états vides et des états d’erreur avec « Réessayer », la page 404 globale existe en français, l’error boundary dashboard envoie à Sentry.
+
+---
+
+*Document généré pour servir de base aux améliorations sans casser le code existant. Toutes les actions des sections 5, 6 et 7 ont été implémentées.*
