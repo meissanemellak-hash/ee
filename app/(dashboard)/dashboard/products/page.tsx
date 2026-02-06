@@ -305,21 +305,11 @@ export default function ProductsPage() {
                   : 'Créez votre premier produit pour gérer votre catalogue, vos prix et vos recettes (ingrédients).'}
               </p>
               {!search && (!selectedCategory || selectedCategory === 'all') && (
-                <>
-                  <ul className="text-sm text-muted-foreground max-w-sm mx-auto mb-8 text-left list-disc list-inside space-y-1">
-                    <li>Prix unitaire et catégorie</li>
-                    <li>Recette (ingrédients et quantités)</li>
-                    <li>Suivi des ventes par produit</li>
-                  </ul>
-                  {canCreate && (
-                    <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
-                      <Link href="/dashboard/products/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Ajouter un produit
-                      </Link>
-                    </Button>
-                  )}
-                </>
+                <ul className="text-sm text-muted-foreground max-w-sm mx-auto mb-0 list-disc space-y-1 flex flex-col items-center text-center [list-style-position:outside]">
+                  <li>Prix unitaire et catégorie</li>
+                  <li>Recette (ingrédients et quantités)</li>
+                  <li>Suivi des ventes par produit</li>
+                </ul>
               )}
             </CardContent>
           </Card>

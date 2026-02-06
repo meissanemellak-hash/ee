@@ -227,7 +227,7 @@ export default function ReportsPage() {
                 Veuillez sélectionner une organisation pour générer des rapports.
               </p>
               <Button asChild variant="outline">
-                <Link href="/dashboard/reports">Retour aux rapports</Link>
+                <Link href="/dashboard">Retour au tableau de bord</Link>
               </Button>
             </CardContent>
           </Card>

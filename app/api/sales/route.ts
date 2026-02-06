@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
+import { runAllAlerts } from '@/lib/services/alerts'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
@@ -285,11 +286,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Vérifier que le produit appartient à l'organisation
+    // Vérifier que le produit appartient à l'organisation et charger la recette (BOM)
     const product = await prisma.product.findFirst({
       where: {
         id: validatedData.productId,
         organizationId: organization.id,
+      },
+      include: {
+        productIngredients: {
+          select: { ingredientId: true, quantityNeeded: true },
+        },
       },
     })
 
@@ -301,37 +307,68 @@ export async function POST(request: NextRequest) {
     }
 
     // Convertir saleDate en Date si c'est une string
-    const saleDate = typeof validatedData.saleDate === 'string' 
-      ? new Date(validatedData.saleDate) 
+    const saleDate = typeof validatedData.saleDate === 'string'
+      ? new Date(validatedData.saleDate)
       : validatedData.saleDate
 
-    // Créer la vente
-    const sale = await prisma.sale.create({
-      data: {
-        restaurantId: validatedData.restaurantId,
-        productId: validatedData.productId,
-        quantity: validatedData.quantity,
-        amount: validatedData.amount,
-        saleDate,
-        saleHour: validatedData.saleHour,
-      },
-      include: {
-        restaurant: {
-          select: {
-            id: true,
-            name: true,
+    const restaurantId = validatedData.restaurantId
+    const quantitySold = validatedData.quantity
+
+    // Créer la vente et déduire l'inventaire selon la recette (BOM) dans une transaction
+    const sale = await prisma.$transaction(async (tx) => {
+      const created = await tx.sale.create({
+        data: {
+          restaurantId,
+          productId: validatedData.productId,
+          quantity: quantitySold,
+          amount: validatedData.amount,
+          saleDate,
+          saleHour: validatedData.saleHour,
+        },
+        include: {
+          restaurant: {
+            select: { id: true, name: true },
+          },
+          product: {
+            select: { id: true, name: true, category: true, unitPrice: true },
           },
         },
-        product: {
-          select: {
-            id: true,
-            name: true,
-            category: true,
-            unitPrice: true,
-          },
-        },
-      },
+      })
+
+      // Déduction des stocks pour chaque ingrédient de la recette
+      if (product.productIngredients.length > 0) {
+        for (const pi of product.productIngredients) {
+          const amountToDeduct = pi.quantityNeeded * quantitySold
+          const inv = await tx.inventory.findUnique({
+            where: {
+              restaurantId_ingredientId: {
+                restaurantId,
+                ingredientId: pi.ingredientId,
+              },
+            },
+          })
+          if (inv) {
+            await tx.inventory.update({
+              where: { id: inv.id },
+              data: {
+                currentStock: { decrement: amountToDeduct },
+                lastUpdated: new Date(),
+              },
+            })
+          }
+          // Si pas de ligne d'inventaire pour cet ingrédient, on ne crée pas de stock négatif
+        }
+      }
+
+      return created
     })
+
+    // Relancer les alertes (sans faire échouer la création si les alertes plantent)
+    try {
+      await runAllAlerts(restaurantId)
+    } catch (alertError) {
+      console.error('[POST /api/sales] runAllAlerts:', alertError)
+    }
 
     return NextResponse.json(sale, { status: 201 })
   } catch (error) {

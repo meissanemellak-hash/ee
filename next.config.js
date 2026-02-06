@@ -34,7 +34,12 @@ const sentryOptions = {
   silent: !process.env.CI,
   widenClientFileUpload: true,
   hideSourceMaps: true,
-  disableLogger: true,
+  // Remplacer disableLogger (déprécié) par webpack.treeshake.removeDebugLogging
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 }
 
 // N'activer Sentry que si le DSN est configuré (évite les erreurs de build)

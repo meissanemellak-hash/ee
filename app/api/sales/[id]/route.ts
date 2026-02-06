@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
+import { runAllAlerts } from '@/lib/services/alerts'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
@@ -193,12 +194,21 @@ export async function PATCH(
     const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'sales:edit')
     if (forbidden) return forbidden
 
-    // Vérifier que la vente existe et appartient à l'organisation
+    // Vérifier que la vente existe et appartient à l'organisation (avec recette pour ajustement stock)
     const existing = await prisma.sale.findFirst({
       where: {
         id: params.id,
         restaurant: {
           organizationId: organization.id,
+        },
+      },
+      include: {
+        product: {
+          include: {
+            productIngredients: {
+              select: { ingredientId: true, quantityNeeded: true },
+            },
+          },
         },
       },
     })
@@ -231,12 +241,18 @@ export async function PATCH(
         }
       }
 
-      // Vérifier produit si modifié
+      // Vérifier produit si modifié et charger sa recette
+      let newProduct: typeof existing.product | null = null
       if (validatedData.productId) {
         const product = await prisma.product.findFirst({
           where: {
             id: validatedData.productId,
             organizationId: organization.id,
+          },
+          include: {
+            productIngredients: {
+              select: { ingredientId: true, quantityNeeded: true },
+            },
           },
         })
 
@@ -246,36 +262,94 @@ export async function PATCH(
             { status: 404 }
           )
         }
+        newProduct = product
       }
 
       // Convertir saleDate en Date si c'est une string
       if (validatedData.saleDate) {
-        validatedData.saleDate = typeof validatedData.saleDate === 'string' 
-          ? new Date(validatedData.saleDate) 
+        validatedData.saleDate = typeof validatedData.saleDate === 'string'
+          ? new Date(validatedData.saleDate)
           : validatedData.saleDate
       }
 
-      // Mettre à jour la vente
-      const sale = await prisma.sale.update({
-        where: { id: params.id },
-        data: validatedData,
-        include: {
-          restaurant: {
-            select: {
-              id: true,
-              name: true,
+      const restaurantId = validatedData.restaurantId ?? existing.restaurantId
+      const quantityOrProductChanged =
+        validatedData.quantity !== undefined || validatedData.productId !== undefined
+      const newQuantity = validatedData.quantity ?? existing.quantity
+      const productForDeduction = newProduct ?? existing.product
+
+      const sale = await prisma.$transaction(async (tx) => {
+        // Si quantité ou produit a changé : remonter l'ancienne déduction puis déduire la nouvelle
+        if (quantityOrProductChanged) {
+          // Remonter les stocks pour l'ancienne vente (ancien produit × ancienne quantité)
+          if (existing.product.productIngredients.length > 0) {
+            const oldRestaurantId = existing.restaurantId
+            for (const pi of existing.product.productIngredients) {
+              const amountToRestore = pi.quantityNeeded * existing.quantity
+              const inv = await tx.inventory.findUnique({
+                where: {
+                  restaurantId_ingredientId: {
+                    restaurantId: oldRestaurantId,
+                    ingredientId: pi.ingredientId,
+                  },
+                },
+              })
+              if (inv) {
+                await tx.inventory.update({
+                  where: { id: inv.id },
+                  data: {
+                    currentStock: { increment: amountToRestore },
+                    lastUpdated: new Date(),
+                  },
+                })
+              }
+            }
+          }
+
+          // Déduire pour la nouvelle vente (nouveau produit × nouvelle quantité)
+          if (productForDeduction.productIngredients.length > 0) {
+            for (const pi of productForDeduction.productIngredients) {
+              const amountToDeduct = pi.quantityNeeded * newQuantity
+              const inv = await tx.inventory.findUnique({
+                where: {
+                  restaurantId_ingredientId: {
+                    restaurantId,
+                    ingredientId: pi.ingredientId,
+                  },
+                },
+              })
+              if (inv) {
+                await tx.inventory.update({
+                  where: { id: inv.id },
+                  data: {
+                    currentStock: { decrement: amountToDeduct },
+                    lastUpdated: new Date(),
+                  },
+                })
+              }
+            }
+          }
+        }
+
+        return tx.sale.update({
+          where: { id: params.id },
+          data: validatedData,
+          include: {
+            restaurant: {
+              select: { id: true, name: true },
+            },
+            product: {
+              select: { id: true, name: true, category: true, unitPrice: true },
             },
           },
-          product: {
-            select: {
-              id: true,
-              name: true,
-              category: true,
-              unitPrice: true,
-            },
-          },
-        },
+        })
       })
+
+      try {
+        await runAllAlerts(restaurantId)
+      } catch (alertError) {
+        console.error('[PATCH /api/sales/[id]] runAllAlerts:', alertError)
+      }
 
       return NextResponse.json(sale)
     }
@@ -373,12 +447,21 @@ export async function DELETE(
     const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'sales:delete')
     if (forbidden) return forbidden
 
-    // Vérifier que la vente existe et appartient à l'organisation
+    // Récupérer la vente avec la recette du produit pour remonter les stocks
     const sale = await prisma.sale.findFirst({
       where: {
         id: params.id,
         restaurant: {
           organizationId: organization.id,
+        },
+      },
+      include: {
+        product: {
+          include: {
+            productIngredients: {
+              select: { ingredientId: true, quantityNeeded: true },
+            },
+          },
         },
       },
     })
@@ -390,9 +473,42 @@ export async function DELETE(
       )
     }
 
-    await prisma.sale.delete({
-      where: { id: params.id },
+    const restaurantId = sale.restaurantId
+
+    await prisma.$transaction(async (tx) => {
+      // Remonter les stocks : ajouter back la quantité déduite à la création
+      if (sale.product.productIngredients.length > 0) {
+        for (const pi of sale.product.productIngredients) {
+          const amountToRestore = pi.quantityNeeded * sale.quantity
+          const inv = await tx.inventory.findUnique({
+            where: {
+              restaurantId_ingredientId: {
+                restaurantId,
+                ingredientId: pi.ingredientId,
+              },
+            },
+          })
+          if (inv) {
+            await tx.inventory.update({
+              where: { id: inv.id },
+              data: {
+                currentStock: { increment: amountToRestore },
+                lastUpdated: new Date(),
+              },
+            })
+          }
+        }
+      }
+      await tx.sale.delete({
+        where: { id: params.id },
+      })
     })
+
+    try {
+      await runAllAlerts(restaurantId)
+    } catch (alertError) {
+      console.error('[DELETE /api/sales/[id]] runAllAlerts:', alertError)
+    }
 
     return NextResponse.json({ message: 'Sale deleted successfully' })
   } catch (error) {

@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
+import { runAllAlerts } from '@/lib/services/alerts'
 import Papa from 'papaparse'
 import { csvSaleRowSchema } from '@/lib/validations/sales'
 
@@ -154,6 +155,55 @@ export async function POST(request: NextRequest) {
       data: salesToCreate,
       skipDuplicates: true,
     })
+
+    // Déduire les stocks selon les recettes (BOM) pour chaque produit importé
+    const productIds = [...new Set(salesToCreate.map(s => s.productId))]
+    const quantityByProduct = new Map<string, number>()
+    for (const s of salesToCreate) {
+      quantityByProduct.set(s.productId, (quantityByProduct.get(s.productId) ?? 0) + s.quantity)
+    }
+
+    const productsWithBom = await prisma.product.findMany({
+      where: { id: { in: productIds }, organizationId: organization.id },
+      include: {
+        productIngredients: {
+          select: { ingredientId: true, quantityNeeded: true },
+        },
+      },
+    })
+
+    await prisma.$transaction(async (tx) => {
+      for (const product of productsWithBom) {
+        const totalQty = quantityByProduct.get(product.id) ?? 0
+        if (totalQty === 0 || product.productIngredients.length === 0) continue
+        for (const pi of product.productIngredients) {
+          const amountToDeduct = pi.quantityNeeded * totalQty
+          const inv = await tx.inventory.findUnique({
+            where: {
+              restaurantId_ingredientId: {
+                restaurantId,
+                ingredientId: pi.ingredientId,
+              },
+            },
+          })
+          if (inv) {
+            await tx.inventory.update({
+              where: { id: inv.id },
+              data: {
+                currentStock: { decrement: amountToDeduct },
+                lastUpdated: new Date(),
+              },
+            })
+          }
+        }
+      }
+    })
+
+    try {
+      await runAllAlerts(restaurantId)
+    } catch (alertError) {
+      console.error('[POST /api/sales/import] runAllAlerts:', alertError)
+    }
 
     return NextResponse.json({
       success: true,

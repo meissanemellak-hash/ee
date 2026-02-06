@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { runAllAlerts } from '@/lib/services/alerts'
 
 export const dynamic = 'force-dynamic'
 
@@ -120,6 +121,13 @@ export async function PATCH(
         },
       },
     })
+
+    // Génération automatique des alertes après mise à jour de l'inventaire
+    try {
+      await runAllAlerts(updatedInventory.restaurantId)
+    } catch (alertError) {
+      console.error('[PATCH /api/inventory/[id]] runAllAlerts:', alertError)
+    }
 
     return NextResponse.json(updatedInventory)
   } catch (error) {

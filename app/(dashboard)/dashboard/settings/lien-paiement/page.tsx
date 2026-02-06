@@ -62,7 +62,7 @@ export default async function SettingsLienPaiementPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {organizations.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Aucune organisation dans Clerk. Créez-en une depuis le dashboard Clerk.</p>
+              <p className="text-muted-foreground text-sm">Aucune organisation. Créez-en une ou sélectionnez-en une depuis le menu en haut à droite.</p>
             ) : (
               <ul className="space-y-3">
                 {organizations.map((org) => (

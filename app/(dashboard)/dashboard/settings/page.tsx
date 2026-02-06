@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
-import { Loader2, Save, Building2, User, Bell, Shield, Trash2, AlertCircle, LogOut, Link2 } from 'lucide-react'
+import { Loader2, Save, Building2, User, Shield, Trash2, AlertCircle, LogOut, Link2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -264,10 +264,11 @@ export default function SettingsPage() {
                 Contactez le créateur ou demandez à être promu administrateur.
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
-              ℹ️ Le nom modifié sera utilisé dans toute l&apos;application. 
-              En cas de limitation technique avec Clerk, vous pouvez également mettre à jour le nom directement dans le dashboard Clerk.
-            </p>
+            {isSuperAdmin && (
+              <p className="text-xs text-muted-foreground">
+                ℹ️ En cas de limitation technique, vous pouvez également mettre à jour le nom dans l&apos;espace d&apos;administration du compte.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -296,15 +297,15 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          {orgData && (
+          {orgData && isSuperAdmin && (
             <div className="text-sm text-muted-foreground space-y-1 pt-2 border-t">
               <p>Créée le : {new Date(orgData.createdAt).toLocaleDateString('fr-FR')}</p>
               <p>Dernière mise à jour : {new Date(orgData.updatedAt).toLocaleDateString('fr-FR')}</p>
               <div className="pt-2 space-y-1">
                 <p className="font-medium">ID dans la DB : <code className="text-xs bg-muted px-1 py-0.5 rounded">{orgData.id}</code></p>
-                <p className="font-medium">ID ClerkOrg dans la DB : <code className="text-xs bg-muted px-1 py-0.5 rounded">{orgData.clerkOrgId || 'Non défini'}</code></p>
+                <p className="font-medium">ID organisation (compte) en base : <code className="text-xs bg-muted px-1 py-0.5 rounded">{orgData.clerkOrgId || 'Non défini'}</code></p>
                 {organization?.id && (
-                  <p className="font-medium">ID Clerk actuel : <code className="text-xs bg-muted px-1 py-0.5 rounded">{organization.id}</code></p>
+                  <p className="font-medium">ID organisation actuel : <code className="text-xs bg-muted px-1 py-0.5 rounded">{organization.id}</code></p>
                 )}
                 {organization?.id && orgData.clerkOrgId && organization.id !== orgData.clerkOrgId && (
                   <p className="text-amber-600 dark:text-amber-400 text-xs mt-2">
@@ -334,12 +335,12 @@ export default function SettingsPage() {
                 </>
               )}
             </Button>
-            {orgData && (
+            {orgData && isSuperAdmin && (
               <Button
                 variant="outline"
                 onClick={handleFixOrgId}
                 disabled={saving}
-                title="Corriger l&apos;ID de l&apos;organisation si il ne correspond pas à celui dans Clerk"
+                title="Corriger l&apos;ID de l&apos;organisation s&apos;il ne correspond pas à celui du compte"
                 className="shadow-sm"
                 aria-label="Corriger l&apos;ID de l&apos;organisation"
               >
@@ -391,48 +392,50 @@ export default function SettingsPage() {
                   className="bg-muted border-border"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="profile-user-id">ID utilisateur (Clerk)</Label>
-                <Input
-                  id="profile-user-id"
-                  value={user.id || 'Non disponible'}
-                  disabled
-                  readOnly
-                  aria-readonly="true"
-                  className="bg-muted border-border font-mono text-xs"
-                  placeholder="ID utilisateur depuis Clerk"
-                />
-                {serverUserId && (
-                  <>
-                    {user.id && serverUserId && user.id !== serverUserId && (
-                      <div className="mt-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                        <p className="text-xs text-amber-700 dark:text-amber-400">
-                          ⚠️ Les IDs ne correspondent pas ! Client: {user.id}, Serveur: {serverUserId}
-                        </p>
-                      </div>
-                    )}
-                    {user.id && serverUserId && user.id === serverUserId && (
-                      <div className="mt-2 p-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
-                        <p className="text-xs text-teal-700 dark:text-teal-400">
-                          ✅ L&apos;ID utilisateur est correct et correspond entre client et serveur
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-                <div className="mt-4 p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
-                  <p className="text-xs text-teal-800 dark:text-teal-200 font-semibold mb-1">
-                    ℹ️ Note importante :
-                  </p>
-                  <p className="text-xs text-teal-700 dark:text-teal-300">
-                    L&apos;<strong>ID utilisateur</strong> (commence par <code>user_</code>) identifie <strong>votre compte personnel</strong> dans Clerk.
-                    <br />
-                    L&apos;<strong>ID organisation</strong> (commence par <code>org_</code>) identifie <strong>l&apos;organisation</strong> dans Clerk.
-                    <br />
-                    <strong>Ces deux IDs sont différents par design</strong> - c&apos;est normal et attendu. Un utilisateur peut appartenir à plusieurs organisations.
-                  </p>
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label htmlFor="profile-user-id">ID utilisateur</Label>
+                  <Input
+                    id="profile-user-id"
+                    value={user.id || 'Non disponible'}
+                    disabled
+                    readOnly
+                    aria-readonly="true"
+                    className="bg-muted border-border font-mono text-xs"
+                    placeholder="ID utilisateur (user_...)"
+                  />
+                  {serverUserId && (
+                    <>
+                      {user.id && serverUserId && user.id !== serverUserId && (
+                        <div className="mt-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs text-amber-700 dark:text-amber-400">
+                            ⚠️ Les IDs ne correspondent pas ! Client: {user.id}, Serveur: {serverUserId}
+                          </p>
+                        </div>
+                      )}
+                      {user.id && serverUserId && user.id === serverUserId && (
+                        <div className="mt-2 p-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
+                          <p className="text-xs text-teal-700 dark:text-teal-400">
+                            ✅ L&apos;ID utilisateur est correct et correspond entre client et serveur
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div className="mt-4 p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
+                    <p className="text-xs text-teal-800 dark:text-teal-200 font-semibold mb-1">
+                      ℹ️ Note importante :
+                    </p>
+                    <p className="text-xs text-teal-700 dark:text-teal-300">
+                      L&apos;<strong>ID utilisateur</strong> (commence par <code>user_</code>) identifie <strong>votre compte personnel</strong>.
+                      <br />
+                      L&apos;<strong>ID organisation</strong> (commence par <code>org_</code>) identifie <strong>l&apos;organisation</strong> dans le système.
+                      <br />
+                      <strong>Ces deux IDs sont différents par design</strong> - c&apos;est normal et attendu. Un utilisateur peut appartenir à plusieurs organisations.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="my-4 border-t" />
 
@@ -453,34 +456,6 @@ export default function SettingsPage() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Section Préférences */}
-        <Card className="rounded-xl border shadow-sm bg-card">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center" aria-hidden="true">
-                <Bell className="h-4 w-4 text-white" />
-              </div>
-              <CardTitle className="text-lg font-semibold">Préférences</CardTitle>
-            </div>
-          <CardDescription className="mt-1">
-            Configurez vos préférences de notifications et d&apos;affichage
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-            <p className="text-sm text-purple-800 dark:text-purple-300 font-medium mb-2">
-              Les préférences de notifications seront disponibles prochainement.
-            </p>
-            <p className="text-sm text-purple-700 dark:text-purple-400 mb-2">Vous pourrez configurer :</p>
-            <ul className="text-sm text-purple-700 dark:text-purple-400 list-disc list-inside space-y-1">
-              <li>Notifications par email pour les alertes critiques</li>
-              <li>Rapports automatiques hebdomadaires</li>
-              <li>Alertes en temps réel</li>
-            </ul>
-          </div>
         </CardContent>
       </Card>
 

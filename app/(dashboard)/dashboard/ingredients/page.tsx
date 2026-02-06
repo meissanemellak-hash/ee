@@ -279,21 +279,11 @@ export default function IngredientsPage() {
                   : 'Créez votre premier ingrédient pour gérer les coûts, les recettes et l’inventaire.'}
               </p>
               {!search && (!selectedUnit || selectedUnit === 'all') && (
-                <>
-                  <ul className="text-sm text-muted-foreground max-w-sm mx-auto mb-8 text-left list-disc list-inside space-y-1">
-                    <li>Coût par unité et fournisseur</li>
-                    <li>Utilisation dans les recettes produits</li>
-                    <li>Suivi des stocks par restaurant</li>
-                  </ul>
-                  {canCreate && (
-                    <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
-                      <Link href="/dashboard/ingredients/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Ajouter un ingrédient
-                      </Link>
-                    </Button>
-                  )}
-                </>
+                <ul className="text-sm text-muted-foreground max-w-sm mx-auto mb-0 list-disc space-y-1 flex flex-col items-center text-center [list-style-position:outside]">
+                  <li>Coût par unité et fournisseur</li>
+                  <li>Utilisation dans les recettes produits</li>
+                  <li>Suivi des stocks par restaurant</li>
+                </ul>
               )}
             </CardContent>
           </Card>

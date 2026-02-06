@@ -79,7 +79,7 @@ npx prisma db push
 - **Flux client** : après la visio, l’admin crée l’organisation et envoie l’invitation Clerk. Il génère un lien de paiement (Plan Pro) depuis **/dashboard/admin/lien-paiement** et l’envoie au client. Le client paie sur Stripe ; le webhook crée l’abonnement pour cette organisation. Le client accepte l’invitation et accède au dashboard.
 - **Page Admin** (`/dashboard/admin/lien-paiement`) : réservée au super-admin (email dans `SUPER_ADMIN_EMAIL`). Liste des organisations et bouton « Générer le lien Plan Pro » par organisation. L’URL générée est à copier et envoyer au client.
 - **Page Facturation** (`/dashboard/settings/billing`) : plan actuel, renouvellement, bouton « Gérer l’abonnement » (Stripe Customer Portal). Sans abonnement : message invitant à demander un lien de souscription à l’administrateur.
-- **Route /pricing** : redirige vers l’accueil (ancienne page Tarifs retirée).
+- **Route /pricing** : supprimée du code ; le middleware redirige toute requête vers `/pricing` vers `/dashboard`. (Ancienne mention : redirige vers l’accueil (ancienne page Tarifs retirée).
 
 ---
 

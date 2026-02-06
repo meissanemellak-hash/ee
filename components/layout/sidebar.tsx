@@ -104,14 +104,18 @@ export function Sidebar() {
       
       {/* Help Section (Style Sequence) */}
       <div className="border-t border-gray-200 dark:border-gray-800 p-4">
-        <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3">
+        <Link
+          href="/dashboard/aide"
+          className="block rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+          aria-label="Accéder au centre d'aide"
+        >
           <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
             Besoin d&apos;aide ?
           </p>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
             Consultez notre documentation
           </p>
-        </div>
+        </Link>
       </div>
     </div>
   )

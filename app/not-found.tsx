@@ -17,9 +17,14 @@ export default function NotFound() {
           <p className="text-muted-foreground text-sm">
             Cette page n&apos;existe pas ou a été déplacée.
           </p>
-          <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
-            <Link href="/dashboard">Retour au tableau de bord</Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
+              <Link href="/dashboard">Retour au tableau de bord</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/">Retour à l&apos;accueil</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

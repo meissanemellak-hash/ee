@@ -5,7 +5,6 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/',
-  '/pricing',
   '/merci-paiement',
   '/mentions-legales',
   '/confidentialite',
@@ -20,6 +19,9 @@ export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl.pathname
 
   // Pages supprimées : redirection vers le dashboard
+  if (pathname === '/pricing' || pathname.startsWith('/pricing/')) {
+    return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
   if (pathname === '/dashboard/onboarding' || pathname.startsWith('/dashboard/onboarding/')) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }

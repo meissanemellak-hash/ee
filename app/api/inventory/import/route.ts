@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
 import Papa from 'papaparse'
 import { csvInventoryRowSchema } from '@/lib/validations/inventory'
+import { runAllAlerts } from '@/lib/services/alerts'
 
 export const dynamic = 'force-dynamic'
 
@@ -248,6 +249,13 @@ export async function POST(request: NextRequest) {
         })
         created++
       }
+      }
+
+    // Génération automatique des alertes après import d'inventaire
+    try {
+      await runAllAlerts(restaurant.id)
+    } catch (alertError) {
+      console.error('[POST /api/inventory/import] runAllAlerts:', alertError)
     }
 
     return NextResponse.json({

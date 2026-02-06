@@ -247,44 +247,11 @@ export default function RestaurantsPage() {
             <p className="text-muted-foreground max-w-md mx-auto mb-2">
               Créez votre premier établissement pour activer le suivi des ventes, l’inventaire et les alertes.
             </p>
-            <ul className="text-sm text-muted-foreground max-w-sm mx-auto mb-8 text-left list-disc list-inside space-y-1">
+            <ul className="text-sm text-muted-foreground max-w-sm mx-auto mb-0 list-disc space-y-1 flex flex-col items-center text-center [list-style-position:outside]">
               <li>Suivi des ventes et chiffre d’affaires</li>
               <li>Gestion des stocks et seuils d’alerte</li>
               <li>Tableau de bord par restaurant</li>
             </ul>
-            <div className="flex flex-wrap justify-center gap-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" aria-label="Import et export">
-                    <Download className="mr-2 h-4 w-4" />
-                    Import / export
-                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center">
-                  <DropdownMenuItem onClick={handleExportCsv} disabled={restaurants.length === 0}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Exporter CSV
-                  </DropdownMenuItem>
-                  {canCreate && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard/restaurants/import">
-                        <Upload className="mr-2 h-4 w-4" />
-                        Importer CSV
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {canCreate && (
-                <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un restaurant">
-                  <Link href="/dashboard/restaurants/new">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Ajouter un restaurant
-                  </Link>
-                </Button>
-              )}
-            </div>
           </CardContent>
         </Card>
       ) : (
