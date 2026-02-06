@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 export function BillingClientSection() {
   const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
   const handleOpenPortal = async () => {
     setLoading(true)
@@ -16,10 +18,18 @@ export function BillingClientSection() {
         window.location.href = data.url
         return
       }
-      alert(data.error ?? 'Erreur')
+      toast({
+        title: 'Erreur',
+        description: data.error ?? 'Impossible d\'ouvrir le portail de facturation.',
+        variant: 'destructive',
+      })
     } catch (e) {
       console.error(e)
-      alert('Erreur réseau')
+      toast({
+        title: 'Erreur',
+        description: 'Erreur réseau. Vérifiez votre connexion et réessayez.',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
