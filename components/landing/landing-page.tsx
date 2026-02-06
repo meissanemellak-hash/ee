@@ -29,7 +29,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
-              <span className="text-xl">AI Operations</span>
+              <span className="text-xl">IA Restaurant Manager</span>
             </Link>
             <nav className="flex items-center gap-2 sm:gap-4" aria-label="Navigation principale">
               <Button variant="ghost" asChild>
@@ -90,7 +90,7 @@ export function LandingPage() {
                 </div>
                 <div className="flex-1 flex justify-center">
                   <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-md">
-                    Tableau de bord · AI Operations
+                    Tableau de bord · IA Restaurant Manager
                   </span>
                 </div>
               </div>
@@ -178,7 +178,7 @@ export function LandingPage() {
         <section className="py-16 lg:py-20 border-t border-border/60 bg-background/50">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <h2 className="text-2xl font-bold text-center text-foreground sm:text-3xl">
-              Ils pilotent déjà avec AI Operations
+              Ils pilotent déjà avec IA Restaurant Manager
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
               Bénéfices : centralisez vos restaurants, réduisez le gaspillage et les ruptures de stock, dégagez des économies concrètes et gagnez du temps sur le suivi opérationnel.
@@ -254,7 +254,7 @@ export function LandingPage() {
               Ces problèmes vous parlent ?
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Sans outil dédié, vous pilotez à l&apos;aveugle. Avec AI Operations, vous retrouvez la visibilité, la réactivité et des bénéfices mesurables : moins de gaspillage, moins de ruptures de stocks, plus de marge.
+              Sans outil dédié, vous pilotez à l&apos;aveugle. Avec IA Restaurant Manager, vous retrouvez la visibilité, la réactivité et des bénéfices mesurables : moins de gaspillage, moins de ruptures de stocks, plus de marge.
             </p>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
@@ -509,13 +509,13 @@ export function LandingPage() {
               Questions fréquentes
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Réponses utiles pour évaluer les bénéfices d&apos;AI Operations sur votre activité et votre ROI.
+              Réponses utiles pour évaluer les bénéfices d&apos;IA Restaurant Manager sur votre activité et votre ROI.
             </p>
             <dl className="mt-12 max-w-2xl mx-auto space-y-4">
               {[
                 {
                   q: 'Pour qui est conçue la plateforme ?',
-                  a: 'AI Operations est pensée pour les groupes et chaînes qui gèrent plusieurs établissements (restaurants, points de vente). Que vous ayez 3 ou 30 restaurants, la plateforme centralise ventes, inventaire, alertes et prévisions sur un seul tableau de bord.',
+                  a: 'IA Restaurant Manager est pensée pour les groupes et chaînes qui gèrent plusieurs établissements (restaurants, points de vente). Que vous ayez 3 ou 30 restaurants, la plateforme centralise ventes, inventaire, alertes et prévisions sur un seul tableau de bord.',
                 },
                 {
                   q: 'Comment sont calculés les tarifs ?',
@@ -573,7 +573,7 @@ export function LandingPage() {
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <p className="text-sm text-muted-foreground">
-                © {new Date().getFullYear()} AI Operations. Tous droits réservés.
+                © {new Date().getFullYear()} IA Restaurant Manager. Tous droits réservés.
               </p>
               <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2" aria-label="Pied de page">
                 <Link href="/mentions-legales" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

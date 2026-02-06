@@ -106,7 +106,9 @@ export function useGenerateForecasts() {
   return useMutation({
     mutationFn: async (data: {
       restaurantId: string
-      forecastDate: string
+      forecastDate?: string
+      startDate?: string
+      endDate?: string
       method: string
     }) => {
       if (!organization?.id) throw new Error('No organization selected')
@@ -126,9 +128,10 @@ export function useGenerateForecasts() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['forecasts', organization?.id] })
+      const count = data.forecasts?.length ?? 0
       toast({
         title: 'Prévisions générées',
-        description: `${data.forecasts.length} prévision(s) générée(s) avec succès.`,
+        description: count > 0 ? `${count} prévision(s) générée(s) avec succès.` : 'Aucune prévision générée.',
       })
     },
     onError: (error: Error) => {

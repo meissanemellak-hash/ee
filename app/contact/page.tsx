@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
 export const metadata = {
-  title: 'Contact | AI Operations',
-  description: 'Contactez l\'équipe AI Operations pour une démo ou un devis.',
+  title: 'Contact | IA Restaurant Manager',
+  description: 'Contactez l\'équipe IA Restaurant Manager pour une démo ou un devis.',
 }
 
 export default function ContactPage() {
@@ -13,7 +13,7 @@ export default function ContactPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="font-semibold text-foreground hover:opacity-90">
-              AI Operations
+              IA Restaurant Manager
             </Link>
             <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
               Retour à l&apos;accueil
@@ -25,7 +25,7 @@ export default function ContactPage() {
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Contact</h1>
         <p className="mt-3 text-muted-foreground max-w-2xl">
-          Vous gérez plusieurs restaurants et souhaitez centraliser ventes, inventaire et alertes ? Notre équipe est à votre écoute pour une démo, un devis personnalisé ou toute question sur la plateforme AI Operations.
+          Vous gérez plusieurs restaurants et souhaitez centraliser ventes, inventaire et alertes ? Notre équipe est à votre écoute pour une démo, un devis personnalisé ou toute question sur la plateforme IA Restaurant Manager.
         </p>
 
         <section className="mt-10">

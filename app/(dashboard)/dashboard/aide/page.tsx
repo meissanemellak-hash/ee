@@ -30,11 +30,11 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
   const content: Record<SectionId, { title: string; description: string; body: React.ReactNode }> = {
     'prise-en-main': {
       title: 'Prise en main',
-      description: 'Démarrez avec AI Operations',
+      description: 'Démarrez avec IA Restaurant Manager',
       body: (
         <>
           <p>
-            AI Operations centralise la gestion de vos établissements, produits, ingrédients, ventes et stocks. Après connexion, vous accédez au tableau de bord. Selon votre rôle (administrateur, manager ou employé), certaines actions sont disponibles ou restreintes.
+            IA Restaurant Manager centralise la gestion de vos établissements, produits, ingrédients, ventes et stocks. Après connexion, vous accédez au tableau de bord. Selon votre rôle (administrateur, manager ou employé), certaines actions sont disponibles ou restreintes.
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Ordre recommandé pour démarrer</h3>
           <ol className="list-decimal list-inside space-y-1 ml-1">
@@ -185,14 +185,14 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
       body: (
         <>
           <p>
-            Les recommandations sont des suggestions générées à partir de vos données (recettes, ventes, stocks, coûts) : commandes d&apos;ingrédients, staffing, etc. Chaque recommandation affiche le <strong className="text-teal-700 dark:text-teal-400 font-bold">coût estimé de la commande</strong> (montant à dépenser) et le <strong className="text-teal-700 dark:text-teal-400 font-bold">gain estimé</strong> (ruptures et gaspillage évités, indicateur).
+            Les recommandations sont des suggestions générées à partir de vos données (recettes, ventes, stocks, coûts) : commandes d&apos;ingrédients, effectifs, etc. Chaque recommandation affiche le <strong className="text-teal-700 dark:text-teal-400 font-bold">coût estimé de la commande</strong> (montant à dépenser) et le <strong className="text-teal-700 dark:text-teal-400 font-bold">gain estimé</strong> (ruptures et gaspillage évités, indicateur).
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Consulter les recommandations</h3>
           <p>Sur la page Recommandations, la liste affiche les suggestions avec type, coût et gain estimés. Vous pouvez filtrer par restaurant, type et statut (en attente, acceptée, rejetée).</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Accepter ou rejeter</h3>
-          <p>Pour une recommandation de <strong className="text-teal-700 dark:text-teal-400 font-bold">commande (ORDER)</strong>, l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">accepter</strong> enregistre la réception : les quantités recommandées sont ajoutées à l&apos;inventaire du restaurant et les alertes sont recalculées. Vous n&apos;avez plus à saisir la réception à la main. Pour les autres types ou si vous ne souhaitez pas appliquer, vous pouvez <strong className="text-teal-700 dark:text-teal-400 font-bold">rejeter</strong>. Les recommandations acceptées ou rejetées restent visibles dans l&apos;historique.</p>
+          <p>Pour une recommandation de <strong className="text-teal-700 dark:text-teal-400 font-bold">commande</strong>, l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">accepter</strong> enregistre la réception : les quantités recommandées sont ajoutées à l&apos;inventaire du restaurant et les alertes sont recalculées. Vous n&apos;avez plus à saisir la réception à la main. Pour les autres types ou si vous ne souhaitez pas appliquer, vous pouvez <strong className="text-teal-700 dark:text-teal-400 font-bold">rejeter</strong>. Les recommandations acceptées ou rejetées restent visibles dans l&apos;historique.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Générer des recommandations</h3>
-          <p>Vous pouvez générer des recommandations pour <strong className="text-teal-700 dark:text-teal-400 font-bold">un restaurant</strong> (sélectionnez-le puis « Générer (1 restaurant) ») ou pour <strong className="text-teal-700 dark:text-teal-400 font-bold">tous les restaurants</strong> en un clic (« Générer pour tous les restaurants »). La génération s&apos;appuie sur les prévisions de ventes et les recettes (BOM) ; les nouvelles suggestions apparaissent avec le statut « En attente ». Une <strong className="text-teal-700 dark:text-teal-400 font-bold">génération automatique</strong> peut être planifiée (ex. tous les jours à 6h) via le cron <code className="text-xs bg-muted px-1 rounded">/api/cron/recommendations</code> si la variable <code className="text-xs bg-muted px-1 rounded">CRON_SECRET</code> est configurée.</p>
+          <p>Vous pouvez générer des recommandations pour <strong className="text-teal-700 dark:text-teal-400 font-bold">un restaurant</strong> (sélectionnez-le puis « Générer (1 restaurant) ») ou pour <strong className="text-teal-700 dark:text-teal-400 font-bold">tous les restaurants</strong> en un clic (« Générer pour tous les restaurants »). La génération s&apos;appuie sur les prévisions de ventes et les recettes (BOM) ; les nouvelles suggestions apparaissent avec le statut « En attente ». Une <strong className="text-teal-700 dark:text-teal-400 font-bold">génération automatique</strong> peut être planifiée (ex. tous les jours à 6h) via la planification automatique (<code className="text-xs bg-muted px-1 rounded">/api/cron/recommendations</code>) si la variable secrète de planification est configurée.</p>
         </>
       ),
     },
@@ -312,7 +312,7 @@ export default function AidePage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Centre d&apos;aide</h1>
               <p className="text-muted-foreground mt-1">
-                Documentation et guide d&apos;utilisation d&apos;AI Operations
+                Documentation et guide d&apos;utilisation d&apos;IA Restaurant Manager
               </p>
             </div>
           </div>

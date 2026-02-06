@@ -70,10 +70,17 @@ export default function ForecastsPage() {
 
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>(() => urlRestaurant || 'all')
   const [selectedMethod, setSelectedMethod] = useState<string>('moving_average')
+  const [generationMode, setGenerationMode] = useState<'single' | 'range'>('single')
   const [forecastDate, setForecastDate] = useState(() => {
     const date = new Date()
     date.setDate(date.getDate() + 1)
     return date.toISOString().split('T')[0]
+  })
+  const [startDateRange, setStartDateRange] = useState(() => new Date().toISOString().split('T')[0])
+  const [endDateRange, setEndDateRange] = useState(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 7)
+    return d.toISOString().split('T')[0]
   })
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -117,15 +124,23 @@ export default function ForecastsPage() {
       return
     }
 
-    if (!forecastDate) {
-      return
+    if (generationMode === 'range') {
+      if (!startDateRange || !endDateRange) return
+      if (new Date(startDateRange) > new Date(endDateRange)) return
+      generateForecasts.mutate({
+        restaurantId: selectedRestaurant,
+        startDate: startDateRange,
+        endDate: endDateRange,
+        method: selectedMethod,
+      })
+    } else {
+      if (!forecastDate) return
+      generateForecasts.mutate({
+        restaurantId: selectedRestaurant,
+        forecastDate,
+        method: selectedMethod,
+      })
     }
-
-    generateForecasts.mutate({
-      restaurantId: selectedRestaurant,
-      forecastDate,
-      method: selectedMethod,
-    })
   }
 
   const handleDelete = async () => {
@@ -234,78 +249,154 @@ export default function ForecastsPage() {
               Générer des prévisions
             </CardTitle>
             <CardDescription className="mt-1">
-              Créez des prévisions de ventes pour un restaurant et une date spécifiques
+              Créez des prévisions pour une date ou une plage de dates (jusqu’à 31 jours)
             </CardDescription>
             <div className="mt-3 p-3 rounded-xl bg-teal-100/50 dark:bg-teal-900/20 border border-teal-200/80 dark:border-teal-900/30">
               <p className="text-xs text-teal-800 dark:text-teal-300">
-                💡 Les prévisions se basent sur l’historique des ventes des jours précédant la date sélectionnée. Plus vous avez de ventes historiques, plus les prévisions seront précises.
+                💡 Les prévisions se basent sur l’historique des ventes des jours précédant la date sélectionnée. En plage, une prévision est générée pour chaque jour.
               </p>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4" role="group" aria-label="Formulaire de génération de prévisions">
-              <div className="space-y-2">
-                <Label htmlFor="forecast-restaurant">Restaurant *</Label>
-                <Select
-                  value={selectedRestaurant === 'all' ? '' : selectedRestaurant}
-                  onValueChange={(value) => setSelectedRestaurant(value || 'all')}
-                >
-                  <SelectTrigger id="forecast-restaurant" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Sélectionner un restaurant">
-                    <SelectValue placeholder="Sélectionner un restaurant" />
-                  </SelectTrigger>
-                <SelectContent>
-                  {restaurants.map((restaurant) => (
-                    <SelectItem key={restaurant.id} value={restaurant.id}>
-                      {restaurant.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="space-y-4" role="group" aria-label="Formulaire de génération de prévisions">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="forecast-restaurant">Restaurant *</Label>
+                  <Select
+                    value={selectedRestaurant === 'all' ? '' : selectedRestaurant}
+                    onValueChange={(value) => setSelectedRestaurant(value || 'all')}
+                  >
+                    <SelectTrigger id="forecast-restaurant" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Sélectionner un restaurant">
+                      <SelectValue placeholder="Sélectionner un restaurant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {restaurants.map((restaurant) => (
+                        <SelectItem key={restaurant.id} value={restaurant.id}>
+                          {restaurant.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Mode</Label>
+                  <Select value={generationMode} onValueChange={(v: 'single' | 'range') => setGenerationMode(v)}>
+                    <SelectTrigger className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Une date ou plage">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Une date</SelectItem>
+                      <SelectItem value="range">Plage de dates</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="forecast-date">Date de prévision *</Label>
-                <Input
-                  id="forecast-date"
-                  type="date"
-                  value={forecastDate}
-                  onChange={(e) => setForecastDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="bg-muted/50 dark:bg-gray-900 border-border"
-                  aria-label="Date de prévision"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="forecast-method">Méthode</Label>
-                <Select value={selectedMethod} onValueChange={setSelectedMethod}>
-                  <SelectTrigger id="forecast-method" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Méthode de prévision">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="moving_average">Moyenne mobile</SelectItem>
-                    <SelectItem value="seasonality">Saisonnalité</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 flex items-end">
-                <Button
-                  onClick={handleGenerate}
-                  disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all'}
-                  className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
-                >
-                {generateForecasts.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Génération...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Générer
-                  </>
-                )}
-                </Button>
-              </div>
+              {generationMode === 'single' ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="forecast-date">Date de prévision *</Label>
+                    <Input
+                      id="forecast-date"
+                      type="date"
+                      value={forecastDate}
+                      onChange={(e) => setForecastDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="bg-muted/50 dark:bg-gray-900 border-border"
+                      aria-label="Date de prévision"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="forecast-method">Méthode</Label>
+                    <Select value={selectedMethod} onValueChange={setSelectedMethod}>
+                      <SelectTrigger id="forecast-method" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Méthode de prévision">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="moving_average">Moyenne mobile</SelectItem>
+                        <SelectItem value="seasonality">Saisonnalité</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 flex items-end">
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !forecastDate}
+                      className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+                    >
+                      {generateForecasts.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Génération...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Générer
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="forecast-start-range">Date de début *</Label>
+                    <Input
+                      id="forecast-start-range"
+                      type="date"
+                      value={startDateRange}
+                      onChange={(e) => setStartDateRange(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="bg-muted/50 dark:bg-gray-900 border-border"
+                      aria-label="Date de début de la plage"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="forecast-end-range">Date de fin *</Label>
+                    <Input
+                      id="forecast-end-range"
+                      type="date"
+                      value={endDateRange}
+                      onChange={(e) => setEndDateRange(e.target.value)}
+                      min={startDateRange || new Date().toISOString().split('T')[0]}
+                      className="bg-muted/50 dark:bg-gray-900 border-border"
+                      aria-label="Date de fin de la plage"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="forecast-method-range">Méthode</Label>
+                    <Select value={selectedMethod} onValueChange={setSelectedMethod}>
+                      <SelectTrigger id="forecast-method-range" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Méthode de prévision">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="moving_average">Moyenne mobile</SelectItem>
+                        <SelectItem value="seasonality">Saisonnalité</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 flex items-end">
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !startDateRange || !endDateRange || new Date(startDateRange) > new Date(endDateRange)}
+                      className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+                    >
+                      {generateForecasts.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Génération...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Générer la plage
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

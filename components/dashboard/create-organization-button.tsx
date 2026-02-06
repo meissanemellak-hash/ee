@@ -99,7 +99,7 @@ export function CreateOrganizationButton() {
         <DialogHeader>
           <DialogTitle>Créer une organisation</DialogTitle>
           <DialogDescription>
-            Créez votre organisation pour commencer à utiliser AI Operations Manager.
+            Créez votre organisation pour commencer à utiliser IA Restaurant Manager.
             Vous pourrez gérer plusieurs restaurants et optimiser vos opérations.
           </DialogDescription>
         </DialogHeader>

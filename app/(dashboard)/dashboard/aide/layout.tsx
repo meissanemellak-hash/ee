@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: "Centre d'aide | AI Operations",
-  description: "Documentation et guide d'utilisation d'AI Operations",
+  title: "Centre d'aide | IA Restaurant Manager",
+  description: "Documentation et guide d'utilisation d'IA Restaurant Manager",
 }
 
 export default function AideLayout({

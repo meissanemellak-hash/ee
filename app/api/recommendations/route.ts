@@ -173,6 +173,10 @@ export async function POST(request: NextRequest) {
 
     const { restaurantId, type, forecastDate } = restBody
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[POST /api/recommendations] type=', type, 'restaurantId=', restaurantId)
+    }
+
     if (!restaurantId || !type) {
       return NextResponse.json(
         { error: 'restaurantId and type are required' },

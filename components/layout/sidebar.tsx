@@ -67,7 +67,7 @@ export function Sidebar() {
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md">
             <span className="text-white font-bold text-sm">AI</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">AI Operations</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">IA Restaurant Manager</h1>
         </div>
       </div>
       

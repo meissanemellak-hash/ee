@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { useRecommendations, useGenerateBOMRecommendations, useGenerateAllRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
+import { useRecommendations, useGenerateBOMRecommendations, useGenerateClassicRecommendations, useGenerateAllRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
@@ -50,6 +50,8 @@ export default function RecommendationsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showGainExplanationCard, setShowGainExplanationCard] = useState(false)
   const [gainExplanationRecId, setGainExplanationRecId] = useState<string | null>(null)
+  const [showStaffingExplanation, setShowStaffingExplanation] = useState(false)
+  const [generationType, setGenerationType] = useState<'bom' | 'staffing'>('bom')
 
   useEffect(() => {
     setSelectedRestaurant(urlRestaurant || 'all')
@@ -67,6 +69,7 @@ export default function RecommendationsPage() {
   })
 
   const generateRecommendations = useGenerateBOMRecommendations()
+  const generateClassicRecommendations = useGenerateClassicRecommendations()
   const generateAllRecommendations = useGenerateAllRecommendations()
   const updateStatus = useUpdateRecommendationStatus()
 
@@ -104,12 +107,19 @@ export default function RecommendationsPage() {
 
   const handleGenerate = (restaurantId?: string) => {
     if (!restaurantId || restaurantId === 'all') return
-    
-    generateRecommendations.mutate({
-      restaurantId,
-      shrinkPct: 0.1,
-      days: 7,
-    })
+
+    if (generationType === 'staffing') {
+      generateClassicRecommendations.mutate({
+        restaurantId,
+        type: 'STAFFING',
+      })
+    } else {
+      generateRecommendations.mutate({
+        restaurantId,
+        shrinkPct: 0.1,
+        days: 7,
+      })
+    }
   }
 
   const handleUpdateStatus = (id: string, status: string) => {
@@ -368,11 +378,41 @@ export default function RecommendationsPage() {
               Générer de nouvelles recommandations
             </CardTitle>
             <CardDescription className="mt-1">
-              Créez des recommandations BOM pour un restaurant ou pour tous les restaurants
+              Créez des recommandations (commandes ou effectifs) pour un restaurant ou pour tous les restaurants
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {showStaffingExplanation && (
+              <p className="text-xs text-muted-foreground mb-3 p-2 rounded-md bg-muted/60 border border-border">
+                Effectifs (staffing) : nombre de personnes recommandées par créneau horaire selon les ventes prévues. Règle utilisée : 1 personne pour 15 ventes par heure, minimum 2 par créneau. Aide à planifier les équipes.
+              </p>
+            )}
             <div className="flex gap-4 flex-wrap items-end">
+              <div className="min-w-[200px] space-y-2">
+                <Label htmlFor="rec-gen-type" className="inline-flex items-center gap-1.5">
+                  Type de génération
+                  <button
+                    type="button"
+                    onClick={() => setShowStaffingExplanation((v) => !v)}
+                    className="inline-flex text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded focus:outline-none"
+                    aria-label="Explication sur les types de recommandations (commandes / effectifs)"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5" />
+                  </button>
+                </Label>
+                <Select
+                  value={generationType}
+                  onValueChange={(v) => setGenerationType(v as 'bom' | 'staffing')}
+                >
+                  <SelectTrigger id="rec-gen-type" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Type de génération">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bom">Commandes (BOM)</SelectItem>
+                    <SelectItem value="staffing">Effectifs (Staffing)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex-1 min-w-[200px] space-y-2">
                 <Label htmlFor="rec-gen-restaurant">Restaurant</Label>
                 <Select
@@ -393,10 +433,10 @@ export default function RecommendationsPage() {
               </div>
               <Button
                 onClick={() => handleGenerate(selectedRestaurant !== 'all' ? selectedRestaurant : undefined)}
-                disabled={generateRecommendations.isPending || selectedRestaurant === 'all'}
+                disabled={(generationType === 'bom' ? generateRecommendations.isPending : generateClassicRecommendations.isPending) || selectedRestaurant === 'all'}
                 className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 shrink-0"
               >
-                {generateRecommendations.isPending ? (
+                {(generationType === 'bom' ? generateRecommendations.isPending : generateClassicRecommendations.isPending) ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Génération...
@@ -409,8 +449,8 @@ export default function RecommendationsPage() {
                 )}
               </Button>
               <Button
-                onClick={() => generateAllRecommendations.mutate({})}
-                disabled={generateAllRecommendations.isPending || generateRecommendations.isPending || restaurants.length === 0}
+                onClick={() => generateAllRecommendations.mutate(generationType === 'staffing' ? { type: 'STAFFING' } : {})}
+                disabled={generateAllRecommendations.isPending || (generationType === 'bom' ? generateRecommendations.isPending : generateClassicRecommendations.isPending) || restaurants.length === 0}
                 variant="outline"
                 className="shrink-0 border-teal-600 text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-900/20"
               >
@@ -494,7 +534,13 @@ export default function RecommendationsPage() {
                             : 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800'
                         }`}
                       >
-                        {recommendation.priority}
+                        {recommendation.priority === 'high'
+                          ? 'Priorité haute'
+                          : recommendation.priority === 'medium'
+                          ? 'Priorité moyenne'
+                          : recommendation.priority === 'low'
+                          ? 'Priorité basse'
+                          : `Priorité ${recommendation.priority}`}
                       </span>
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
@@ -666,10 +712,34 @@ export default function RecommendationsPage() {
                   )}
 
                   {recommendation.type === 'STAFFING' && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Données de staffing: {JSON.stringify(details, null, 2)}
-                      </p>
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-foreground">Effectifs recommandés par créneau</h4>
+                      {Array.isArray(details) ? (
+                        <div className="rounded-xl border border-border overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
+                                <th className="text-left p-3 font-medium">Créneau</th>
+                                <th className="text-left p-3 font-medium">Ventes prévues</th>
+                                <th className="text-left p-3 font-medium">Effectif recommandé</th>
+                                <th className="text-left p-3 font-medium hidden sm:table-cell">Raison</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(details as { date?: string; timeSlot?: string; expectedSales?: number; recommendedStaff?: number; reason?: string }[]).map((row, i) => (
+                                <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30">
+                                  <td className="p-3 font-medium">{row.timeSlot ?? '—'}</td>
+                                  <td className="p-3">{row.expectedSales ?? '—'}</td>
+                                  <td className="p-3 font-medium">{row.recommendedStaff ?? '—'}</td>
+                                  <td className="p-3 text-muted-foreground hidden sm:table-cell min-w-[200px] max-w-md whitespace-normal break-words align-top" title={row.reason}>{row.reason ?? '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Données de staffing: {JSON.stringify(details, null, 2)}</p>
+                      )}
                     </div>
                   )}
                 </CardContent>

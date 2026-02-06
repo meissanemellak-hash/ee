@@ -141,22 +141,76 @@ export function useGenerateBOMRecommendations() {
   })
 }
 
+export function useGenerateClassicRecommendations() {
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (data: {
+      restaurantId: string
+      type: 'ORDER' | 'STAFFING'
+      forecastDate?: string
+    }) => {
+      if (!organization?.id) throw new Error('No organization selected')
+      const response = await fetch('/api/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          clerkOrgId: organization.id,
+        }),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || error.details || 'Échec de la génération')
+      }
+      const result = await response.json()
+      return result as { success: boolean; recommendations: unknown[] }
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
+      const count = result.recommendations?.length ?? 0
+      if (count === 0) {
+        toast({
+          title: 'Aucune recommandation générée',
+          description: 'Pas assez de données (ventes par créneau horaire pour l’effectif, ou stocks suffisants pour les commandes).',
+        })
+      } else {
+        toast({
+          title: 'Recommandations générées',
+          description: `${count} recommandation(s) créée(s).`,
+        })
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
 export function useGenerateAllRecommendations() {
   const queryClient = useQueryClient()
   const { organization } = useOrganization()
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: async (params?: { shrinkPct?: number; days?: number }) => {
+    mutationFn: async (params?: { shrinkPct?: number; days?: number; type?: 'ORDER' | 'STAFFING' }) => {
       if (!organization?.id) throw new Error('No organization selected')
+      const body: Record<string, unknown> = {
+        clerkOrgId: organization.id,
+        shrinkPct: params?.shrinkPct ?? 0.1,
+        days: params?.days ?? 7,
+      }
+      if (params?.type) body.type = params.type
       const response = await fetch('/api/recommendations/generate-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clerkOrgId: organization.id,
-          shrinkPct: params?.shrinkPct ?? 0.1,
-          days: params?.days ?? 7,
-        }),
+        body: JSON.stringify(body),
       })
       if (!response.ok) {
         const error = await response.json()

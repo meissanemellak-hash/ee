@@ -4,7 +4,7 @@ test.describe('Page d\'accueil', () => {
   test('affiche le header et le lien Se connecter', async ({ page }) => {
     await page.goto('/', { waitUntil: 'load', timeout: 30_000 })
     await page.getByRole('link', { name: /Se connecter/i }).first().waitFor({ state: 'visible', timeout: 15_000 })
-    await expect(page.getByText('AI Operations').first()).toBeVisible()
+    await expect(page.getByText('IA Restaurant Manager').first()).toBeVisible()
   })
 
   test('le lien Se connecter mène vers /sign-in', async ({ page }) => {

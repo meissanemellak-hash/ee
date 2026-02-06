@@ -42,9 +42,9 @@ const typeLabels: Record<string, string> = {
 }
 
 const priorityLabels: Record<string, string> = {
-  low: 'Faible',
-  medium: 'Moyenne',
-  high: 'Élevée',
+  low: 'Priorité basse',
+  medium: 'Priorité moyenne',
+  high: 'Priorité haute',
 }
 
 const statusLabels: Record<string, string> = {
@@ -727,7 +727,7 @@ export default function ReportsPage() {
                                     : 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800'
                                 }`}
                               >
-                                {rec.priority}
+                                {priorityLabels[rec.priority] || `Priorité ${rec.priority}`}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-center">

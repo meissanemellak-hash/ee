@@ -7,7 +7,7 @@ import { getAccountLockedEmailHtml } from '@/lib/services/email-templates'
 
 const webhookSecret = process.env.CLERK_WEBHOOK_SECRET
 
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'AI Operations'
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'IA Restaurant Manager'
 const EMAIL_FROM = process.env.EMAIL_FROM ?? 'noreply@resend.dev'
 
 export async function POST(request: NextRequest) {

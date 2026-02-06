@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
 export const metadata = {
-  title: 'Choisir un créneau | AI Operations',
-  description: 'Choisissez un créneau pour votre démo AI Operations.',
+  title: 'Choisir un créneau | IA Restaurant Manager',
+  description: 'Choisissez un créneau pour votre démo IA Restaurant Manager.',
 }
 
 const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL || 'https://calendly.com'
@@ -28,7 +28,7 @@ export default async function DemoMerciPage({ searchParams }: Props) {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="font-semibold text-foreground hover:opacity-90">
-              AI Operations
+              IA Restaurant Manager
             </Link>
             <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
               Retour à l&apos;accueil

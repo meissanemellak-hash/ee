@@ -81,7 +81,7 @@ export function MobileSidebar() {
           />
           <div className="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r lg:hidden">
             <div className="flex h-16 items-center border-b px-6">
-              <h2 className="text-xl font-bold text-primary">AI Operations</h2>
+              <h2 className="text-xl font-bold text-primary">IA Restaurant Manager</h2>
               <Button
                 variant="ghost"
                 size="icon"

@@ -1,7 +1,7 @@
 import { CheckCircle2 } from 'lucide-react'
 
 export const metadata = {
-  title: 'Paiement reçu | AI Operations',
+  title: 'Paiement reçu | IA Restaurant Manager',
   description: 'Votre paiement a bien été enregistré.',
 }
 

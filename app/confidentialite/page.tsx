@@ -1,8 +1,8 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Politique de confidentialité | AI Operations',
-  description: 'Politique de confidentialité et protection des données personnelles - AI Operations.',
+  title: 'Politique de confidentialité | IA Restaurant Manager',
+  description: 'Politique de confidentialité et protection des données personnelles - IA Restaurant Manager.',
 }
 
 export default function ConfidentialitePage() {
@@ -12,7 +12,7 @@ export default function ConfidentialitePage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="font-semibold text-foreground hover:opacity-90">
-              AI Operations
+              IA Restaurant Manager
             </Link>
             <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
               Retour à l&apos;accueil
@@ -29,7 +29,7 @@ export default function ConfidentialitePage() {
 
         <div className="mt-8 prose prose-neutral dark:prose-invert max-w-none text-muted-foreground text-sm space-y-8">
           <p className="text-muted-foreground">
-            La présente politique de confidentialité décrit la manière dont <strong>AI Operations</strong> collecte, utilise et protège les données personnelles des utilisateurs de son site et de sa plateforme SaaS de pilotage multi-restaurants. Elle s&apos;inscrit dans le cadre du Règlement général sur la protection des données (RGPD) et de la loi française « Informatique et Libertés ».
+            La présente politique de confidentialité décrit la manière dont <strong>IA Restaurant Manager</strong> collecte, utilise et protège les données personnelles des utilisateurs de son site et de sa plateforme SaaS de pilotage multi-restaurants. Elle s&apos;inscrit dans le cadre du Règlement général sur la protection des données (RGPD) et de la loi française « Informatique et Libertés ».
           </p>
 
           <section>
@@ -55,7 +55,7 @@ export default function ConfidentialitePage() {
             <ul className="list-disc pl-6 mt-2 space-y-1">
               <li><strong>Site et formulaire de demande de démo</strong> : nom, prénom, adresse email, société/groupe, nombre de restaurants, difficultés et priorités indiquées, message. Ces données permettent de traiter votre demande et de vous recontacter.</li>
               <li><strong>Compte et plateforme</strong> : identifiants (nom, prénom, email), mot de passe (stocké de manière sécurisée, non lisible), nom de l&apos;organisation, nombre d&apos;établissements, rôles des utilisateurs.</li>
-              <li><strong>Données d&apos;activité</strong> : données relatives aux restaurants, ventes, inventaire, alertes, prévisions et rapports que vous saisissez ou générez dans la plateforme. En tant que client, vous êtes responsable du traitement de ces données pour vos propres finalités ; AI Operations agit en tant que sous-traitant pour la fourniture du service.</li>
+              <li><strong>Données d&apos;activité</strong> : données relatives aux restaurants, ventes, inventaire, alertes, prévisions et rapports que vous saisissez ou générez dans la plateforme. En tant que client, vous êtes responsable du traitement de ces données pour vos propres finalités ; IA Restaurant Manager agit en tant que sous-traitant pour la fourniture du service.</li>
               <li><strong>Données techniques</strong> : adresse IP, type de navigateur, logs d&apos;accès et d&apos;utilisation, dans le cadre du fonctionnement, de la sécurité et de la maintenance du service.</li>
             </ul>
           </section>

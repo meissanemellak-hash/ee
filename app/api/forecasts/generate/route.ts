@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { restaurantId, forecastDate, method, clerkOrgId } = body
+    const { restaurantId, forecastDate, startDate, endDate, method, clerkOrgId } = body
     const orgIdToUse = authOrgId || clerkOrgId
 
     console.log('[POST /api/forecasts/generate] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
@@ -76,9 +76,22 @@ export async function POST(request: NextRequest) {
     const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'forecasts:generate')
     if (forbidden) return forbidden
 
-    if (!restaurantId || !forecastDate) {
+    const useRange = startDate != null && endDate != null && startDate !== '' && endDate !== ''
+    if (!restaurantId) {
       return NextResponse.json(
-        { error: 'restaurantId and forecastDate are required' },
+        { error: 'restaurantId is required' },
+        { status: 400 }
+      )
+    }
+    if (!useRange && !forecastDate) {
+      return NextResponse.json(
+        { error: 'Either forecastDate or both startDate and endDate are required' },
+        { status: 400 }
+      )
+    }
+    if (useRange && (!startDate || !endDate)) {
+      return NextResponse.json(
+        { error: 'When using a range, both startDate and endDate are required' },
         { status: 400 }
       )
     }
@@ -98,12 +111,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const date = new Date(forecastDate)
-    const forecasts = await generateForecastsForRestaurant(
-      restaurantId,
-      date,
-      method
-    )
+    const methodValue = method || 'moving_average'
+    let forecasts: Awaited<ReturnType<typeof generateForecastsForRestaurant>>
+
+    if (useRange) {
+      const start = new Date(startDate as string)
+      const end = new Date(endDate as string)
+      start.setHours(0, 0, 0, 0)
+      end.setHours(23, 59, 59, 999)
+      if (start.getTime() > end.getTime()) {
+        return NextResponse.json(
+          { error: 'startDate must be before or equal to endDate' },
+          { status: 400 }
+        )
+      }
+      const maxDays = 31
+      const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1
+      if (daysDiff > maxDays) {
+        return NextResponse.json(
+          { error: `La plage ne peut pas dépasser ${maxDays} jours` },
+          { status: 400 }
+        )
+      }
+      const allForecasts: Awaited<ReturnType<typeof generateForecastsForRestaurant>> = []
+      for (let d = new Date(start); d.getTime() <= end.getTime(); d.setDate(d.getDate() + 1)) {
+        const dayForecasts = await generateForecastsForRestaurant(
+          restaurantId,
+          new Date(d),
+          methodValue
+        )
+        allForecasts.push(...dayForecasts)
+      }
+      forecasts = allForecasts
+    } else {
+      const date = new Date(forecastDate as string)
+      forecasts = await generateForecastsForRestaurant(
+        restaurantId,
+        date,
+        methodValue
+      )
+    }
 
     return NextResponse.json({ success: true, forecasts })
   } catch (error) {

@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { generateBOMOrderRecommendations } from '@/lib/services/recommender-bom'
+import { generateStaffingRecommendations } from '@/lib/services/recommender'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const { clerkOrgId, shrinkPct = 0.1, days = 7 } = body
+    const { clerkOrgId, shrinkPct = 0.1, days = 7, type } = body
+    const isStaffing = type === 'STAFFING'
     const orgIdToUse = authOrgId || clerkOrgId
 
     let organization: any = null
@@ -91,38 +93,57 @@ export async function POST(request: NextRequest) {
     const byRestaurant: { restaurantId: string; restaurantName: string; count: number }[] = []
     const errors: string[] = []
 
-    for (const restaurant of restaurants) {
-      try {
-        const result = await generateBOMOrderRecommendations(
-          restaurant.id,
-          typeof shrinkPct === 'number' ? shrinkPct : 0.1,
-          typeof days === 'number' ? days : 7
-        )
-
-        if (result.recommendations.length > 0) {
-          const dataToSave = {
-            ...result.details,
-            estimatedSavings: result.estimatedSavings,
-          }
-          await prisma.recommendation.create({
-            data: {
+    if (isStaffing) {
+      for (const restaurant of restaurants) {
+        try {
+          const result = await generateStaffingRecommendations(restaurant.id, new Date())
+          if (result.length > 0) {
+            byRestaurant.push({
               restaurantId: restaurant.id,
-              type: 'ORDER',
-              data: dataToSave as any,
-              priority: 'medium',
-              status: 'pending',
-            },
-          })
-          byRestaurant.push({
-            restaurantId: restaurant.id,
-            restaurantName: restaurant.name,
-            count: result.recommendations.length,
-          })
+              restaurantName: restaurant.name,
+              count: 1,
+            })
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Erreur inconnue'
+          errors.push(`${restaurant.name}: ${msg}`)
+          console.error(`[generate-all STAFFING] ${restaurant.name}:`, err)
         }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Erreur inconnue'
-        errors.push(`${restaurant.name}: ${msg}`)
-        console.error(`[generate-all] ${restaurant.name}:`, err)
+      }
+    } else {
+      for (const restaurant of restaurants) {
+        try {
+          const result = await generateBOMOrderRecommendations(
+            restaurant.id,
+            typeof shrinkPct === 'number' ? shrinkPct : 0.1,
+            typeof days === 'number' ? days : 7
+          )
+
+          if (result.recommendations.length > 0) {
+            const dataToSave = {
+              ...result.details,
+              estimatedSavings: result.estimatedSavings,
+            }
+            await prisma.recommendation.create({
+              data: {
+                restaurantId: restaurant.id,
+                type: 'ORDER',
+                data: dataToSave as any,
+                priority: 'medium',
+                status: 'pending',
+              },
+            })
+            byRestaurant.push({
+              restaurantId: restaurant.id,
+              restaurantName: restaurant.name,
+              count: result.recommendations.length,
+            })
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Erreur inconnue'
+          errors.push(`${restaurant.name}: ${msg}`)
+          console.error(`[generate-all] ${restaurant.name}:`, err)
+        }
       }
     }
 

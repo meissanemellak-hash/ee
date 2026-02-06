@@ -21,7 +21,7 @@ const localization = {
 }
 
 export const metadata: Metadata = {
-  title: 'AI Operations Manager - Chaînes de Fast-Casual',
+  title: 'IA Restaurant Manager - Chaînes de Fast-Casual',
   description: 'Optimisez les opérations de votre chaîne de restaurants',
   icons: {
     icon: '/favicon.ico',

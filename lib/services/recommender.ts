@@ -170,10 +170,10 @@ export async function generateStaffingRecommendations(
     const avgSales = slotSales.reduce((sum, s) => sum + s.quantity, 0) / slotSales.length
     const avgRevenue = slotSales.reduce((sum, s) => sum + s.amount, 0) / slotSales.length
 
-    // Règle simple: 1 personne pour 20 ventes/heure
+    // Règle simple: 1 personne pour 15 ventes/heure
     // Ajuster selon la durée de la tranche
     const hoursInSlot = slot.end - slot.start
-    const recommendedStaff = Math.ceil((avgSales / hoursInSlot) / 20)
+    const recommendedStaff = Math.ceil((avgSales / hoursInSlot) / 15)
 
     // Minimum 2 personnes
     const finalRecommendedStaff = Math.max(2, recommendedStaff)
