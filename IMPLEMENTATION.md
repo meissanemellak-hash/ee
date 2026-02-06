@@ -1,4 +1,4 @@
-# État d'implémentation - AI Operations Manager
+# État d'implémentation - IA Restaurant Manager
 
 ## ✅ Fonctionnalités implémentées
 

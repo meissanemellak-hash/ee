@@ -1,4 +1,4 @@
-# AI Operations Manager pour Chaînes de Fast-Casual
+# IA Restaurant Manager pour Chaînes de Fast-Casual
 
 SaaS B2B pour optimiser les opérations des chaînes de restaurants multi-sites.
 

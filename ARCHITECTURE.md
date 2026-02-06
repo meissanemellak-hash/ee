@@ -1,4 +1,4 @@
-# Architecture - AI Operations Manager pour Chaînes de Fast-Casual
+# Architecture - IA Restaurant Manager pour Chaînes de Fast-Casual
 
 ## Vue d'ensemble
 

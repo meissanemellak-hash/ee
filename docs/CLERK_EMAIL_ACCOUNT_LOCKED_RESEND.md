@@ -15,7 +15,7 @@ Ce document décrit la prise en charge du template Clerk **Compte verrouillé** 
 
 3. **Variables d’environnement (optionnel)**  
    - `EMAIL_FROM` : adresse d’envoi (ex. `noreply@ton-domaine.com`). Sinon Resend utilise la valeur par défaut.  
-   - `NEXT_PUBLIC_APP_NAME` : nom affiché dans le pied de page du mail (défaut : « AI Operations »).
+   - `NEXT_PUBLIC_APP_NAME` : nom affiché dans le pied de page du mail (défaut : « IA Restaurant Manager »).
 
 ## Comportement
 

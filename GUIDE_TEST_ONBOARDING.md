@@ -47,7 +47,7 @@ Puis connectez-vous avec ce compte en ayant **cette organisation** sélectionné
 **À valider :**
 
 - [ ] La redirection vers `/dashboard/onboarding` se fait sans erreur.
-- [ ] La page affiche le **wizard** (carte avec « Bienvenue sur AI Operations »).
+- [ ] La page affiche le **wizard** (carte avec « Bienvenue sur IA Restaurant Manager »).
 - [ ] L’indicateur d’étapes en haut montre le **premier point** actif (premier step).
 
 ---
@@ -57,7 +57,7 @@ Puis connectez-vous avec ce compte en ayant **cette organisation** sélectionné
 ### Étape 3.1 – Écran « Bienvenue »
 
 1. Vous devez voir :
-   - Le titre **« Bienvenue sur AI Operations »**.
+   - Le titre **« Bienvenue sur IA Restaurant Manager »**.
    - Un court texte sur la plateforme (ventes, stocks, achats, recommandations).
    - Un bouton **« Commencer »** avec une flèche.
 2. Cliquez sur **« Commencer »**.

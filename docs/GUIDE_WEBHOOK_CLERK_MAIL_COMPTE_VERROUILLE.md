@@ -58,7 +58,7 @@ Dans `.env.local` (dev) ou les variables d’environnement de l’hébergeur (pr
 | Variable | Exemple | Rôle |
 |----------|---------|------|
 | `EMAIL_FROM` | `noreply@ton-domaine.com` | Adresse d’envoi du mail (en prod, une fois le domaine vérifié dans Resend). |
-| `NEXT_PUBLIC_APP_NAME` | `AI Operations` | Nom affiché dans le pied de page du mail. |
+| `NEXT_PUBLIC_APP_NAME` | `IA Restaurant Manager` | Nom affiché dans le pied de page du mail. |
 
 Sans `EMAIL_FROM`, Resend utilise sa valeur par défaut (ex. `onboarding@resend.dev`).
 

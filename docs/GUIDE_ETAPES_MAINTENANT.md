@@ -19,7 +19,7 @@ Ce guide te permet de configurer Stripe, tester l’invitation et le paiement, p
 ### Étape 1.2 – Créer le produit et le prix « Plan Pro »
 
 1. Dans Stripe : **Product catalog** → **Products** → **Add product**.
-2. **Name** : `Plan Pro` (ou « AI Operations Pro »).
+2. **Name** : `Plan Pro` (ou « IA Restaurant Manager Pro »).
 3. **Description** (optionnel) : « Abonnement mensuel – Tableau de bord, ventes, inventaire, alertes. »
 4. Dans la section **Pricing** :
    - **Pricing model** : Standard pricing.
@@ -165,7 +165,7 @@ Si tu es redirigé encore vers `/pricing`, vérifie que :
 
 ### Étape 3.1 – Créer un événement Calendly
 
-1. Va sur [https://calendly.com](https://calendly.com) et crée un événement (ex. « Démo AI Operations », 30 min).
+1. Va sur [https://calendly.com](https://calendly.com) et crée un événement (ex. « Démo IA Restaurant Manager », 30 min).
 2. Copie l’URL de l’événement (ex. `https://calendly.com/ton-username/demo`).
 
 ---

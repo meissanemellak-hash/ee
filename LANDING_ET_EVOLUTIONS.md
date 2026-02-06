@@ -17,7 +17,7 @@ Document de référence de tout ce qui a été mis en place sur la landing, les 
 
 ### Section « Aperçu du produit »
 - Sous-titre : *« Vue d’ensemble de vos économies, alertes et recommandations comme dans votre tableau de bord. »*
-- Barre d’URL du mockup : « Tableau de bord · AI Operations » (plus de `app.example.com`).
+- Barre d’URL du mockup : « Tableau de bord · IA Restaurant Manager » (plus de `app.example.com`).
 - Contenu aligné sur le vrai dashboard :
   - Carte verte **« Économies générées ce mois-ci »** : 3 478 € (fond teal, texte blanc).
   - **Recommandations appliquées** : 51, avec « 3 478 € économisés » (icône TrendingUp) et « vs. 2 890 € période précédente ».

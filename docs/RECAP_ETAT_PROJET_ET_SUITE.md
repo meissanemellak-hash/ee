@@ -1,6 +1,6 @@
 # Récapitulatif – État du projet et suite
 
-Document de référence : état actuel du SaaS AI Operations et prochaines étapes.
+Document de référence : état actuel du SaaS IA Restaurant Manager et prochaines étapes.
 
 ---
 

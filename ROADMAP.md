@@ -1,4 +1,4 @@
-# Roadmap - AI Operations Manager (5 000€/mois)
+# Roadmap - IA Restaurant Manager (5 000€/mois)
 
 ## 🎯 Objectif : MVP prêt pour vente premium en 4-6 semaines
 
