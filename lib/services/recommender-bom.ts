@@ -37,6 +37,9 @@ interface RecommendationDetails {
     shrinkPct: number
     forecastDays: number
   }
+  /** Coût total estimé de la commande (somme des coûts ingrédients) */
+  estimatedOrderCost?: number
+  /** Gain estimé lié aux ruptures et au gaspillage évités (indicateur) */
   estimatedSavings?: number
   reason?: string
 }
@@ -366,7 +369,8 @@ export async function generateBOMOrderRecommendations(
     }
   }
 
-  // 5. Calculer les économies estimées
+  // 5. Calculer le coût estimé de la commande (somme des coûts ingrédients) et le gain estimé (indicateur)
+  const estimatedOrderCost = recommendations.reduce((sum, r) => sum + (r.estimatedCost || 0), 0)
   const estimatedSavings = calculateEstimatedSavings(
     recommendations,
     inventory,
@@ -386,7 +390,8 @@ export async function generateBOMOrderRecommendations(
       shrinkPct,
       forecastDays: days,
     },
-    estimatedSavings, // Inclure les économies estimées dans les détails
+    estimatedOrderCost, // Coût total de la commande recommandée (€)
+    estimatedSavings,   // Gain estimé : ruptures/gaspillage évités (indicateur)
   }
 
   return {
@@ -397,7 +402,7 @@ export async function generateBOMOrderRecommendations(
 }
 
 /**
- * Calcule les économies estimées (gaspillage évité + ruptures évitées)
+ * Calcule le gain estimé (gaspillage évité + ruptures évitées) – indicateur, pas le coût de la commande
  */
 function calculateEstimatedSavings(
   recommendations: OrderRecommendation[],

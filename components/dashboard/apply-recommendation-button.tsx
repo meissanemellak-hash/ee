@@ -34,7 +34,7 @@ export function ApplyRecommendationButton({ recommendationId }: ApplyRecommendat
       setApplied(true)
       toast({
         title: 'Recommandation appliquée',
-        description: 'La recommandation a été acceptée et les économies seront comptabilisées.',
+        description: 'La recommandation a été acceptée et l\'inventaire a été mis à jour (réception de commande).',
       })
 
       // Rafraîchir la page pour mettre à jour les métriques

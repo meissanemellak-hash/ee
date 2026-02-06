@@ -38,6 +38,9 @@ export interface RecommendationDetails {
     shrinkPct: number
     forecastDays: number
   }
+  /** Coût total estimé de la commande (€) */
+  estimatedOrderCost?: number
+  /** Gain estimé (ruptures/gaspillage évités, indicateur) */
   estimatedSavings?: number
 }
 
@@ -124,7 +127,67 @@ export function useGenerateBOMRecommendations() {
       } else {
         toast({
           title: 'Recommandations générées',
-          description: `${recommendationsCount} recommandation${recommendationsCount > 1 ? 's' : ''} créée${recommendationsCount > 1 ? 's' : ''}. Économies estimées: ${formatCurrency(result.estimatedSavings || 0)}`,
+          description: `${recommendationsCount} recommandation${recommendationsCount > 1 ? 's' : ''} créée${recommendationsCount > 1 ? 's' : ''}. Coût estimé: ${formatCurrency((result as any).estimatedOrderCost ?? result.details?.estimatedOrderCost ?? 0)} • Gain estimé: ${formatCurrency(result.estimatedSavings || 0)}`,
+        })
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useGenerateAllRecommendations() {
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (params?: { shrinkPct?: number; days?: number }) => {
+      if (!organization?.id) throw new Error('No organization selected')
+      const response = await fetch('/api/recommendations/generate-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clerkOrgId: organization.id,
+          shrinkPct: params?.shrinkPct ?? 0.1,
+          days: params?.days ?? 7,
+        }),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || error.details || 'Échec de la génération')
+      }
+      return response.json() as Promise<{
+        success: boolean
+        generated: number
+        byRestaurant: { restaurantId: string; restaurantName: string; count: number }[]
+        errors?: string[]
+      }>
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
+      const total = result.generated
+      if (total === 0 && (!result.byRestaurant || result.byRestaurant.length === 0)) {
+        toast({
+          title: 'Aucune recommandation générée',
+          description: result.message || 'Aucun restaurant ou stocks suffisants.',
+        })
+      } else {
+        toast({
+          title: 'Génération terminée',
+          description: `${total} recommandation${total !== 1 ? 's' : ''} créée${total !== 1 ? 's' : ''} pour ${result.byRestaurant?.length ?? 0} restaurant(s).`,
+        })
+      }
+      if (result.errors?.length) {
+        toast({
+          title: 'Avertissements',
+          description: result.errors.slice(0, 2).join(' • '),
+          variant: 'destructive',
         })
       }
     },
@@ -166,7 +229,7 @@ export function useUpdateRecommendationStatus() {
       toast({
         title: 'Recommandation mise à jour',
         description: variables.status === 'accepted' 
-          ? 'Recommandation acceptée. Redirection vers le dashboard...'
+          ? 'Recommandation acceptée. L’inventaire a été mis à jour avec les quantités commandées.'
           : 'Statut changé en rejeté',
       })
     },

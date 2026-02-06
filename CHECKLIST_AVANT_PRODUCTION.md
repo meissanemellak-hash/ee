@@ -49,6 +49,16 @@
 
 ---
 
+## Cron Vercel – Recommandations (génération automatique)
+
+Le cron génère des recommandations BOM pour **tous les restaurants** de toutes les organisations (ex. tous les jours à 6h UTC). Il appelle `GET /api/cron/recommendations`, sécurisé par un secret.
+
+- [ ] **CRON_SECRET en production** : dans Vercel (Project → Settings → Environment Variables), ajouter la variable **`CRON_SECRET`** avec une valeur forte (ex. `openssl rand -hex 32`). **Important** : tant que `CRON_SECRET` est défini, Vercel envoie automatiquement `Authorization: Bearer <CRON_SECRET>` lors de l’appel du cron ; la route vérifie ce secret et refuse les appels non autorisés.
+- [ ] **Planification** : le fichier `vercel.json` définit déjà un cron `0 6 * * *` (tous les jours à 6h UTC) sur `/api/cron/recommendations`. Après déploiement, le cron apparaît dans Vercel (Project → Settings → Crons) et s’exécute automatiquement.
+- [ ] **Test (optionnel)** : après le premier déploiement, vérifier dans les logs Vercel qu’une exécution du cron a bien eu lieu, ou appeler manuellement l’URL avec le secret : `curl -H "Authorization: Bearer VOTRE_CRON_SECRET" https://ton-domaine.com/api/cron/recommendations` et contrôler la réponse JSON (success, recommendationsCreated, etc.).
+
+---
+
 ## Documentation (Aide utilisateur)
 
 - [ ] Créer le workspace Notion avec les articles essentiels

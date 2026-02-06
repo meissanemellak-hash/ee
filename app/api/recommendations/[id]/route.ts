@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { runAllAlerts } from '@/lib/services/alerts'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,9 +101,78 @@ export async function PATCH(
       )
     }
 
-    const updated = await prisma.recommendation.update({
+    const restaurantId = recommendation.restaurantId
+
+    // Quand on accepte une recommandation de type ORDER, appliquer la réception de commande (mise à jour inventaire)
+    if (status === 'accepted' && recommendation.type === 'ORDER') {
+      const data = recommendation.data as any
+      const items: { ingredientId: string; quantity: number }[] = []
+
+      if (Array.isArray(data)) {
+        for (const r of data) {
+          if (r?.ingredientId && (r.recommendedQuantity ?? 0) > 0) {
+            items.push({ ingredientId: r.ingredientId, quantity: Number(r.recommendedQuantity) })
+          }
+        }
+      } else if (data?.ingredients && Array.isArray(data.ingredients)) {
+        for (const ing of data.ingredients) {
+          if (ing?.ingredientId && (ing.quantityToOrder ?? 0) > 0) {
+            items.push({ ingredientId: ing.ingredientId, quantity: Number(ing.quantityToOrder) })
+          }
+        }
+      }
+
+      await prisma.$transaction(async (tx) => {
+        for (const { ingredientId, quantity } of items) {
+          const inv = await tx.inventory.findUnique({
+            where: {
+              restaurantId_ingredientId: { restaurantId, ingredientId },
+            },
+          })
+          if (inv) {
+            await tx.inventory.update({
+              where: { id: inv.id },
+              data: {
+                currentStock: { increment: quantity },
+                lastUpdated: new Date(),
+              },
+            })
+          } else {
+            const ingredient = await tx.ingredient.findUnique({ where: { id: ingredientId } })
+            if (ingredient) {
+              await tx.inventory.create({
+                data: {
+                  restaurantId,
+                  ingredientId,
+                  currentStock: quantity,
+                  minThreshold: 0,
+                  lastUpdated: new Date(),
+                },
+              })
+            }
+          }
+        }
+        await tx.recommendation.update({
+          where: { id: params.id },
+          data: { status },
+        })
+      })
+
+      try {
+        await runAllAlerts(restaurantId)
+      } catch (alertError) {
+        console.error('[PATCH /api/recommendations/[id]] runAllAlerts:', alertError)
+      }
+    } else {
+      await prisma.recommendation.update({
+        where: { id: params.id },
+        data: { status },
+      })
+    }
+
+    const updated = await prisma.recommendation.findUnique({
       where: { id: params.id },
-      data: { status },
+      include: { restaurant: true },
     })
 
     return NextResponse.json(updated)

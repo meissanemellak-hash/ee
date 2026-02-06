@@ -185,14 +185,14 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
       body: (
         <>
           <p>
-            Les recommandations sont des suggestions générées à partir de vos données (recettes, ventes, stocks, coûts) : optimisation des recettes, réduction du gaspillage, ajustement des quantités, etc.
+            Les recommandations sont des suggestions générées à partir de vos données (recettes, ventes, stocks, coûts) : commandes d&apos;ingrédients, staffing, etc. Chaque recommandation affiche le <strong className="text-teal-700 dark:text-teal-400 font-bold">coût estimé de la commande</strong> (montant à dépenser) et le <strong className="text-teal-700 dark:text-teal-400 font-bold">gain estimé</strong> (ruptures et gaspillage évités, indicateur).
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Consulter les recommandations</h3>
-          <p>Sur la page Recommandations, la liste affiche les suggestions avec type, description et gain estimé. Vous pouvez filtrer par type (recette, gaspillage, etc.) et par statut (en attente, acceptée, rejetée).</p>
+          <p>Sur la page Recommandations, la liste affiche les suggestions avec type, coût et gain estimés. Vous pouvez filtrer par restaurant, type et statut (en attente, acceptée, rejetée).</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Accepter ou rejeter</h3>
-          <p>Pour chaque recommandation vous pouvez l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">accepter</strong> (l&apos;application applique la modification proposée lorsque c&apos;est possible) ou la <strong className="text-teal-700 dark:text-teal-400 font-bold">rejeter</strong>. Les recommandations acceptées ou rejetées restent visibles dans l&apos;historique avec leur statut.</p>
-          <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Générer de nouvelles recommandations</h3>
-          <p>Selon les droits de votre rôle, vous pouvez lancer une génération de recommandations (par exemple à partir des recettes et des coûts). Les nouvelles suggestions apparaissent dans la liste avec le statut « En attente ».</p>
+          <p>Pour une recommandation de <strong className="text-teal-700 dark:text-teal-400 font-bold">commande (ORDER)</strong>, l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">accepter</strong> enregistre la réception : les quantités recommandées sont ajoutées à l&apos;inventaire du restaurant et les alertes sont recalculées. Vous n&apos;avez plus à saisir la réception à la main. Pour les autres types ou si vous ne souhaitez pas appliquer, vous pouvez <strong className="text-teal-700 dark:text-teal-400 font-bold">rejeter</strong>. Les recommandations acceptées ou rejetées restent visibles dans l&apos;historique.</p>
+          <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Générer des recommandations</h3>
+          <p>Vous pouvez générer des recommandations pour <strong className="text-teal-700 dark:text-teal-400 font-bold">un restaurant</strong> (sélectionnez-le puis « Générer (1 restaurant) ») ou pour <strong className="text-teal-700 dark:text-teal-400 font-bold">tous les restaurants</strong> en un clic (« Générer pour tous les restaurants »). La génération s&apos;appuie sur les prévisions de ventes et les recettes (BOM) ; les nouvelles suggestions apparaissent avec le statut « En attente ». Une <strong className="text-teal-700 dark:text-teal-400 font-bold">génération automatique</strong> peut être planifiée (ex. tous les jours à 6h) via le cron <code className="text-xs bg-muted px-1 rounded">/api/cron/recommendations</code> si la variable <code className="text-xs bg-muted px-1 rounded">CRON_SECRET</code> est configurée.</p>
         </>
       ),
     },

@@ -7,7 +7,7 @@ import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Loader2, Lightbulb, TrendingUp, Package, CheckCircle2, XCircle, RefreshCw, Filter } from 'lucide-react'
+import { Loader2, Lightbulb, TrendingUp, Package, CheckCircle2, XCircle, RefreshCw, Filter, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { useRecommendations, useGenerateBOMRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
+import { useRecommendations, useGenerateBOMRecommendations, useGenerateAllRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
@@ -48,6 +48,8 @@ export default function RecommendationsPage() {
   const [selectedType, setSelectedType] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('pending')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [showGainExplanationCard, setShowGainExplanationCard] = useState(false)
+  const [gainExplanationRecId, setGainExplanationRecId] = useState<string | null>(null)
 
   useEffect(() => {
     setSelectedRestaurant(urlRestaurant || 'all')
@@ -65,6 +67,7 @@ export default function RecommendationsPage() {
   })
 
   const generateRecommendations = useGenerateBOMRecommendations()
+  const generateAllRecommendations = useGenerateAllRecommendations()
   const updateStatus = useUpdateRecommendationStatus()
 
   const { data: roleData } = useUserRole()
@@ -74,25 +77,19 @@ export default function RecommendationsPage() {
   // Calculer les statistiques
   const safeRecommendations = Array.isArray(recommendations) ? recommendations : []
   
-  const calculateTotalSavings = () => {
+  const calculateTotalOrderCost = () => {
     const pendingRecs = safeRecommendations.filter((r) => r.status === 'pending')
-    
     return pendingRecs.reduce((total, rec) => {
       const data = rec.data as RecommendationDetails
-      
-      if (data?.estimatedSavings) {
-        return total + data.estimatedSavings
-      }
-      
-      if (data?.ingredients && Array.isArray(data.ingredients)) {
-        const estimatedSavings = data.ingredients.reduce((acc: number, ing: any) => {
-          const quantityToOrder = ing.quantityToOrder || 0
-          return acc + (quantityToOrder > 0 ? 100 : 0)
-        }, 0)
-        return total + estimatedSavings
-      }
-      
-      return total + 500
+      return total + (data?.estimatedOrderCost ?? 0)
+    }, 0)
+  }
+
+  const calculateTotalSavings = () => {
+    const pendingRecs = safeRecommendations.filter((r) => r.status === 'pending')
+    return pendingRecs.reduce((total, rec) => {
+      const data = rec.data as RecommendationDetails
+      return total + (data?.estimatedSavings ?? 0)
     }, 0)
   }
   
@@ -245,15 +242,42 @@ export default function RecommendationsPage() {
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Économies estimées
+                Coût estimé des commandes (en attente)
+              </CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {formatCurrency(calculateTotalOrderCost())}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Total des commandes recommandées</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                Gain estimé (en attente)
+                <button
+                  type="button"
+                  onClick={() => setShowGainExplanationCard((v) => !v)}
+                  className="inline-flex text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded focus:outline-none"
+                  aria-label="Afficher l’explication du gain estimé"
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                </button>
               </CardTitle>
               <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
+              {showGainExplanationCard && (
+                <p className="text-xs text-muted-foreground mb-2 p-2 rounded-md bg-muted/60 border border-border">
+                  Valeur estimée des ruptures de stock et du gaspillage évités en commandant à point. Indicateur de bénéfice indirect, pas un gain en caisse.
+                </p>
+              )}
               <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
                 {formatCurrency(calculateTotalSavings())}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Sur les recommandations en attente</p>
+              <p className="text-xs text-muted-foreground mt-2">Ruptures / gaspillage évités (indicateur)</p>
             </CardContent>
           </Card>
           <Card className="rounded-xl border shadow-sm bg-card">
@@ -344,7 +368,7 @@ export default function RecommendationsPage() {
               Générer de nouvelles recommandations
             </CardTitle>
             <CardDescription className="mt-1">
-              Créez des recommandations BOM pour un restaurant spécifique
+              Créez des recommandations BOM pour un restaurant ou pour tous les restaurants
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -380,7 +404,25 @@ export default function RecommendationsPage() {
                 ) : (
                   <>
                     <Lightbulb className="h-4 w-4 mr-2" />
-                    Générer
+                    Générer (1 restaurant)
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => generateAllRecommendations.mutate({})}
+                disabled={generateAllRecommendations.isPending || generateRecommendations.isPending || restaurants.length === 0}
+                variant="outline"
+                className="shrink-0 border-teal-600 text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-900/20"
+              >
+                {generateAllRecommendations.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Générer pour tous les restaurants
                   </>
                 )}
               </Button>
@@ -399,6 +441,9 @@ export default function RecommendationsPage() {
               <h3 className="text-xl font-semibold mb-2">Aucune recommandation trouvée</h3>
               <p className="text-muted-foreground max-w-md mx-auto">
                 Aucune recommandation ne correspond à vos critères. Modifiez les filtres ou générez de nouvelles recommandations.
+              </p>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
+                Une génération automatique a lieu chaque jour (cron). S&apos;il n&apos;y a rien à recommander (stocks suffisants), aucune nouvelle suggestion n&apos;apparaît.
               </p>
             </CardContent>
           </Card>
@@ -485,6 +530,33 @@ export default function RecommendationsPage() {
                             <span className="text-muted-foreground">Shrink:</span>
                             <p className="font-medium">{(details.assumptions.shrinkPct * 100).toFixed(1)}%</p>
                           </div>
+                          {typeof details.estimatedOrderCost === 'number' && (
+                            <div>
+                              <span className="text-muted-foreground">Coût estimé de la commande:</span>
+                              <p className="font-medium">{formatCurrency(details.estimatedOrderCost)}</p>
+                            </div>
+                          )}
+                          {typeof details.estimatedSavings === 'number' && (
+                            <div>
+                              <span className="text-muted-foreground inline-flex items-center gap-1">
+                                Gain estimé (ruptures/gaspillage évités):
+                                <button
+                                  type="button"
+                                  onClick={() => setGainExplanationRecId((id) => (id === recommendation.id ? null : recommendation.id))}
+                                  className="inline-flex text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded focus:outline-none"
+                                  aria-label="Afficher l’explication du gain estimé"
+                                >
+                                  <HelpCircle className="h-3.5 w-3.5" />
+                                </button>
+                              </span>
+                              <p className="font-medium text-teal-700 dark:text-teal-400">{formatCurrency(details.estimatedSavings)}</p>
+                              {gainExplanationRecId === recommendation.id && (
+                                <p className="text-xs text-muted-foreground mt-1 p-2 rounded-md bg-muted/60 border border-border">
+                                  Valeur estimée des ruptures de stock et du gaspillage évités en passant cette commande. Bénéfice indirect, pas un gain en caisse.
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
