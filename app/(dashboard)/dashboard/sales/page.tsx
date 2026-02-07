@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useQueryClient } from '@tanstack/react-query'
-import { useSales, useDeleteSale, getSalesListQueryOptions } from '@/lib/react-query/hooks/use-sales'
+import { useSales, useDeleteSale, getSalesListQueryOptions, getSaleQueryOptions } from '@/lib/react-query/hooks/use-sales'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'

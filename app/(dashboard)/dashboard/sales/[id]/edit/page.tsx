@@ -35,8 +35,18 @@ export default function EditSalePage() {
   const { data: sale, isLoading: loadingSale, error: saleError } = useSale(saleId)
   const updateSale = useUpdateSale()
 
-  const restaurants = (restaurantsData?.restaurants || []) as { id: string; name: string }[]
-  const products = (productsData?.products || []) as { id: string; name: string; unitPrice: number }[]
+  const restaurantsFromApi = (restaurantsData?.restaurants || []) as { id: string; name: string }[]
+  // Inclure le restaurant de la vente dans la liste pour que le Select l'affiche même s'il n'est pas dans la première page
+  const restaurants =
+    sale?.restaurant && !restaurantsFromApi.some((r) => r.id === sale.restaurant.id)
+      ? [{ id: sale.restaurant.id, name: sale.restaurant.name }, ...restaurantsFromApi]
+      : restaurantsFromApi
+  const productsFromApi = (productsData?.products || []) as { id: string; name: string; unitPrice: number }[]
+  // Inclure le produit de la vente dans la liste pour que le Select l'affiche même s'il n'est pas dans la première page
+  const products =
+    sale?.product && !productsFromApi.some((p) => p.id === sale.product.id)
+      ? [{ id: sale.product.id, name: sale.product.name, unitPrice: sale.product.unitPrice }, ...productsFromApi]
+      : productsFromApi
   const loadingData = loadingRestaurants || loadingProducts
 
   const [formData, setFormData] = useState({
@@ -47,6 +57,9 @@ export default function EditSalePage() {
     saleDate: '',
     saleHour: '',
   })
+
+  const restaurantIdValue = formData.restaurantId || (sale?.restaurantId ?? '')
+  const productIdValue = formData.productId || (sale?.productId ?? '')
 
   // Initialiser le formulaire quand la vente est chargée
   useEffect(() => {
@@ -256,7 +269,7 @@ export default function EditSalePage() {
               <div className="space-y-2">
                 <Label htmlFor="restaurantId">Restaurant *</Label>
                 <Select
-                  value={formData.restaurantId}
+                  value={restaurantIdValue}
                   onValueChange={(value) => setFormData({ ...formData, restaurantId: value })}
                   required
                   disabled={updateSale.isPending || loadingData}
@@ -277,7 +290,7 @@ export default function EditSalePage() {
               <div className="space-y-2">
                 <Label htmlFor="productId">Produit *</Label>
                 <Select
-                  value={formData.productId}
+                  value={productIdValue}
                   onValueChange={(value) => setFormData({ ...formData, productId: value })}
                   required
                   disabled={updateSale.isPending || loadingData}

@@ -91,9 +91,16 @@ export default function ForecastsPage() {
     setSelectedRestaurant(urlRestaurant || 'all')
   }, [urlRestaurant])
 
-  // Charger les restaurants pour les filtres
+  // Charger les restaurants pour les filtres (l'API renvoie _count.sales)
   const { data: restaurantsData } = useRestaurants(1, 100)
   const restaurants = restaurantsData?.restaurants || []
+  const restaurantsWithCount = restaurants as Array<{ id: string; name: string; _count?: { sales: number } }>
+  const selectedRestaurantSalesCount =
+    selectedRestaurant && selectedRestaurant !== 'all'
+      ? (restaurantsWithCount.find((r) => r.id === selectedRestaurant)?._count?.sales ?? 0)
+      : null
+  const selectedRestaurantHasNoSales =
+    selectedRestaurant && selectedRestaurant !== 'all' && selectedRestaurantSalesCount === 0
 
   // Charger les prévisions avec filtres
   const { data, isLoading, error, refetch } = useForecasts({
@@ -121,6 +128,9 @@ export default function ForecastsPage() {
 
   const handleGenerate = async () => {
     if (!selectedRestaurant || selectedRestaurant === 'all') {
+      return
+    }
+    if (selectedRestaurantHasNoSales) {
       return
     }
 
@@ -256,6 +266,13 @@ export default function ForecastsPage() {
                 💡 Les prévisions se basent sur l’historique des ventes des jours précédant la date sélectionnée. En plage, une prévision est générée pour chaque jour.
               </p>
             </div>
+            {selectedRestaurantHasNoSales && (
+              <div className="mt-3 p-3 rounded-xl bg-amber-100/80 dark:bg-amber-900/20 border border-amber-300/80 dark:border-amber-800/50" role="alert">
+                <p className="text-sm text-amber-900 dark:text-amber-200">
+                  Ce restaurant n'a aucune vente enregistrée. Enregistrez des ventes pour pouvoir générer des prévisions cohérentes.
+                </p>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-4" role="group" aria-label="Formulaire de génération de prévisions">
@@ -321,7 +338,7 @@ export default function ForecastsPage() {
                   <div className="space-y-2 flex items-end">
                     <Button
                       onClick={handleGenerate}
-                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !forecastDate}
+                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !forecastDate || selectedRestaurantHasNoSales}
                       className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                     >
                       {generateForecasts.isPending ? (
@@ -379,7 +396,7 @@ export default function ForecastsPage() {
                   <div className="space-y-2 flex items-end">
                     <Button
                       onClick={handleGenerate}
-                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !startDateRange || !endDateRange || new Date(startDateRange) > new Date(endDateRange)}
+                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !startDateRange || !endDateRange || new Date(startDateRange) > new Date(endDateRange) || selectedRestaurantHasNoSales}
                       className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                     >
                       {generateForecasts.isPending ? (

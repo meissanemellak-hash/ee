@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       const limit = parseInt(limitParam || '50') || 50
       const skip = (page - 1) * limit
 
-      const [restaurants, total] = await Promise.all([
+      const [restaurants, total, activeAlertsByRestaurant] = await Promise.all([
         prisma.restaurant.findMany({
           where: { organizationId: organization.id },
           orderBy: { name: 'asc' },
@@ -98,10 +98,29 @@ export async function GET(request: NextRequest) {
         prisma.restaurant.count({
           where: { organizationId: organization.id },
         }),
+        prisma.alert.groupBy({
+          by: ['restaurantId'],
+          where: {
+            resolved: false,
+            restaurant: { organizationId: organization.id },
+          },
+          _count: { id: true },
+        }),
       ])
 
+      const activeCountMap = new Map(
+        activeAlertsByRestaurant.map((r) => [r.restaurantId, r._count.id])
+      )
+      const restaurantsWithActiveAlerts = restaurants.map((r) => ({
+        ...r,
+        _count: {
+          ...r._count,
+          alerts: activeCountMap.get(r.id) ?? 0,
+        },
+      }))
+
       return NextResponse.json({
-        restaurants,
+        restaurants: restaurantsWithActiveAlerts,
         total,
         page,
         limit,
@@ -110,20 +129,41 @@ export async function GET(request: NextRequest) {
     }
 
     // Format simple (compatibilité avec l'ancien code)
-    const restaurants = await prisma.restaurant.findMany({
-      where: { organizationId: organization.id },
-      orderBy: { name: 'asc' },
-      include: {
-        _count: {
-          select: {
-            sales: true,
-            alerts: true,
+    const [restaurants, activeAlertsByRestaurant] = await Promise.all([
+      prisma.restaurant.findMany({
+        where: { organizationId: organization.id },
+        orderBy: { name: 'asc' },
+        include: {
+          _count: {
+            select: {
+              sales: true,
+              alerts: true,
+            },
           },
         },
-      },
-    })
+      }),
+      prisma.alert.groupBy({
+        by: ['restaurantId'],
+        where: {
+          resolved: false,
+          restaurant: { organizationId: organization.id },
+        },
+        _count: { id: true },
+      }),
+    ])
 
-    return NextResponse.json(restaurants)
+    const activeCountMap = new Map(
+      activeAlertsByRestaurant.map((r) => [r.restaurantId, r._count.id])
+    )
+    const restaurantsWithActiveAlerts = restaurants.map((r) => ({
+      ...r,
+      _count: {
+        ...r._count,
+        alerts: activeCountMap.get(r.id) ?? 0,
+      },
+    }))
+
+    return NextResponse.json(restaurantsWithActiveAlerts)
   } catch (error) {
     logger.error('Error fetching restaurants:', error)
     return NextResponse.json(

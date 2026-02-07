@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
@@ -52,10 +52,20 @@ export default function RecommendationsPage() {
   const [gainExplanationRecId, setGainExplanationRecId] = useState<string | null>(null)
   const [showStaffingExplanation, setShowStaffingExplanation] = useState(false)
   const [generationType, setGenerationType] = useState<'bom' | 'staffing'>('bom')
+  const scrollPositionRef = useRef<number | null>(null)
 
   useEffect(() => {
     setSelectedRestaurant(urlRestaurant || 'all')
   }, [urlRestaurant])
+
+  // Restaurer la position du scroll après un changement de filtre (évite que la page remonte)
+  useEffect(() => {
+    if (scrollPositionRef.current != null) {
+      const y = scrollPositionRef.current
+      scrollPositionRef.current = null
+      requestAnimationFrame(() => window.scrollTo(0, y))
+    }
+  }, [selectedRestaurant, selectedType, selectedStatus])
 
   // Charger les restaurants pour les filtres
   const { data: restaurantsData } = useRestaurants(1, 100)
@@ -340,7 +350,13 @@ export default function RecommendationsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="rec-filter-type">Type</Label>
-                <Select value={selectedType} onValueChange={setSelectedType}>
+                <Select
+                  value={selectedType}
+                  onValueChange={(v) => {
+                    scrollPositionRef.current = typeof window !== 'undefined' ? window.scrollY : null
+                    setSelectedType(v)
+                  }}
+                >
                   <SelectTrigger id="rec-filter-type" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par type">
                     <SelectValue placeholder="Tous les types" />
                   </SelectTrigger>
@@ -353,7 +369,13 @@ export default function RecommendationsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="rec-filter-status">Statut</Label>
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <Select
+                  value={selectedStatus}
+                  onValueChange={(v) => {
+                    scrollPositionRef.current = typeof window !== 'undefined' ? window.scrollY : null
+                    setSelectedStatus(v)
+                  }}
+                >
                   <SelectTrigger id="rec-filter-status" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par statut">
                     <SelectValue placeholder="Tous les statuts" />
                   </SelectTrigger>
@@ -378,7 +400,7 @@ export default function RecommendationsPage() {
               Générer de nouvelles recommandations
             </CardTitle>
             <CardDescription className="mt-1">
-              Créez des recommandations (commandes ou effectifs) pour un restaurant ou pour tous les restaurants
+              Générez des recommandations (commandes ou effectifs) pour un restaurant ou pour tous les restaurants
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -483,7 +505,7 @@ export default function RecommendationsPage() {
                 Aucune recommandation ne correspond à vos critères. Modifiez les filtres ou générez de nouvelles recommandations.
               </p>
               <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
-                Une génération automatique a lieu chaque jour (cron). S&apos;il n&apos;y a rien à recommander (stocks suffisants), aucune nouvelle suggestion n&apos;apparaît.
+                Une génération automatique a lieu chaque jour. S&apos;il n&apos;y a rien à recommander (stocks suffisants), aucune nouvelle suggestion n&apos;apparaît.
               </p>
             </CardContent>
           </Card>

@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useQueryClient } from '@tanstack/react-query'
-import { useProducts, useDeleteProduct, getProductsListQueryOptions } from '@/lib/react-query/hooks/use-products'
+import { useProducts, useDeleteProduct, getProductsListQueryOptions, getProductQueryOptions } from '@/lib/react-query/hooks/use-products'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
 import { ProductListSkeleton } from '@/components/ui/skeletons/product-list-skeleton'

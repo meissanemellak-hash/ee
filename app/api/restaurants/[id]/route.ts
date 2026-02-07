@@ -77,21 +77,29 @@ export async function GET(
     }
 
     // Récupérer le restaurant avec les compteurs et les ventes récentes
-    const restaurant = await prisma.restaurant.findFirst({
-      where: {
-        id: params.id,
-        organizationId: organization.id,
-      },
-      include: {
-        _count: {
-          select: {
-            sales: true,
-            alerts: true,
-            inventory: true,
+    const [restaurant, activeAlertsCount] = await Promise.all([
+      prisma.restaurant.findFirst({
+        where: {
+          id: params.id,
+          organizationId: organization.id,
+        },
+        include: {
+          _count: {
+            select: {
+              sales: true,
+              alerts: true,
+              inventory: true,
+            },
           },
         },
-      },
-    })
+      }),
+      prisma.alert.count({
+        where: {
+          restaurantId: params.id,
+          resolved: false,
+        },
+      }),
+    ])
 
     if (!restaurant) {
       return NextResponse.json(
@@ -138,14 +146,17 @@ export async function GET(
       },
     })
 
-    // Construire la réponse avec toutes les données nécessaires
+    // Construire la réponse : _count.alerts = alertes actives uniquement (non résolues)
     const response = {
       id: restaurant.id,
       name: restaurant.name,
       address: restaurant.address,
       timezone: restaurant.timezone,
       createdAt: restaurant.createdAt,
-      _count: restaurant._count,
+      _count: {
+        ...restaurant._count,
+        alerts: activeAlertsCount,
+      },
       totalRevenue,
       recentSales: recentSales.map((sale) => ({
         id: sale.id,

@@ -26,7 +26,7 @@ export function useActiveRestaurant() {
       }
       const query = params.toString()
       const url = query ? `${pathname || ''}?${query}` : pathname || '/dashboard'
-      router.push(url)
+      router.push(url, { scroll: false })
     },
     [pathname, router, searchParams]
   )
