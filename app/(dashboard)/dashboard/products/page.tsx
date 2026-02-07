@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -63,13 +64,22 @@ export default function ProductsPage() {
   const canDelete = permissions.canDeleteProduct(currentRole)
 
   const { activeRestaurantId } = useActiveRestaurant()
+  const searchParams = useSearchParams()
   const [page, setPage] = useState(1)
   const limit = 12
-  const [search, setSearch] = useState('')
+  const rawSearchFromUrl = searchParams.get('search') ?? ''
+  const isPageNameSearch = /^produits?$/i.test(rawSearchFromUrl)
+  const [search, setSearch] = useState(() => (isPageNameSearch ? '' : rawSearchFromUrl))
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
-  
+
+  // Synchroniser la recherche depuis l'URL (ex. lien depuis la page Recherche), sauf si le terme est le nom de la page
+  useEffect(() => {
+    const q = searchParams.get('search')
+    if (q != null && !/^produits?$/i.test(q)) setSearch(q)
+  }, [searchParams])
+
   // Debounce la recherche pour éviter trop de requêtes
   const debouncedSearch = useDebounce(search, 300)
 

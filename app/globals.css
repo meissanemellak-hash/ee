@@ -72,3 +72,9 @@
 .sign-in-footer-single-line a[href*="/demo"] {
   white-space: nowrap;
 }
+
+/* Masquer la croix native du navigateur sur les champs search (évite le doublon avec notre bouton Effacer) */
+.header-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}

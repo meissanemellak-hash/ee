@@ -132,7 +132,7 @@ export function InventoryTable({
                     <div className="flex justify-end gap-2">
                       {isEditing ? (
                         <>
-                          <Button size="sm" onClick={() => onSave(item.id)} disabled={updateMutation.isPending && updateMutation.variables?.id === item.id} className="shadow-sm">
+                          <Button size="sm" onClick={() => onSave(item.id)} disabled={updateMutation.isPending && updateMutation.variables?.id === item.id} className="shadow-sm bg-teal-600 hover:bg-teal-700 text-white border-0">
                             {updateMutation.isPending && updateMutation.variables?.id === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                           </Button>
                           <Button size="sm" variant="outline" onClick={onCancel} className="shadow-sm"><X className="h-4 w-4" /></Button>

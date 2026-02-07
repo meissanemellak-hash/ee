@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -64,11 +64,19 @@ export default function IngredientsPage() {
 
   const searchParams = useSearchParams()
   const activeRestaurantId = searchParams.get('restaurant')
-  const [search, setSearch] = useState('')
+  const rawSearchFromUrl = searchParams.get('search') ?? ''
+  const isPageNameSearch = /^ingr[eé]dients$/i.test(rawSearchFromUrl)
+  const [search, setSearch] = useState(() => (isPageNameSearch ? '' : rawSearchFromUrl))
   const [selectedUnit, setSelectedUnit] = useState<string>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [ingredientToDelete, setIngredientToDelete] = useState<Ingredient | null>(null)
-  
+
+  // Synchroniser la recherche depuis l'URL (ex. lien depuis la page Recherche), sauf si le terme est le nom de la page
+  useEffect(() => {
+    const q = searchParams.get('search')
+    if (q != null && !/^ingr[eé]dients$/i.test(q)) setSearch(q)
+  }, [searchParams])
+
   // Debounce la recherche pour éviter trop de requêtes
   const debouncedSearch = useDebounce(search, 300)
 
