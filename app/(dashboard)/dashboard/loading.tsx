@@ -1,5 +1,5 @@
-import { DashboardSkeleton } from '@/components/ui/skeletons/dashboard-skeleton'
+import { PageLoadingSkeleton } from '@/components/ui/skeletons/page-loading-skeleton'
 
 export default function DashboardLoading() {
-  return <DashboardSkeleton />
+  return <PageLoadingSkeleton />
 }

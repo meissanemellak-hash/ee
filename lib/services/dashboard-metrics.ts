@@ -237,7 +237,7 @@ export async function calculateExecutiveDashboardMetrics(
         message = `Commande recommandée → évite ~${Math.round(estimatedSavings)}€ de ruptures`
       }
     } else if (rec.type === 'STAFFING') {
-      message = `Ajustement staffing → économie estimée ~${Math.round(estimatedSavings)}€`
+      message = `Ajustement staffing → effectif recommandé par créneau`
     } else {
       message = `Recommandation → économie estimée ~${Math.round(estimatedSavings)}€`
     }

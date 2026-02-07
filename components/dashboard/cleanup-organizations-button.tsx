@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { useState } from 'react'
 import { Loader2, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -51,7 +52,7 @@ export function CleanupOrganizationsButton() {
       console.error('Error cleaning up organizations:', error)
       toast({
         title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Erreur lors du nettoyage',
+        description: translateApiError(error instanceof Error ? error.message : undefined),
         variant: 'destructive',
       })
     } finally {

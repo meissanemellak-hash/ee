@@ -28,7 +28,7 @@ export function RestaurantSwitcher() {
       onValueChange={(v) => setActiveRestaurantId(v === 'all' ? null : v)}
     >
       <SelectTrigger
-        className="w-full min-w-0 max-w-[200px] h-9 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg gap-2 shadow-none"
+        className="w-full min-w-0 max-w-[200px] h-9 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-lg gap-2 shadow-none"
         aria-label="Restaurant actif"
       >
         <span className="flex h-6 w-6 shrink-0 items-center justify-center text-gray-600 dark:text-gray-400 [&>svg]:shrink-0 [&>svg]:block [&>svg]:translate-y-1">

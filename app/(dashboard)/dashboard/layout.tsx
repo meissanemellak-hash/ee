@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { auth, clerkClient } from '@clerk/nextjs/server'
-import { getCurrentOrganization, ensureOrganizationInDb } from '@/lib/auth'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
+import { NavProgress } from '@/components/layout/nav-progress'
 import { Suspense } from 'react'
 import { DashboardSyncWrapper } from '@/components/dashboard/dashboard-sync-wrapper'
 
@@ -20,7 +20,7 @@ export default async function DashboardLayout({
     redirect('/sign-in')
   }
 
-  // Si orgId absent, vérifier si l'utilisateur a des organisations dans Clerk
+  // Si orgId absent, vérifier si l'utilisateur a des organisations dans Clerk (cas rare)
   if (!orgId) {
     try {
       const client = await clerkClient()
@@ -34,18 +34,10 @@ export default async function DashboardLayout({
     }
   }
 
-  // Synchroniser l'org depuis Clerk si besoin
-  let organization = await getCurrentOrganization()
-  if (!organization && orgId) {
-    try {
-      organization = await ensureOrganizationInDb(orgId)
-    } catch {
-      // ignorer
-    }
-  }
-
+  // Ne pas bloquer le rendu : la syncho org est faite à la demande dans les API (getCurrentOrganization crée l'org si besoin)
   return (
     <div className="flex min-h-screen">
+      <NavProgress />
       <Suspense fallback={null}>
         <DashboardSyncWrapper />
       </Suspense>

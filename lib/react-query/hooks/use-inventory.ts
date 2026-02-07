@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { getImportToastTitleAndErrorDetail } from '@/lib/utils'
 
 export interface InventoryItemIngredient {
@@ -75,7 +76,7 @@ export function useCreateInventoryItem() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -120,7 +121,7 @@ export function useUpdateInventoryItem() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -154,7 +155,7 @@ export function useDeleteInventoryItem() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -215,7 +216,7 @@ export function useImportInventory(restaurantId: string | undefined) {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },

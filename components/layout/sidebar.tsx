@@ -85,6 +85,7 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={href}
+              prefetch={true}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 isActive
@@ -106,6 +107,7 @@ export function Sidebar() {
       <div className="border-t border-gray-200 dark:border-gray-800 p-4">
         <Link
           href="/dashboard/aide"
+          prefetch={true}
           className="block rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
           aria-label="Accéder au centre d'aide"
         >

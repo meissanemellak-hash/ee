@@ -347,7 +347,7 @@ export default function RecommendationsPage() {
                   <SelectContent>
                     <SelectItem value="all">Tous les types</SelectItem>
                     <SelectItem value="ORDER">Commandes</SelectItem>
-                    <SelectItem value="STAFFING">Staffing</SelectItem>
+                    <SelectItem value="STAFFING">Effectifs (Staffing)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -511,7 +511,7 @@ export default function RecommendationsPage() {
                           )}
                         </div>
                         <span className="truncate">
-                          {recommendation.type === 'ORDER' ? 'Recommandation de commande' : 'Recommandation de staffing'}
+                          {recommendation.type === 'ORDER' ? 'Recommandation de commande' : 'Recommandation d\'effectifs (Staffing)'}
                         </span>
                       </CardTitle>
                       <CardDescription className="mt-1">

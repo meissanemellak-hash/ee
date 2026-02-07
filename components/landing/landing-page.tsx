@@ -389,7 +389,7 @@ export function LandingPage() {
                   text: 'Tableau de bord unifié, alertes en temps réel et rapports pour prendre les bonnes décisions. Moins de tableaux Excel, plus de pilotage efficace.',
                 },
                 {
-                  title: 'Achats & supply chain',
+                  title: 'Achats & logistique',
                   text: 'Suivez les stocks, les seuils d\'alerte et les prévisions. Réduisez le gaspillage et les ruptures de stocks en anticipant les besoins par restaurant.',
                 },
               ].map((item) => (

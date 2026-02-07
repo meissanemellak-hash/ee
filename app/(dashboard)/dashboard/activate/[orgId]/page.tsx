@@ -4,6 +4,7 @@ import { useEffect, Suspense, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useOrganizationList } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { Loader2 } from 'lucide-react'
 
 function ActivateContent() {
@@ -99,7 +100,7 @@ function ActivateContent() {
         console.error('❌ Error activating organization:', error)
         toast({
           title: 'Erreur',
-          description: error instanceof Error ? error.message : 'Impossible d&apos;activer l&apos;organisation. Veuillez réessayer.',
+          description: translateApiError(error instanceof Error ? error.message : undefined),
           variant: 'destructive',
         })
         setTimeout(() => {

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { frFR } from '@clerk/localizations'
-import { Toaster } from '@/components/ui/toaster'
+import { ToasterClient } from '@/components/toaster-client'
 import { ReactQueryProvider } from '@/lib/react-query/provider'
 import './globals.css'
 
@@ -39,7 +39,7 @@ export default function RootLayout({
         <html lang="fr" suppressHydrationWarning>
           <body className={inter.className} suppressHydrationWarning>
             {children}
-            <Toaster />
+            <ToasterClient />
           </body>
         </html>
       </ReactQueryProvider>

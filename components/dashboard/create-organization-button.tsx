@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { useRouter } from 'next/navigation'
 import { useOrganizationList, useOrganization } from '@clerk/nextjs'
 import {
@@ -77,11 +78,9 @@ export function CreateOrganizationButton() {
       }, 2000)
     } catch (error) {
       console.error('Error creating organization:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue'
-      
       toast({
         title: 'Erreur',
-        description: errorMessage,
+        description: translateApiError(error instanceof Error ? error.message : undefined),
         variant: 'destructive',
         duration: 5000, // Afficher plus longtemps pour voir les détails
       })

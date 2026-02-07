@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 
 export interface Forecast {
   id: string
@@ -137,7 +138,7 @@ export function useGenerateForecasts() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -187,7 +188,7 @@ export function useDeleteForecast() {
       }
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },

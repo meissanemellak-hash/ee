@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import type { Report, ReportType } from '@/lib/services/reports'
 
 export interface ReportFilters {
@@ -47,7 +48,7 @@ export function useGenerateReport() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },

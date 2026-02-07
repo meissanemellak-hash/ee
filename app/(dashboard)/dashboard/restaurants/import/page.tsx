@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { Upload, FileText, CheckCircle2, XCircle, Loader2, ArrowLeft, Download } from 'lucide-react'
 import Link from 'next/link'
 import Papa from 'papaparse'
@@ -85,7 +86,7 @@ export default function ImportRestaurantsPage() {
         error: (error) => {
           toast({
             title: 'Erreur de lecture',
-            description: error.message,
+            description: translateApiError(error.message),
             variant: 'destructive',
           })
         },
@@ -114,7 +115,7 @@ export default function ImportRestaurantsPage() {
           error: (error) => {
             toast({
               title: 'Erreur de lecture',
-              description: error.message,
+              description: translateApiError(error.message),
               variant: 'destructive',
             })
           },

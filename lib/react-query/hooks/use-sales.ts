@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { getImportToastTitleAndErrorDetail } from '@/lib/utils'
 
 export interface Sale {
@@ -218,7 +219,7 @@ export function useCreateSale() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -258,7 +259,7 @@ export function useUpdateSale() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -308,7 +309,7 @@ export function useDeleteSale() {
       }
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -370,7 +371,7 @@ export function useImportSales() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },

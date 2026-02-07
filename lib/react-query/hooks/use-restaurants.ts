@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { getImportToastTitleAndErrorDetail } from '@/lib/utils'
 
 export interface Restaurant {
@@ -118,7 +119,7 @@ export function useCreateRestaurant() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -158,7 +159,7 @@ export function useUpdateRestaurant() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -218,7 +219,7 @@ export function useDeleteRestaurant() {
       }
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },
@@ -278,7 +279,7 @@ export function useImportRestaurants() {
     onError: (error: Error) => {
       toast({
         title: 'Erreur',
-        description: error.message,
+        description: translateApiError(error.message),
         variant: 'destructive',
       })
     },

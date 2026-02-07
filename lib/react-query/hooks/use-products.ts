@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { getImportToastTitleAndErrorDetail } from '@/lib/utils'
 
 export interface Product {
@@ -297,7 +298,7 @@ export function useAddProductIngredient() {
       })
     },
     onError: (error: Error) => {
-      toast({ title: 'Erreur', description: error.message, variant: 'destructive' })
+      toast({ title: 'Erreur', description: translateApiError(error.message), variant: 'destructive' })
     },
   })
 }
@@ -335,7 +336,7 @@ export function useRemoveProductIngredient() {
       })
     },
     onError: (error: Error) => {
-      toast({ title: 'Erreur', description: error.message, variant: 'destructive' })
+      toast({ title: 'Erreur', description: translateApiError(error.message), variant: 'destructive' })
     },
   })
 }

@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale/fr'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 
 interface Activity {
   id: string
@@ -72,7 +73,7 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
       setError(message)
       toast({
         title: 'Erreur de chargement',
-        description: message,
+        description: translateApiError(message),
         variant: 'destructive',
       })
       setActivities([])

@@ -13,6 +13,7 @@ import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 
@@ -40,7 +41,7 @@ export default function IngredientDetailPage() {
       hasToastedError.current = true
       toast({
         title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Impossible de charger l\'ingrédient',
+        description: translateApiError(error instanceof Error ? error.message : undefined),
         variant: 'destructive',
       })
     }

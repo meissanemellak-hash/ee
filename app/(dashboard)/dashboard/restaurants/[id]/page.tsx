@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/utils'
 import { Edit, TrendingUp, Bell, Package, Warehouse, Store, MapPin } from 'lucide-react'
 import { DeleteRestaurantButton } from '@/components/restaurants/delete-restaurant-button'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { useRestaurant } from '@/lib/react-query/hooks/use-restaurants'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
@@ -92,7 +93,7 @@ export default function RestaurantDetailPage() {
       hasToastedError.current = true
       toast({
         title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Impossible de charger les données',
+        description: translateApiError(error instanceof Error ? error.message : undefined),
         variant: 'destructive',
       })
     }

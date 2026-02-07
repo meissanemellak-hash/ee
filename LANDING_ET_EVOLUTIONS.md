@@ -38,7 +38,7 @@ Document de référence de tout ce qui a été mis en place sur la landing, les 
 
 ### Sections Douleurs, Solution, Pour qui
 - **« Sites » remplacé par « restaurants »** partout (y compris « multi-sites » → « multi-restaurants » où pertinent).
-- Section « Pour qui » détaillée avec 4 profils : Chaînes de restaurants, Groupes multi-restaurants, Direction opérations, Achats & supply chain.
+- Section « Pour qui » détaillée avec 4 profils : Chaînes de restaurants, Groupes multi-restaurants, Direction opérations, Achats & logistique.
 
 ### Section Tarifs
 - Prix sur **une seule ligne** : « À partir de 5 000 € / mois » (`whitespace-nowrap`).
