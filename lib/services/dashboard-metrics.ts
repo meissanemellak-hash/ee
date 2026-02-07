@@ -201,7 +201,7 @@ export async function calculateExecutiveDashboardMetrics(
     take: 3,
   })
 
-  // 7. Calculer le gaspillage estimé (basé sur les alertes OVERSTOCK)
+  // 7. Gaspillage estimé (option 3 hybride : calcul réel si possible, sinon forfait par alerte)
   const overstockAlerts = await prisma.alert.findMany({
     where: {
       restaurant: restaurantWhere,
@@ -213,7 +213,37 @@ export async function calculateExecutiveDashboardMetrics(
     },
   })
 
-  const estimatedWaste = overstockAlerts.length * 800 // Estimation par alerte
+  const FALLBACK_WASTE_PER_ALERT = 800
+
+  let estimatedWaste: number
+  try {
+    const overstockInventory = await prisma.inventory.findMany({
+      where: {
+        restaurant: restaurantWhere,
+        maxThreshold: { not: null },
+      },
+      include: { ingredient: true },
+    })
+    const itemsInOverstock = overstockInventory.filter(
+      (inv) => inv.maxThreshold != null && inv.currentStock > inv.maxThreshold
+    )
+    // Normalise le surplus dans l'unité du coût (ex. g → kg) pour que surplus * costPerUnit donne des € cohérents
+    const surplusToCostUnit = (surplus: number, unit: string | null | undefined): number => {
+      const u = (unit ?? '').toLowerCase().trim()
+      if (u === 'g' || u === 'gramme' || u === 'grammes') return surplus / 1000 // surplus en g → quantité en kg
+      if (u === 'ml' || u === 'millilitre' || u === 'millilitres') return surplus / 1000 // surplus en ml → quantité en L
+      return surplus // kg, L, unité, pièce, etc. : pas de conversion
+    }
+    const computedWaste = itemsInOverstock.reduce((sum, inv) => {
+      const surplus = inv.currentStock - (inv.maxThreshold ?? 0)
+      const costPerUnit = inv.ingredient?.costPerUnit ?? 0
+      const quantityInCostUnit = surplusToCostUnit(surplus, inv.ingredient?.unit)
+      return sum + quantityInCostUnit * costPerUnit
+    }, 0)
+    estimatedWaste = computedWaste > 0 ? Math.round(computedWaste * 100) / 100 : overstockAlerts.length * FALLBACK_WASTE_PER_ALERT
+  } catch {
+    estimatedWaste = overstockAlerts.length * FALLBACK_WASTE_PER_ALERT
+  }
 
   // Formater les recommandations actionnables
   const formattedRecommendations = topActionableRecommendations.map((rec) => {

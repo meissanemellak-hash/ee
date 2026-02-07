@@ -9,8 +9,9 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { calculateExecutiveDashboardMetrics } from '@/lib/services/dashboard-metrics'
 import { logger } from '@/lib/logger'
-import { TrendingUp, TrendingDown, AlertTriangle, Package, CheckCircle2, ArrowRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react'
 import { DashboardRecommendationsList } from '@/components/dashboard/dashboard-recommendations-list'
+import { GaspillageEstimeCard } from '@/components/dashboard/gaspillage-estime-card'
 import { ReloadButton } from '@/components/dashboard/reload-button'
 import { RecentActivityTable } from '@/components/dashboard/recent-activity-table'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -247,22 +248,7 @@ export default async function DashboardPage(props: PageProps) {
             </p>
           </CardContent>
           </Card>
-          <Card className="rounded-xl border shadow-sm bg-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Gaspillage estimé
-              </CardTitle>
-              <Package className="h-4 w-4 text-amber-600" aria-hidden="true" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {formatCurrency(metrics.estimatedWaste)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Produits frais surstockés ce mois-ci
-            </p>
-          </CardContent>
-          </Card>
+          <GaspillageEstimeCard estimatedWaste={metrics.estimatedWaste} />
         </section>
 
         {/* Zone 2.5 - Graphique Évolution des Ventes */}
