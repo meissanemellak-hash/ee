@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 import type { SalesAnalysis } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/sales/analyze] Erreur synchronisation:', error)
+          logger.error('[GET /api/sales/analyze] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -183,7 +184,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(analysis)
   } catch (error) {
-    console.error('Error analyzing sales:', error)
+    logger.error('Error analyzing sales:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

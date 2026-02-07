@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +56,7 @@ export async function PATCH(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/organizations/update] Erreur synchronisation:', error)
+          logger.error('[PATCH /api/organizations/update] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -95,9 +96,9 @@ export async function PATCH(request: NextRequest) {
       // Vérifier si l'utilisateur est admin (role: 'org:admin' ou créateur 'org:creator')
       hasAdminRole = membershipRole === 'org:admin' || membershipRole === 'org:creator'
       
-      console.log('[PATCH /api/organizations/update] Rôle utilisateur:', membershipRole, 'Admin:', hasAdminRole)
+      logger.log('[PATCH /api/organizations/update] Rôle utilisateur:', membershipRole, 'Admin:', hasAdminRole)
     } catch (error) {
-      console.error('[PATCH /api/organizations/update] Erreur vérification membre:', error)
+      logger.error('[PATCH /api/organizations/update] Erreur vérification membre:', error)
       // On continue quand même, mais on ne pourra pas mettre à jour Clerk
     }
 
@@ -133,14 +134,14 @@ export async function PATCH(request: NextRequest) {
           )
         }
         
-        console.log('[PATCH /api/organizations/update] ✅ Permissions vérifiées, changement de nom autorisé:', {
+        logger.log('[PATCH /api/organizations/update] ✅ Permissions vérifiées, changement de nom autorisé:', {
           isCreator,
           hasAdminRole,
           currentName: organization.name,
           newName: name.trim(),
         })
       } catch (error: any) {
-        console.error('[PATCH /api/organizations/update] ❌ Erreur vérification permissions:', error)
+        logger.error('[PATCH /api/organizations/update] ❌ Erreur vérification permissions:', error)
         // Si on ne peut pas vérifier les permissions, on refuse par sécurité
         return NextResponse.json(
           { 
@@ -168,14 +169,14 @@ export async function PATCH(request: NextRequest) {
             clerkOrg = await client.organizations.getOrganization({ 
               organizationId: organization.clerkOrgId 
             })
-            console.log('[PATCH /api/organizations/update] Organisation trouvée dans Clerk:', {
+            logger.log('[PATCH /api/organizations/update] Organisation trouvée dans Clerk:', {
               id: clerkOrg.id,
               name: clerkOrg.name,
               createdBy: clerkOrg.createdBy,
               slug: clerkOrg.slug,
             })
           } catch (getError: any) {
-            console.error('[PATCH /api/organizations/update] ❌ Erreur récupération organisation Clerk:', {
+            logger.error('[PATCH /api/organizations/update] ❌ Erreur récupération organisation Clerk:', {
               error: getError,
               code: getError?.code,
               status: getError?.status,
@@ -187,7 +188,7 @@ export async function PATCH(request: NextRequest) {
         
         // Vérifier si l'utilisateur est le créateur de l'organisation
         isCreator = clerkOrg.createdBy === userId
-        console.log('[PATCH /api/organizations/update] Vérification créateur:', {
+        logger.log('[PATCH /api/organizations/update] Vérification créateur:', {
           clerkOrgCreatedBy: clerkOrg.createdBy,
           currentUserId: userId,
           isCreator,
@@ -198,13 +199,13 @@ export async function PATCH(request: NextRequest) {
         // Si l'utilisateur n'est ni créateur ni admin, on ne peut pas mettre à jour Clerk
         // Mais on continue quand même pour mettre à jour la DB
         if (!isCreator && !hasAdminRole) {
-          console.warn('[PATCH /api/organizations/update] ⚠️ Utilisateur non-créateur et non-admin, impossible de mettre à jour Clerk')
-          console.warn('[PATCH /api/organizations/update] ⚠️ Mise à jour DB uniquement (pas de permissions Clerk)')
+          logger.warn('[PATCH /api/organizations/update] ⚠️ Utilisateur non-créateur et non-admin, impossible de mettre à jour Clerk')
+          logger.warn('[PATCH /api/organizations/update] ⚠️ Mise à jour DB uniquement (pas de permissions Clerk)')
           // On ne lance pas d'erreur, on continue pour mettre à jour la DB
           // Le warning sera retourné dans la réponse
         } else {
           // L'utilisateur a les permissions, on peut essayer de mettre à jour Clerk
-          console.log('[PATCH /api/organizations/update] Tentative mise à jour Clerk:', {
+          logger.log('[PATCH /api/organizations/update] Tentative mise à jour Clerk:', {
             organizationId: organization.clerkOrgId,
             clerkOrgIdFromDB: organization.clerkOrgId,
             clerkOrgIdFromClerk: clerkOrg.id,
@@ -223,12 +224,12 @@ export async function PATCH(request: NextRequest) {
           
           // Vérifier si le nom est déjà le même dans Clerk (pas besoin de mettre à jour)
           if (clerkOrg.name === name.trim()) {
-            console.log('[PATCH /api/organizations/update] ✅ Nom déjà synchronisé dans Clerk:', clerkOrg.name)
+            logger.log('[PATCH /api/organizations/update] ✅ Nom déjà synchronisé dans Clerk:', clerkOrg.name)
             clerkUpdateSuccess = true
           } else {
             // Utiliser l'ID de Clerk pour être sûr
             // Note: Seul le créateur ou un admin peut modifier le nom dans Clerk
-            console.log('[PATCH /api/organizations/update] 🔄 Appel updateOrganization avec:', {
+            logger.log('[PATCH /api/organizations/update] 🔄 Appel updateOrganization avec:', {
               organizationId: clerkOrg.id,
               newName: name.trim(),
               currentClerkName: clerkOrg.name,
@@ -243,21 +244,21 @@ export async function PATCH(request: NextRequest) {
               
               // Si les IDs diffèrent, utiliser celui de Clerk
               if (organization.clerkOrgId !== clerkOrg.id) {
-                console.warn('[PATCH /api/organizations/update] ⚠️ IDs différents, utilisation de celui de Clerk')
+                logger.warn('[PATCH /api/organizations/update] ⚠️ IDs différents, utilisation de celui de Clerk')
                 orgIdToUse = clerkOrg.id
               }
               
-              console.log('[PATCH /api/organizations/update] 🔄 Tentative updateOrganization avec ID:', orgIdToUse)
+              logger.log('[PATCH /api/organizations/update] 🔄 Tentative updateOrganization avec ID:', orgIdToUse)
               
               const updatedClerkOrg = await client.organizations.updateOrganization(orgIdToUse, {
                 name: name.trim(),
               })
               
-              console.log('[PATCH /api/organizations/update] ✅ Nom mis à jour dans Clerk avec succès:', updatedClerkOrg.name)
+              logger.log('[PATCH /api/organizations/update] ✅ Nom mis à jour dans Clerk avec succès:', updatedClerkOrg.name)
               clerkUpdateSuccess = true
             } catch (updateError: any) {
               // Log détaillé de l'erreur
-              console.error('[PATCH /api/organizations/update] ❌ Erreur spécifique updateOrganization:', {
+              logger.error('[PATCH /api/organizations/update] ❌ Erreur spécifique updateOrganization:', {
                 error: updateError,
                 code: updateError?.code,
                 status: updateError?.status,
@@ -280,26 +281,26 @@ export async function PATCH(request: NextRequest) {
               if (updateError?.code === 'resource_not_found' || updateError?.status === 404) {
                 // Si on a utilisé l'ID de Clerk et qu'il diffère de celui de la DB, essayer avec l'ID de la DB
                 if (orgIdToUse === clerkOrg.id && organization.clerkOrgId !== clerkOrg.id) {
-                  console.log('[PATCH /api/organizations/update] 🔄 Retry avec l\'ID de la DB:', organization.clerkOrgId)
+                  logger.log('[PATCH /api/organizations/update] 🔄 Retry avec l\'ID de la DB:', organization.clerkOrgId)
                   try {
 const retryUpdatedClerkOrg = await client.organizations.updateOrganization(organization.clerkOrgId, {
                         name: name.trim(),
                       })
-                    console.log('[PATCH /api/organizations/update] ✅ Nom mis à jour dans Clerk avec succès (retry DB ID):', retryUpdatedClerkOrg.name)
+                    logger.log('[PATCH /api/organizations/update] ✅ Nom mis à jour dans Clerk avec succès (retry DB ID):', retryUpdatedClerkOrg.name)
                     clerkUpdateSuccess = true
                   } catch (retryError: any) {
-                    console.error('[PATCH /api/organizations/update] ❌ Erreur retry avec ID DB:', retryError)
+                    logger.error('[PATCH /api/organizations/update] ❌ Erreur retry avec ID DB:', retryError)
                     // Essayer une dernière fois avec l'ID de Clerk si on avait utilisé l'ID de la DB
                     if (orgIdToUse === organization.clerkOrgId && clerkOrg.id !== organization.clerkOrgId) {
-                      console.log('[PATCH /api/organizations/update] 🔄 Dernier retry avec l\'ID de Clerk:', clerkOrg.id)
+                      logger.log('[PATCH /api/organizations/update] 🔄 Dernier retry avec l\'ID de Clerk:', clerkOrg.id)
                       try {
                         const finalRetry = await client.organizations.updateOrganization(clerkOrg.id, {
                           name: name.trim(),
                         })
-                        console.log('[PATCH /api/organizations/update] ✅ Nom mis à jour dans Clerk avec succès (retry Clerk ID):', finalRetry.name)
+                        logger.log('[PATCH /api/organizations/update] ✅ Nom mis à jour dans Clerk avec succès (retry Clerk ID):', finalRetry.name)
                         clerkUpdateSuccess = true
                       } catch (finalError: any) {
-                        console.error('[PATCH /api/organizations/update] ❌ Erreur retry final:', finalError)
+                        logger.error('[PATCH /api/organizations/update] ❌ Erreur retry final:', finalError)
                         throw updateError // Relancer l'erreur originale
                       }
                     } else {
@@ -308,7 +309,7 @@ const retryUpdatedClerkOrg = await client.organizations.updateOrganization(organ
                   }
                 } else {
                   // Les IDs correspondent déjà, mais l'erreur persiste - probablement un bug de l'API Clerk
-                  console.error('[PATCH /api/organizations/update] ❌ Erreur resource_not_found même avec l\'ID correct. Probable bug de l\'API Clerk.')
+                  logger.error('[PATCH /api/organizations/update] ❌ Erreur resource_not_found même avec l\'ID correct. Probable bug de l\'API Clerk.')
                   throw updateError
                 }
               } else {
@@ -319,7 +320,7 @@ const retryUpdatedClerkOrg = await client.organizations.updateOrganization(organ
           }
         }
       } catch (error: any) {
-        console.error('[PATCH /api/organizations/update] ❌ Erreur mise à jour Clerk:', {
+        logger.error('[PATCH /api/organizations/update] ❌ Erreur mise à jour Clerk:', {
           error,
           code: error?.code,
           status: error?.status,
@@ -367,7 +368,7 @@ const retryUpdatedClerkOrg = await client.organizations.updateOrganization(organ
             'Le nom dans l\'application sera utilisé partout.'
         }
         
-        console.warn('[PATCH /api/organizations/update] ⚠️ Mise à jour DB uniquement (Clerk échoué):', errorDetails)
+        logger.warn('[PATCH /api/organizations/update] ⚠️ Mise à jour DB uniquement (Clerk échoué):', errorDetails)
         
         // On continue quand même la mise à jour dans la DB
         // Le warning sera retourné dans la réponse
@@ -412,7 +413,7 @@ const retryUpdatedClerkOrg = await client.organizations.updateOrganization(organ
           organizationId: organization.clerkOrgId 
         })
       } catch (error) {
-        console.error('[PATCH /api/organizations/update] Erreur récupération finale Clerk:', error)
+        logger.error('[PATCH /api/organizations/update] Erreur récupération finale Clerk:', error)
       }
     } else {
       finalClerkOrg = clerkOrg
@@ -420,7 +421,7 @@ const retryUpdatedClerkOrg = await client.organizations.updateOrganization(organ
     
     if (finalClerkOrg) {
       clerkNameMatch = finalClerkOrg.name === updatedOrganization.name
-      console.log('[PATCH /api/organizations/update] Vérification finale Clerk:', {
+      logger.log('[PATCH /api/organizations/update] Vérification finale Clerk:', {
         dbName: updatedOrganization.name,
         clerkName: finalClerkOrg.name,
         match: clerkNameMatch,
@@ -454,13 +455,13 @@ const retryUpdatedClerkOrg = await client.organizations.updateOrganization(organ
       } else if (clerkNameMatch) {
         // Si les noms correspondent, pas de warning nécessaire
         // La synchronisation est réussie
-        console.log('[PATCH /api/organizations/update] ✅ Synchronisation réussie, pas de warning nécessaire')
+        logger.log('[PATCH /api/organizations/update] ✅ Synchronisation réussie, pas de warning nécessaire')
       }
     }
     
     return NextResponse.json(response)
   } catch (error) {
-    console.error('[PATCH /api/organizations/update] Erreur:', error)
+    logger.error('[PATCH /api/organizations/update] Erreur:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

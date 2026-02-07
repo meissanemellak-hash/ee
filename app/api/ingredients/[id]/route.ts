@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { z } from 'zod'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,7 +70,7 @@ export async function GET(
             }
           }
         } catch (error) {
-          console.error('[GET /api/ingredients/[id]] Erreur synchronisation:', error)
+          logger.error('[GET /api/ingredients/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -112,7 +113,7 @@ export async function GET(
 
     return NextResponse.json({ ingredient })
   } catch (error) {
-    console.error('Error fetching ingredient:', error)
+    logger.error('Error fetching ingredient:', error)
     return NextResponse.json(
       { error: 'Error fetching ingredient', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -173,7 +174,7 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/ingredients/[id]] Erreur synchronisation:', error)
+          logger.error('[PATCH /api/ingredients/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -245,7 +246,7 @@ export async function PATCH(
       )
     }
 
-    console.error('Error updating ingredient:', error)
+    logger.error('Error updating ingredient:', error)
     return NextResponse.json(
       { error: 'Error updating ingredient', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -306,7 +307,7 @@ export async function DELETE(
             }
           }
         } catch (error) {
-          console.error('[DELETE /api/ingredients/[id]] Erreur synchronisation:', error)
+          logger.error('[DELETE /api/ingredients/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -370,7 +371,7 @@ export async function DELETE(
       message: 'Ingrédient supprimé avec succès',
     })
   } catch (error) {
-    console.error('Error deleting ingredient:', error)
+    logger.error('Error deleting ingredient:', error)
     return NextResponse.json(
       { error: 'Error deleting ingredient', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

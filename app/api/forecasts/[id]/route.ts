@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +59,7 @@ export async function GET(
             }
           }
         } catch (error) {
-          console.error('[GET /api/forecasts/[id]] Erreur synchronisation:', error)
+          logger.error('[GET /api/forecasts/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -106,7 +107,7 @@ export async function GET(
 
     return NextResponse.json(forecast)
   } catch (error) {
-    console.error('Error fetching forecast:', error)
+    logger.error('Error fetching forecast:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -166,7 +167,7 @@ export async function DELETE(
             }
           }
         } catch (error) {
-          console.error('[DELETE /api/forecasts/[id]] Erreur synchronisation:', error)
+          logger.error('[DELETE /api/forecasts/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -174,7 +175,7 @@ export async function DELETE(
     }
 
     if (!organization) {
-      console.error('[DELETE /api/forecasts/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
+      logger.error('[DELETE /api/forecasts/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
       return NextResponse.json(
         { 
           error: 'Organization not found',
@@ -212,7 +213,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Forecast deleted successfully' })
   } catch (error) {
-    console.error('Error deleting forecast:', error)
+    logger.error('Error deleting forecast:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

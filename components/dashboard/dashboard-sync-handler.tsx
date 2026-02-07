@@ -2,6 +2,7 @@
 
 import { useOrganization } from '@clerk/nextjs'
 import { useEffect, useRef } from 'react'
+import { logger } from '@/lib/logger'
 
 /**
  * SOLUTION RADICALE ET DÉFINITIVE :
@@ -30,7 +31,7 @@ export function DashboardSyncHandler() {
       if (lastSyncAttempt) {
         const timeSinceLastAttempt = now - parseInt(lastSyncAttempt, 10)
         if (timeSinceLastAttempt < 10000) {
-          console.log('⏳ Synchronisation récente, pas de rechargement')
+          logger.log('⏳ Synchronisation récente, pas de rechargement')
           return
         }
       }
@@ -38,7 +39,7 @@ export function DashboardSyncHandler() {
       // Vérifier si l'URL contient un paramètre de cache-busting (indique un rechargement récent)
       const urlParams = new URLSearchParams(window.location.search)
       if (urlParams.has('t')) {
-        console.log('✅ Page déjà rechargée, pas de nouvelle synchronisation')
+        logger.log('✅ Page déjà rechargée, pas de nouvelle synchronisation')
         hasSynced.current = true
         return
       }
@@ -46,7 +47,7 @@ export function DashboardSyncHandler() {
       hasSynced.current = true
       localStorage.setItem(syncKey, now.toString())
       
-      console.log('✅ Organisation active détectée:', organization.name, organization.id)
+      logger.log('✅ Organisation active détectée:', organization.name, organization.id)
       
       // Vérifier d'abord si l'organisation est déjà synchronisée côté serveur
       fetch('/api/organizations/check-sync', {
@@ -56,18 +57,18 @@ export function DashboardSyncHandler() {
       })
         .then(res => res.json())
         .then(data => {
-          console.log('📋 Vérification synchronisation:', data)
+          logger.log('📋 Vérification synchronisation:', data)
           
           // Si l'organisation est déjà synchronisée, ne pas recharger
           if (data.synced && data.organization) {
-            console.log('✅ Organisation déjà synchronisée:', data.organization.name)
+            logger.log('✅ Organisation déjà synchronisée:', data.organization.name)
             // Nettoyer le flag de synchronisation
             localStorage.removeItem(syncKey)
             return
           }
 
           // Si pas synchronisée, utiliser force-sync
-          console.log('🔄 Organisation non synchronisée, synchronisation en cours...')
+          logger.log('🔄 Organisation non synchronisée, synchronisation en cours...')
           return fetch('/api/organizations/force-sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -77,12 +78,12 @@ export function DashboardSyncHandler() {
         .then(data => {
           if (!data) return // Déjà synchronisée
           
-          console.log('📋 Réponse force-sync:', data)
+          logger.log('📋 Réponse force-sync:', data)
           
           if (data.synced) {
-            console.log('✅ Organisation synchronisée:', data.organization?.name)
+            logger.log('✅ Organisation synchronisée:', data.organization?.name)
           } else {
-            console.log('⚠️ Synchronisation échouée')
+            logger.log('⚠️ Synchronisation échouée')
           }
           
           // Nettoyer le flag avant le rechargement
@@ -91,12 +92,12 @@ export function DashboardSyncHandler() {
           // Forcer un rechargement UNIQUEMENT si nécessaire
           // Attendre un peu pour laisser le temps au serveur de mettre à jour
           setTimeout(() => {
-            console.log('🔄 Rechargement pour afficher le dashboard')
+            logger.log('🔄 Rechargement pour afficher le dashboard')
             window.location.replace(`/dashboard?t=${Date.now()}`)
           }, 500)
         })
         .catch(error => {
-          console.error('❌ Erreur de synchronisation:', error)
+          logger.error('❌ Erreur de synchronisation:', error)
           // Nettoyer le flag en cas d'erreur
           localStorage.removeItem(syncKey)
           // Ne pas recharger en cas d'erreur pour éviter les boucles

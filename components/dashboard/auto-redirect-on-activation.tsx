@@ -3,6 +3,7 @@
 import { useOrganization } from '@clerk/nextjs'
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { logger } from '@/lib/logger'
 
 /**
  * SOLUTION ROBUSTE : Détecte quand une organisation est activée via Clerk
@@ -36,7 +37,7 @@ export function AutoRedirectOnActivation() {
 
     // Limiter le nombre de tentatives pour éviter les boucles infinies
     if (checkAttempts.current >= maxAttempts) {
-      console.log('⚠️ Nombre maximum de tentatives atteint, arrêt de la vérification')
+      logger.log('⚠️ Nombre maximum de tentatives atteint, arrêt de la vérification')
       return
     }
 
@@ -57,7 +58,7 @@ export function AutoRedirectOnActivation() {
           const data = await response.json()
           if (data.synced) {
             hasRedirected.current = true
-            console.log('✅ Organisation synchronisée, redirection vers le dashboard')
+            logger.log('✅ Organisation synchronisée, redirection vers le dashboard')
             // Redirection avec rechargement complet
             window.location.href = '/dashboard'
             return
@@ -65,7 +66,7 @@ export function AutoRedirectOnActivation() {
         }
         
         // Si pas synchronisée, attendre un peu et réessayer
-        console.log(`⏳ Organisation pas encore synchronisée, tentative ${checkAttempts.current}/${maxAttempts}...`)
+        logger.log(`⏳ Organisation pas encore synchronisée, tentative ${checkAttempts.current}/${maxAttempts}...`)
         if (checkAttempts.current < maxAttempts) {
           setTimeout(() => {
             setIsChecking(false)
@@ -74,7 +75,7 @@ export function AutoRedirectOnActivation() {
           setIsChecking(false)
         }
       } catch (error) {
-        console.error('❌ Erreur lors de la vérification:', error)
+        logger.error('❌ Erreur lors de la vérification:', error)
         // En cas d'erreur, ne pas rediriger pour éviter les boucles
         setIsChecking(false)
       }

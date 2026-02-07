@@ -6,6 +6,7 @@ import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
 import { runAllAlerts } from '@/lib/services/alerts'
 import { z } from 'zod'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +62,7 @@ export async function GET(
             }
           }
         } catch (error) {
-          console.error('[GET /api/sales/[id]] Erreur synchronisation:', error)
+          logger.error('[GET /api/sales/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -109,7 +110,7 @@ export async function GET(
 
     return NextResponse.json(sale)
   } catch (error) {
-    console.error('Error fetching sale:', error)
+    logger.error('Error fetching sale:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -135,7 +136,7 @@ export async function PATCH(
     const { clerkOrgId, ...updateData } = body
     const orgIdToUse = authOrgId || clerkOrgId
 
-    console.log('[PATCH /api/sales/[id]] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    logger.log('[PATCH /api/sales/[id]] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -171,7 +172,7 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/sales/[id]] Erreur synchronisation:', error)
+          logger.error('[PATCH /api/sales/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -179,7 +180,7 @@ export async function PATCH(
     }
 
     if (!organization) {
-      console.error('[PATCH /api/sales/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+      logger.error('[PATCH /api/sales/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
       return NextResponse.json(
         { 
           error: 'Organization not found',
@@ -348,7 +349,7 @@ export async function PATCH(
       try {
         await runAllAlerts(restaurantId)
       } catch (alertError) {
-        console.error('[PATCH /api/sales/[id]] runAllAlerts:', alertError)
+        logger.error('[PATCH /api/sales/[id]] runAllAlerts:', alertError)
       }
 
       return NextResponse.json(sale)
@@ -356,7 +357,7 @@ export async function PATCH(
 
     return NextResponse.json(existing)
   } catch (error) {
-    console.error('Error updating sale:', error)
+    logger.error('Error updating sale:', error)
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -424,7 +425,7 @@ export async function DELETE(
             }
           }
         } catch (error) {
-          console.error('[DELETE /api/sales/[id]] Erreur synchronisation:', error)
+          logger.error('[DELETE /api/sales/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -432,7 +433,7 @@ export async function DELETE(
     }
 
     if (!organization) {
-      console.error('[DELETE /api/sales/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
+      logger.error('[DELETE /api/sales/[id]] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
       return NextResponse.json(
         { 
           error: 'Organization not found',
@@ -507,12 +508,12 @@ export async function DELETE(
     try {
       await runAllAlerts(restaurantId)
     } catch (alertError) {
-      console.error('[DELETE /api/sales/[id]] runAllAlerts:', alertError)
+      logger.error('[DELETE /api/sales/[id]] runAllAlerts:', alertError)
     }
 
     return NextResponse.json({ message: 'Sale deleted successfully' })
   } catch (error) {
-    console.error('Error deleting sale:', error)
+    logger.error('Error deleting sale:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

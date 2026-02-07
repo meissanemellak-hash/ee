@@ -4,6 +4,7 @@ import { useOrganizationList } from '@clerk/nextjs'
 import { useEffect, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
+import { logger } from '@/lib/logger'
 
 function ActivationHandlerContent() {
   const searchParams = useSearchParams()
@@ -25,8 +26,8 @@ function ActivationHandlerContent() {
 
     const activate = async () => {
       try {
-        console.log('🔍 Activation de l\'organisation:', activateOrgId)
-        console.log('📋 userMemberships:', userMemberships?.data)
+        logger.log('🔍 Activation de l\'organisation:', activateOrgId)
+        logger.log('📋 userMemberships:', userMemberships?.data)
         
         // Trouver l'organisation dans userMemberships
         const membership = userMemberships?.data?.find(
@@ -34,12 +35,12 @@ function ActivationHandlerContent() {
         )
 
         if (membership) {
-          console.log('✅ Organisation trouvée:', membership.organization.name)
+          logger.log('✅ Organisation trouvée:', membership.organization.name)
           
           try {
             // Activer l'organisation
             await setActive({ organization: activateOrgId })
-            console.log('✅ setActive réussi')
+            logger.log('✅ setActive réussi')
             
             toast({
               title: 'Organisation activée',
@@ -51,7 +52,7 @@ function ActivationHandlerContent() {
               window.location.href = '/dashboard'
             }, 500)
           } catch (setActiveError) {
-            console.error('❌ Erreur setActive:', setActiveError)
+            logger.error('❌ Erreur setActive:', setActiveError)
             
             // Si setActive échoue, utiliser une approche alternative
             // Rediriger vers une URL qui force l'activation via Clerk
@@ -65,7 +66,7 @@ function ActivationHandlerContent() {
             window.location.href = '/dashboard'
           }
         } else {
-          console.error('❌ Organisation non trouvée dans userMemberships')
+          logger.error('❌ Organisation non trouvée dans userMemberships')
           toast({
             title: 'Erreur',
             description: 'Organisation introuvable. Veuillez utiliser le sélecteur d\'organisation en haut à gauche.',
@@ -79,7 +80,7 @@ function ActivationHandlerContent() {
           }, 2000)
         }
       } catch (error) {
-        console.error('❌ Error activating organization:', error)
+        logger.error('❌ Error activating organization:', error)
         toast({
           title: 'Erreur',
           description: 'Impossible d\'activer l\'organisation. Veuillez utiliser le sélecteur d\'organisation en haut à gauche.',

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    console.log('[GET /api/forecasts] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
+    logger.log('[GET /api/forecasts] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       })
       
       if (!organization) {
-        console.log('[GET /api/forecasts] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
+        logger.log('[GET /api/forecasts] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              console.log(`✅ Organisation "${organization.name}" synchronisée`)
+              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/forecasts] Erreur synchronisation:', error)
+          logger.error('[GET /api/forecasts] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(forecasts)
   } catch (error) {
-    console.error('Error fetching forecasts:', error)
+    logger.error('Error fetching forecasts:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

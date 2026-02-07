@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getCurrentUserRole } from '@/lib/auth-role'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ role })
   } catch (error) {
-    console.error('[GET /api/user/role]', error)
+    logger.error('[GET /api/user/role]', error)
     return NextResponse.json(
       {
         error: 'Erreur lors du chargement du rôle',

@@ -1,5 +1,6 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { prisma } from './db/prisma'
+import { logger } from './logger'
 
 /**
  * Récupère l'organisation de l'utilisateur actuel
@@ -42,7 +43,7 @@ export async function getCurrentOrganization() {
               shrinkPct: 0.1, // 10% par défaut
             },
           })
-          console.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk`)
+          logger.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk`)
           break // Succès, sortir de la boucle
         } catch (dbError) {
           // Si l'organisation existe déjà (race condition), la récupérer
@@ -51,7 +52,7 @@ export async function getCurrentOrganization() {
               where: { clerkOrgId: orgId },
             })
             if (organization) {
-              console.log(`✅ Organisation "${organization.name}" trouvée dans la DB`)
+              logger.log(`✅ Organisation "${organization.name}" trouvée dans la DB`)
               break // Succès, sortir de la boucle
             }
           } else {
@@ -72,17 +73,17 @@ export async function getCurrentOrganization() {
         if (isRateLimit && attempts < maxAttempts) {
           // Attendre avant de réessayer (backoff exponentiel)
           const delay = Math.min(1000 * Math.pow(2, attempts - 1), 5000)
-          console.log(`⏳ Rate limit Clerk (tentative ${attempts}/${maxAttempts}), attente ${delay}ms...`)
+          logger.log(`⏳ Rate limit Clerk (tentative ${attempts}/${maxAttempts}), attente ${delay}ms...`)
           await new Promise(resolve => setTimeout(resolve, delay))
           continue // Réessayer
         } else if (isRateLimit) {
           // Dernière tentative échouée à cause du rate limit
-          console.error('❌ Rate limit Clerk après', maxAttempts, 'tentatives')
+          logger.error('❌ Rate limit Clerk après', maxAttempts, 'tentatives')
           // On retourne null mais l'organisation existe dans Clerk, donc le layout laissera passer
           return null
         } else {
           // Erreur non liée au rate limit
-          console.error('❌ Error syncing organization from Clerk:', error)
+          logger.error('❌ Error syncing organization from Clerk:', error)
           if (attempts >= maxAttempts) {
             // Après plusieurs tentatives, on retourne null
             // Mais comme orgId existe, le layout laissera quand même passer
@@ -124,7 +125,7 @@ export async function ensureOrganizationInDb(clerkOrgId: string) {
             shrinkPct: 0.1,
           },
         })
-        console.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk (admin)`)
+        logger.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk (admin)`)
         break
       } catch (dbError) {
         if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
@@ -148,7 +149,7 @@ export async function ensureOrganizationInDb(clerkOrgId: string) {
         await new Promise((resolve) => setTimeout(resolve, delay))
         continue
       }
-      console.error('❌ ensureOrganizationInDb:', error)
+      logger.error('❌ ensureOrganizationInDb:', error)
       throw error
     }
   }

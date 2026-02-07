@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { generateOrderRecommendations, generateStaffingRecommendations } from '@/lib/services/recommender'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/recommendations] Erreur synchronisation:', error)
+          logger.error('[GET /api/recommendations] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(recommendations)
   } catch (error) {
-    console.error('Error fetching recommendations:', error)
+    logger.error('Error fetching recommendations:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
     const { clerkOrgId, ...restBody } = body
     const orgIdToUse = authOrgId || clerkOrgId
 
-    console.log('[POST /api/recommendations] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    logger.log('[POST /api/recommendations] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/recommendations] Erreur synchronisation:', error)
+          logger.error('[POST /api/recommendations] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
     const { restaurantId, type, forecastDate } = restBody
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('[POST /api/recommendations] type=', type, 'restaurantId=', restaurantId)
+      logger.log('[POST /api/recommendations] type=', type, 'restaurantId=', restaurantId)
     }
 
     if (!restaurantId || !type) {
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, recommendations })
   } catch (error) {
-    console.error('Error generating recommendations:', error)
+    logger.error('Error generating recommendations:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

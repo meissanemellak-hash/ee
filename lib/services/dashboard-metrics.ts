@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 /**
  * Interface pour les métriques du dashboard exécutif
@@ -74,12 +75,12 @@ export async function calculateExecutiveDashboardMetrics(
     // Pour les autres, on peut estimer depuis data
     const data = rec.data as any
     
-    console.log('[dashboard-metrics] Recommendation ID:', rec.id, 'data.estimatedSavings:', data?.estimatedSavings, 'data keys:', Object.keys(data || {}))
+    logger.log('[dashboard-metrics] Recommendation ID:', rec.id, 'data.estimatedSavings:', data?.estimatedSavings, 'data keys:', Object.keys(data || {}))
     
     if (data?.estimatedSavings) {
       // Recommandation BOM avec estimatedSavings
       const savings = data.estimatedSavings || 0
-      console.log('[dashboard-metrics] Utilisation estimatedSavings:', savings)
+      logger.log('[dashboard-metrics] Utilisation estimatedSavings:', savings)
       return sum + savings
     } else if (data?.ingredients && Array.isArray(data.ingredients)) {
       // Recommandation BOM sans estimatedSavings - calculer depuis les ingrédients
@@ -91,7 +92,7 @@ export async function calculateExecutiveDashboardMetrics(
         // Estimation conservatrice : 10€ par ingrédient commandé
         return acc + (quantityToOrder > 0 ? 100 : 0)
       }, 0)
-      console.log('[dashboard-metrics] Calcul estimatedSavings depuis ingredients:', estimatedSavings)
+      logger.log('[dashboard-metrics] Calcul estimatedSavings depuis ingredients:', estimatedSavings)
       return sum + estimatedSavings
     } else if (Array.isArray(data)) {
       // Array d'OrderRecommendation, estimer depuis estimatedCost

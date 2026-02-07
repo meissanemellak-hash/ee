@@ -55,7 +55,7 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/recommendations/[id]] Erreur synchronisation:', error)
+          logger.error('[PATCH /api/recommendations/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -161,7 +161,7 @@ export async function PATCH(
       try {
         await runAllAlerts(restaurantId)
       } catch (alertError) {
-        console.error('[PATCH /api/recommendations/[id]] runAllAlerts:', alertError)
+        logger.error('[PATCH /api/recommendations/[id]] runAllAlerts:', alertError)
       }
     } else {
       await prisma.recommendation.update({
@@ -177,7 +177,7 @@ export async function PATCH(
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error('Error updating recommendation:', error)
+    logger.error('Error updating recommendation:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

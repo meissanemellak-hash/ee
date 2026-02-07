@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
 import Papa from 'papaparse'
 import { csvRestaurantRowSchema } from '@/lib/validations/restaurants'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
-    console.error('[POST /api/restaurants/import] Erreur:', error)
+    logger.error('[POST /api/restaurants/import] Erreur:', error)
     return NextResponse.json(
       {
         error: 'Erreur serveur',

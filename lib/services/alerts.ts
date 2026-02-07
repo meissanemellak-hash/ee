@@ -1,4 +1,5 @@
 import { prisma } from '../db/prisma'
+import { logger } from '../logger'
 import type { AlertType, AlertSeverity } from '@/types'
 
 interface AlertInput {
@@ -48,10 +49,10 @@ export async function checkInventoryAlerts(restaurantId: string) {
     },
   })
 
-  console.log(`[checkInventoryAlerts] Restaurant ${restaurantId}: ${inventory.length} entrées d'inventaire trouvées`)
+  logger.log(`[checkInventoryAlerts] Restaurant ${restaurantId}: ${inventory.length} entrées d'inventaire trouvées`)
 
   if (inventory.length === 0) {
-    console.log(`[checkInventoryAlerts] Aucun inventaire configuré pour le restaurant ${restaurantId}. Les alertes nécessitent un inventaire avec des seuils min/max.`)
+    logger.log(`[checkInventoryAlerts] Aucun inventaire configuré pour le restaurant ${restaurantId}. Les alertes nécessitent un inventaire avec des seuils min/max.`)
     return
   }
 
@@ -93,7 +94,7 @@ export async function checkForecastAlerts(restaurantId: string) {
   const tomorrowEnd = new Date(tomorrow)
   tomorrowEnd.setHours(23, 59, 59, 999)
 
-  console.log(`[checkForecastAlerts] Restaurant ${restaurantId}: Recherche des prévisions pour ${tomorrow.toISOString()}`)
+  logger.log(`[checkForecastAlerts] Restaurant ${restaurantId}: Recherche des prévisions pour ${tomorrow.toISOString()}`)
 
   // Récupérer les prévisions pour demain
   const forecasts = await prisma.forecast.findMany({
@@ -121,12 +122,12 @@ export async function checkForecastAlerts(restaurantId: string) {
     where: { restaurantId },
   })
 
-  console.log(`[checkForecastAlerts] Restaurant ${restaurantId}: ${forecasts.length} prévisions trouvées`)
+  logger.log(`[checkForecastAlerts] Restaurant ${restaurantId}: ${forecasts.length} prévisions trouvées`)
 
   // Pour chaque prévision, vérifier si on a assez de stock
   for (const forecast of forecasts) {
     if (!forecast.product || !forecast.product.productIngredients) {
-      console.log(`[checkForecastAlerts] Prévision ${forecast.id} sans produit ou recette, ignorée`)
+      logger.log(`[checkForecastAlerts] Prévision ${forecast.id} sans produit ou recette, ignorée`)
       continue
     }
 
@@ -160,10 +161,10 @@ export async function checkForecastAlerts(restaurantId: string) {
  * Exécute toutes les vérifications d'alertes pour un restaurant
  */
 export async function runAllAlerts(restaurantId: string) {
-  console.log(`[runAllAlerts] Début de la vérification des alertes pour le restaurant ${restaurantId}`)
+  logger.log(`[runAllAlerts] Début de la vérification des alertes pour le restaurant ${restaurantId}`)
   await checkInventoryAlerts(restaurantId)
   await checkForecastAlerts(restaurantId)
-  console.log(`[runAllAlerts] Fin de la vérification des alertes pour le restaurant ${restaurantId}`)
+  logger.log(`[runAllAlerts] Fin de la vérification des alertes pour le restaurant ${restaurantId}`)
 }
 
 /**
@@ -212,5 +213,5 @@ export async function createTestAlerts(restaurantId: string) {
     },
   })
 
-  console.log(`[createTestAlerts] 3 alertes de test créées pour le restaurant ${restaurantId}`)
+  logger.log(`[createTestAlerts] 3 alertes de test créées pour le restaurant ${restaurantId}`)
 }

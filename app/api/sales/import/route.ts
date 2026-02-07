@@ -6,6 +6,7 @@ import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/
 import { runAllAlerts } from '@/lib/services/alerts'
 import Papa from 'papaparse'
 import { csvSaleRowSchema } from '@/lib/validations/sales'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -202,7 +203,7 @@ export async function POST(request: NextRequest) {
     try {
       await runAllAlerts(restaurantId)
     } catch (alertError) {
-      console.error('[POST /api/sales/import] runAllAlerts:', alertError)
+      logger.error('[POST /api/sales/import] runAllAlerts:', alertError)
     }
 
     return NextResponse.json({
@@ -211,7 +212,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
-    console.error('Error importing sales:', error)
+    logger.error('Error importing sales:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 import { generateForecastsForRestaurant } from '@/lib/services/forecast'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     const { restaurantId, forecastDate, startDate, endDate, method, clerkOrgId } = body
     const orgIdToUse = authOrgId || clerkOrgId
 
-    console.log('[POST /api/forecasts/generate] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    logger.log('[POST /api/forecasts/generate] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       })
       
       if (!organization) {
-        console.log('[POST /api/forecasts/generate] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
+        logger.log('[POST /api/forecasts/generate] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              console.log(`✅ Organisation "${organization.name}" synchronisée`)
+              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/forecasts/generate] Erreur synchronisation:', error)
+          logger.error('[POST /api/forecasts/generate] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, forecasts })
   } catch (error) {
-    console.error('Error generating forecasts:', error)
+    logger.error('Error generating forecasts:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

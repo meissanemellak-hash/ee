@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/activity/recent] Erreur synchronisation:', error)
+          logger.error('[GET /api/activity/recent] Erreur synchronisation:', error)
         }
       }
     }
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest) {
       })
 
     } catch (error) {
-      console.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des ventes:', error)
+      logger.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des ventes:', error)
       // Continuer avec un tableau vide plutôt que de planter
       recentSales = []
     }
@@ -131,7 +132,7 @@ export async function GET(request: NextRequest) {
       })
 
     } catch (error) {
-      console.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des recommandations:', error)
+      logger.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des recommandations:', error)
       recentAcceptedRecommendations = []
     }
 
@@ -159,7 +160,7 @@ export async function GET(request: NextRequest) {
       })
 
     } catch (error) {
-      console.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des alertes créées:', error)
+      logger.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des alertes créées:', error)
       recentAlerts = []
     }
 
@@ -188,7 +189,7 @@ export async function GET(request: NextRequest) {
       })
 
     } catch (error) {
-      console.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des alertes résolues:', error)
+      logger.error('[GET /api/activity/recent] ❌ Erreur lors de la récupération des alertes résolues:', error)
       recentResolvedAlerts = []
     }
 
@@ -283,10 +284,10 @@ export async function GET(request: NextRequest) {
       activities: serializedActivities,
     })
   } catch (error) {
-    console.error('[GET /api/activity/recent] ❌ Erreur complète:', error)
+    logger.error('[GET /api/activity/recent] ❌ Erreur complète:', error)
     if (error instanceof Error) {
-      console.error('[GET /api/activity/recent] ❌ Stack trace:', error.stack)
-      console.error('[GET /api/activity/recent] ❌ Message:', error.message)
+      logger.error('[GET /api/activity/recent] ❌ Stack trace:', error.stack)
+      logger.error('[GET /api/activity/recent] ❌ Message:', error.message)
     }
     return NextResponse.json(
       { 

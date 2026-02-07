@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useOrganizationList } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
 import { translateApiError } from '@/lib/translate-api-error'
+import { logger } from '@/lib/logger'
 import { Loader2 } from 'lucide-react'
 
 function ActivateContent() {
@@ -35,8 +36,8 @@ function ActivateContent() {
 
     const activate = async () => {
       try {
-        console.log('🔍 Recherche de l\'organisation:', orgId)
-        console.log('📋 Organisations disponibles:', userMemberships.data?.map(m => ({
+        logger.log('🔍 Recherche de l\'organisation:', orgId)
+        logger.log('📋 Organisations disponibles:', userMemberships.data?.map(m => ({
           id: m.organization.id,
           name: m.organization.name
         })))
@@ -47,14 +48,14 @@ function ActivateContent() {
         )
 
         if (!orgInList) {
-          console.error('❌ Organisation non trouvée dans userMemberships:', orgId)
-          console.log('💡 Toutes les organisations:', userMemberships.data)
+          logger.error('❌ Organisation non trouvée dans userMemberships:', orgId)
+          logger.log('💡 Toutes les organisations:', userMemberships.data)
           
           // Essayer quand même d'activer - parfois Clerk accepte même si pas dans la liste
           try {
-            console.log('🔄 Tentative d\'activation directe...')
+            logger.log('🔄 Tentative d\'activation directe...')
             await setActive({ organization: orgId })
-            console.log('✅ Activation directe réussie')
+            logger.log('✅ Activation directe réussie')
             
             toast({
               title: 'Organisation activée',
@@ -80,12 +81,12 @@ function ActivateContent() {
           }
         }
 
-        console.log('✅ Organisation trouvée:', orgInList.organization.name)
+        logger.log('✅ Organisation trouvée:', orgInList.organization.name)
         
         // Activer l'organisation
         await setActive({ organization: orgId })
         
-        console.log('✅ Organisation activée avec succès')
+        logger.log('✅ Organisation activée avec succès')
         
         toast({
           title: 'Organisation activée',
@@ -97,7 +98,7 @@ function ActivateContent() {
           window.location.href = '/dashboard'
         }, 1000)
       } catch (error) {
-        console.error('❌ Error activating organization:', error)
+        logger.error('❌ Error activating organization:', error)
         toast({
           title: 'Erreur',
           description: translateApiError(error instanceof Error ? error.message : undefined),

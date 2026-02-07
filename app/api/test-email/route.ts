@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { sendNotificationEmail, sendAlertEmail } from '@/lib/services/email'
+import { logger } from '@/lib/logger'
 
 /**
  * Route API de test pour vérifier l'envoi d'emails avec Resend
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
       details: result,
     })
   } catch (error) {
-    console.error('Error sending test email:', error)
+    logger.error('Error sending test email:', error)
     return NextResponse.json(
       {
         error: 'Failed to send email',
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
       details: result,
     })
   } catch (error) {
-    console.error('Error sending test email:', error)
+    logger.error('Error sending test email:', error)
     return NextResponse.json(
       {
         error: 'Failed to send email',

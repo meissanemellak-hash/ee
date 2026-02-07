@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
       try {
         activeClerkOrg = await client.organizations.getOrganization({ organizationId: orgId })
       } catch (error) {
-        console.error('Error getting active org from Clerk:', error)
+        logger.error('Error getting active org from Clerk:', error)
       }
     }
     
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Debug error:', error)
+    logger.error('Debug error:', error)
     return NextResponse.json(
       { 
         error: 'Error',

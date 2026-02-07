@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
       total: userOrganizations.length,
     })
   } catch (error) {
-    console.error('Error syncing organizations:', error)
+    logger.error('Error syncing organizations:', error)
     return NextResponse.json(
       { 
         error: 'Error syncing organizations',

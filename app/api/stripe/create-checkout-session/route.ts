@@ -3,6 +3,7 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { getCurrentOrganization } from '@/lib/auth'
 import { getStripe, STRIPE_PLANS, type PlanId } from '@/lib/stripe'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
     })
   } catch (err) {
-    console.error('[stripe/create-checkout-session]', err)
+    logger.error('[stripe/create-checkout-session]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur Stripe' },
       { status: 500 }

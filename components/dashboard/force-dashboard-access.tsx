@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useOrganization } from '@clerk/nextjs'
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 /**
  * SOLUTION SIMPLE ET DIRECTE :
@@ -38,7 +39,7 @@ export function ForceDashboardAccess() {
     setLoading(true)
 
     try {
-      console.log('🔄 Redirection vers le dashboard:', organization.id, organization.name)
+      logger.log('🔄 Redirection vers le dashboard:', organization.id, organization.name)
       
       toast({
         title: 'Redirection en cours...',
@@ -49,11 +50,11 @@ export function ForceDashboardAccess() {
       // Redirection directe vers /dashboard
       // Le DashboardSyncHandler gérera automatiquement la synchronisation
       setTimeout(() => {
-        console.log('🔄 Redirection vers /dashboard')
+        logger.log('🔄 Redirection vers /dashboard')
         window.location.href = '/dashboard'
       }, 1000)
     } catch (error) {
-      console.error('❌ Erreur:', error)
+      logger.error('❌ Erreur:', error)
       toast({
         title: 'Redirection en cours...',
         description: 'Redirection vers le dashboard...',

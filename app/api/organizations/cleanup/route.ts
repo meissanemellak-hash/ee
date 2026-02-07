@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,12 +26,12 @@ export async function POST(request: NextRequest) {
       userMemberships.data?.map(m => m.organization.id) || []
     )
 
-    console.log('📋 Organisations Clerk de l\'utilisateur:', Array.from(clerkOrgIds))
+    logger.log('📋 Organisations Clerk de l\'utilisateur:', Array.from(clerkOrgIds))
 
     // Récupérer toutes les organisations de la DB
     const allOrgsInDb = await prisma.organization.findMany()
     
-    console.log('📋 Organisations dans la DB:', allOrgsInDb.map(o => ({ id: o.id, name: o.name, clerkOrgId: o.clerkOrgId })))
+    logger.log('📋 Organisations dans la DB:', allOrgsInDb.map(o => ({ id: o.id, name: o.name, clerkOrgId: o.clerkOrgId })))
 
     // Si deleteAll est true, supprimer TOUTES les organisations de la DB
     // Sinon, supprimer seulement celles dont l'utilisateur n'est pas membre
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (deleteAll) {
       // Supprimer toutes les organisations de la DB
       orphanOrgs = allOrgsInDb
-      console.log('🗑️ Mode suppression totale activé')
+      logger.log('🗑️ Mode suppression totale activé')
     } else {
       // Identifier les organisations orphelines (dans DB mais pas dans les membreships de l'utilisateur)
       orphanOrgs = allOrgsInDb.filter(
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.log('🔍 Organisations à supprimer:', orphanOrgs.map(o => ({ id: o.id, name: o.name, clerkOrgId: o.clerkOrgId })))
+    logger.log('🔍 Organisations à supprimer:', orphanOrgs.map(o => ({ id: o.id, name: o.name, clerkOrgId: o.clerkOrgId })))
 
     // Supprimer les organisations orphelines
     const deletedOrgs = []
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
           clerkOrgId: org.clerkOrgId,
         })
       } catch (error) {
-        console.error(`Erreur lors de la suppression de ${org.name}:`, error)
+        logger.error(`Erreur lors de la suppression de ${org.name}:`, error)
       }
     }
 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       message: `${deletedOrgs.length} organisation(s) orpheline(s) supprimée(s)`,
     })
   } catch (error) {
-    console.error('Error cleaning up organizations:', error)
+    logger.error('Error cleaning up organizations:', error)
     return NextResponse.json(
       { 
         error: 'Erreur lors du nettoyage',

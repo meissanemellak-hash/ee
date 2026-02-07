@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { generateBOMOrderRecommendations } from '@/lib/services/recommender-bom'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     const { clerkOrgId, ...restBody } = body
     const orgIdToUse = authOrgId || clerkOrgId
 
-    console.log('[POST /api/recommendations/bom] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    logger.log('[POST /api/recommendations/bom] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', clerkOrgId, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/recommendations/bom] Erreur synchronisation:', error)
+          logger.error('[POST /api/recommendations/bom] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Log pour debug
-    console.log('[POST /api/recommendations/bom] Résultat:', {
+    logger.log('[POST /api/recommendations/bom] Résultat:', {
       recommendationsCount: result.recommendations.length,
       hasDetails: !!result.details,
       reason: (result.details as any)?.reason,
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
         estimatedSavings: result.estimatedSavings,
       }
       
-      console.log('[POST /api/recommendations/bom] Sauvegarde recommandation avec estimatedSavings:', result.estimatedSavings)
+      logger.log('[POST /api/recommendations/bom] Sauvegarde recommandation avec estimatedSavings:', result.estimatedSavings)
       
       await prisma.recommendation.create({
         data: {
@@ -129,12 +130,12 @@ export async function POST(request: NextRequest) {
     } else {
       // Si aucune recommandation, retourner un message explicatif
       const reason = (result.details as any)?.reason || 'Aucune recommandation générée. Vérifiez que vous avez des produits avec des recettes et des ventes historiques.'
-      console.log('[POST /api/recommendations/bom] Aucune recommandation générée. Raison:', reason)
+      logger.log('[POST /api/recommendations/bom] Aucune recommandation générée. Raison:', reason)
     }
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('Error generating BOM recommendations:', error)
+    logger.error('Error generating BOM recommendations:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

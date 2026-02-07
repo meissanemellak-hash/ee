@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
         createdBy: userId,
       })
     } catch (clerkError) {
-      console.error('Clerk API Error:', clerkError)
+      logger.error('Clerk API Error:', clerkError)
       throw new Error(`Erreur Clerk: ${clerkError instanceof Error ? clerkError.message : 'Unknown Clerk error'}`)
     }
 
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
         },
       })
     } catch (dbError) {
-      console.error('Database Error:', dbError)
+      logger.error('Database Error:', dbError)
       // Si l'organisation existe déjà dans la DB mais pas dans Clerk, on la récupère
       if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
         const existing = await prisma.organization.findUnique({
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
       message: `L'organisation "${organization.name}" a été créée avec succès dans Clerk et la base de données.`,
     })
   } catch (error) {
-    console.error('Error creating organization:', error)
+    logger.error('Error creating organization:', error)
     
     if (error instanceof Error) {
       // Si l'organisation existe déjà dans Clerk

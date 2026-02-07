@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[POST /api/organizations/invite]', error)
+    logger.error('[POST /api/organizations/invite]', error)
     const message =
       error instanceof Error ? error.message : 'Erreur lors de l\'invitation'
     return NextResponse.json(

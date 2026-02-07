@@ -3,6 +3,7 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { getStripe, STRIPE_PLANS } from '@/lib/stripe'
 import { ensureOrganizationInDb } from '@/lib/auth'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
       const org = await ensureOrganizationInDb(clerkOrgId)
       organization = org ? { id: org.id, name: org.name } : null
     } catch (err) {
-      console.error('[admin/create-checkout-link] ensureOrganizationInDb:', err)
+      logger.error('[admin/create-checkout-link] ensureOrganizationInDb:', err)
       return NextResponse.json(
         { error: 'Impossible de synchroniser l\'organisation depuis Clerk' },
         { status: 500 }
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
     })
   } catch (err) {
-    console.error('[admin/create-checkout-link]', err)
+    logger.error('[admin/create-checkout-link]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur Stripe' },
       { status: 500 }

@@ -6,6 +6,7 @@ import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
 import { runAllAlerts } from '@/lib/services/alerts'
 import { z } from 'zod'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    console.log('[GET /api/sales] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
+    logger.log('[GET /api/sales] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       })
       
       if (!organization) {
-        console.log('[GET /api/sales] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
+        logger.log('[GET /api/sales] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              console.log(`✅ Organisation "${organization.name}" synchronisée`)
+              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/sales] Erreur synchronisation:', error)
+          logger.error('[GET /api/sales] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -189,7 +190,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(sales)
   } catch (error) {
-    console.error('Error fetching sales:', error)
+    logger.error('Error fetching sales:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
     const validatedData = saleSchema.parse(body)
     const orgIdToUse = authOrgId || body.clerkOrgId
 
-    console.log('[POST /api/sales] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', body.clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    logger.log('[POST /api/sales] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', body.clerkOrgId, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
       })
       
       if (!organization) {
-        console.log('[POST /api/sales] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
+        logger.log('[POST /api/sales] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
@@ -241,7 +242,7 @@ export async function POST(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              console.log(`✅ Organisation "${organization.name}" synchronisée`)
+              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -251,7 +252,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/sales] Erreur synchronisation:', error)
+          logger.error('[POST /api/sales] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -367,12 +368,12 @@ export async function POST(request: NextRequest) {
     try {
       await runAllAlerts(restaurantId)
     } catch (alertError) {
-      console.error('[POST /api/sales] runAllAlerts:', alertError)
+      logger.error('[POST /api/sales] runAllAlerts:', alertError)
     }
 
     return NextResponse.json(sale, { status: 201 })
   } catch (error) {
-    console.error('Error creating sale:', error)
+    logger.error('Error creating sale:', error)
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

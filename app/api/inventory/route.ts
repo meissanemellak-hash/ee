@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { runAllAlerts } from '@/lib/services/alerts'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/inventory] Erreur synchronisation:', error)
+          logger.error('[GET /api/inventory] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -118,7 +119,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(inventory)
   } catch (error) {
-    console.error('[GET /api/inventory] Erreur:', error)
+    logger.error('[GET /api/inventory] Erreur:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/inventory] Erreur synchronisation:', error)
+          logger.error('[POST /api/inventory] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -273,12 +274,12 @@ export async function POST(request: NextRequest) {
     try {
       await runAllAlerts(restaurantId)
     } catch (alertError) {
-      console.error('[POST /api/inventory] runAllAlerts:', alertError)
+      logger.error('[POST /api/inventory] runAllAlerts:', alertError)
     }
 
     return NextResponse.json(inventory)
   } catch (error) {
-    console.error('[POST /api/inventory] Erreur:', error)
+    logger.error('[POST /api/inventory] Erreur:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

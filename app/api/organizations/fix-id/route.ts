@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
           },
         })
         
-        console.log('[POST /api/organizations/fix-id] ✅ Organisation créée dans la DB avec le bon ID')
+        logger.log('[POST /api/organizations/fix-id] ✅ Organisation créée dans la DB avec le bon ID')
         
         return NextResponse.json({
           success: true,
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
           },
         })
       } catch (error: any) {
-        console.error('[POST /api/organizations/fix-id] ❌ Erreur création:', error)
+        logger.error('[POST /api/organizations/fix-id] ❌ Erreur création:', error)
         
         // Si c'est une erreur de contrainte unique, l'organisation existe peut-être déjà
         if (error?.code === 'P2002' || (error instanceof Error && error.message.includes('Unique constraint'))) {
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     // Si l'ID est déjà correct, rien à faire
     if (organization.clerkOrgId === correctClerkOrgId) {
-      console.log('[POST /api/organizations/fix-id] ✅ L\'ID est déjà correct, aucune action nécessaire')
+      logger.log('[POST /api/organizations/fix-id] ✅ L\'ID est déjà correct, aucune action nécessaire')
       return NextResponse.json({
         success: true,
         message: 'L\'ID est déjà correct. Aucune modification nécessaire.',
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
         data: { clerkOrgId: correctClerkOrgId },
       })
 
-      console.log('[POST /api/organizations/fix-id] ✅ ID corrigé:', {
+      logger.log('[POST /api/organizations/fix-id] ✅ ID corrigé:', {
         oldId: organization.clerkOrgId,
         newId: correctClerkOrgId,
         organizationName: updatedOrganization.name,
@@ -203,7 +204,7 @@ export async function POST(request: NextRequest) {
         },
       })
     } catch (error) {
-      console.error('[POST /api/organizations/fix-id] Erreur mise à jour:', error)
+      logger.error('[POST /api/organizations/fix-id] Erreur mise à jour:', error)
       return NextResponse.json(
         { 
           error: 'Erreur lors de la mise à jour de l\'ID',
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (error) {
-    console.error('[POST /api/organizations/fix-id] Erreur:', error)
+    logger.error('[POST /api/organizations/fix-id] Erreur:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

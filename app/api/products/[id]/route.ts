@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { z } from 'zod'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +69,7 @@ export async function GET(
             }
           }
         } catch (error) {
-          console.error('[GET /api/products/[id]] Erreur synchronisation:', error)
+          logger.error('[GET /api/products/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -100,7 +101,7 @@ export async function GET(
 
     return NextResponse.json({ product })
   } catch (error) {
-    console.error('Error fetching product:', error)
+    logger.error('Error fetching product:', error)
     return NextResponse.json(
       { error: 'Error fetching product', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -161,7 +162,7 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/products/[id]] Erreur synchronisation:', error)
+          logger.error('[PATCH /api/products/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -231,7 +232,7 @@ export async function PATCH(
       )
     }
 
-    console.error('Error updating product:', error)
+    logger.error('Error updating product:', error)
     return NextResponse.json(
       { error: 'Error updating product', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -300,7 +301,7 @@ export async function DELETE(
             }
           }
         } catch (error) {
-          console.error('[DELETE /api/products/[id]] Erreur synchronisation:', error)
+          logger.error('[DELETE /api/products/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -355,7 +356,7 @@ export async function DELETE(
       message: 'Produit supprimé avec succès',
     })
   } catch (error) {
-    console.error('Error deleting product:', error)
+    logger.error('Error deleting product:', error)
     return NextResponse.json(
       { error: 'Error deleting product', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

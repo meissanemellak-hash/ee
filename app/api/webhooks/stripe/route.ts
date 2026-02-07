@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Signature invalide'
-    console.error('[webhooks/stripe] Signature invalide:', message)
+    logger.error('[webhooks/stripe] Signature invalide:', message)
     return NextResponse.json({ error: message }, { status: 400 })
   }
 
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
         break
     }
   } catch (err) {
-    console.error('[webhooks/stripe] Erreur traitement:', err)
+    logger.error('[webhooks/stripe] Erreur traitement:', err)
     return NextResponse.json(
       { error: 'Erreur lors du traitement du webhook' },
       { status: 500 }
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
 async function upsertSubscriptionFromStripe(sub: Stripe.Subscription) {
   const organizationId = (sub.metadata?.organizationId as string) || null
   if (!organizationId) {
-    console.warn('[webhooks/stripe] Subscription sans metadata.organizationId:', sub.id)
+    logger.warn('[webhooks/stripe] Subscription sans metadata.organizationId:', sub.id)
     return
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
                 shrinkPct: 0.1,
               },
             })
-            console.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk`)
+            logger.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk`)
           } catch (dbError) {
             // Si erreur de contrainte unique, récupérer l'organisation existante
             if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (error) {
-        console.error('❌ Error syncing organization:', error)
+        logger.error('❌ Error syncing organization:', error)
         // Si erreur, retourner non synchronisée
         return NextResponse.json({ synced: false }, { status: 200 })
       }
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
       } : null,
     })
   } catch (error) {
-    console.error('Error checking organization sync:', error)
+    logger.error('Error checking organization sync:', error)
     return NextResponse.json(
       { 
         synced: false,

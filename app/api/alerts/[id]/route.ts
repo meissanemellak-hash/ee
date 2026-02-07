@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +62,7 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/alerts/[id]] Erreur synchronisation:', error)
+          logger.error('[PATCH /api/alerts/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -111,7 +112,7 @@ export async function PATCH(
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error('Error updating alert:', error)
+    logger.error('Error updating alert:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

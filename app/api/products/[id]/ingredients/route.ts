@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
@@ -64,7 +65,7 @@ export async function GET(
             }
           }
         } catch (error) {
-          console.error('[GET /api/products/[id]/ingredients] Erreur synchronisation:', error)
+          logger.error('[GET /api/products/[id]/ingredients] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -117,7 +118,7 @@ export async function GET(
 
     return NextResponse.json(productIngredients)
   } catch (error) {
-    console.error('Error fetching product ingredients:', error)
+    logger.error('Error fetching product ingredients:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -179,7 +180,7 @@ export async function POST(
             }
           }
         } catch (error) {
-          console.error('[POST /api/products/[id]/ingredients] Erreur synchronisation:', error)
+          logger.error('[POST /api/products/[id]/ingredients] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -282,7 +283,7 @@ export async function POST(
 
     return NextResponse.json(productIngredient, { status: 201 })
   } catch (error) {
-    console.error('Error adding product ingredient:', error)
+    logger.error('Error adding product ingredient:', error)
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

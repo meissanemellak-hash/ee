@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/organizations] Erreur synchronisation:', error)
+          logger.error('[GET /api/organizations] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(organization)
   } catch (error) {
-    console.error('[GET /api/organizations] Erreur:', error)
+    logger.error('[GET /api/organizations] Erreur:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

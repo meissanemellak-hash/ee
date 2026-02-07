@@ -3,6 +3,7 @@ import { auth, clerkClient } from '@clerk/nextjs/server'
 import { getCurrentUserRole } from '@/lib/auth-role'
 import { APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
 import type { Role } from '@/lib/roles'
+import { logger } from '@/lib/logger'
 
 function mapMembershipToRole(
   clerkRole: string,
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ members })
   } catch (error) {
-    console.error('[GET /api/organizations/members]', error)
+    logger.error('[GET /api/organizations/members]', error)
     const message =
       error instanceof Error ? error.message : 'Erreur lors du chargement'
     return NextResponse.json(

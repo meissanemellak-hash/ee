@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
       message: 'Organisation prête à être activée',
     })
   } catch (error) {
-    console.error('❌ Error in activate organization API:', error)
+    logger.error('❌ Error in activate organization API:', error)
     return NextResponse.json(
       { 
         error: 'Erreur lors de l\'activation',

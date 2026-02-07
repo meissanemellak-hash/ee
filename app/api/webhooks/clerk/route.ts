@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { prisma } from '@/lib/db/prisma'
 import { sendEmail } from '@/lib/services/email'
 import { getAccountLockedEmailHtml } from '@/lib/services/email-templates'
+import { logger } from '@/lib/logger'
 
 const webhookSecret = process.env.CLERK_WEBHOOK_SECRET
 
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       'svix-signature': svix_signature,
     })
   } catch (err) {
-    console.error('Error verifying webhook:', err)
+    logger.error('Error verifying webhook:', err)
     return NextResponse.json(
       { error: 'Error verifying webhook' },
       { status: 400 }
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
             html,
           })
         } catch (err) {
-          console.error('[webhook clerk] Erreur envoi email Compte verrouillé:', err)
+          logger.error('[webhook clerk] Erreur envoi email Compte verrouillé:', err)
           return NextResponse.json({ error: 'Email send failed' }, { status: 500 })
         }
       }

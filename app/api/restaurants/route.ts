@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/restaurants] Erreur synchronisation:', error)
+          logger.error('[GET /api/restaurants] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -124,7 +125,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(restaurants)
   } catch (error) {
-    console.error('Error fetching restaurants:', error)
+    logger.error('Error fetching restaurants:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/restaurants] Erreur synchronisation:', error)
+          logger.error('[POST /api/restaurants] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -212,7 +213,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(restaurant)
   } catch (error) {
-    console.error('Error creating restaurant:', error)
+    logger.error('Error creating restaurant:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

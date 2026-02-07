@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +59,7 @@ export async function DELETE(
             }
           }
         } catch (error) {
-          console.error('[DELETE /api/products/[id]/ingredients/[ingredientId]] Erreur synchronisation:', error)
+          logger.error('[DELETE /api/products/[id]/ingredients/[ingredientId]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -117,7 +118,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Product ingredient deleted successfully' })
   } catch (error) {
-    console.error('Error deleting product ingredient:', error)
+    logger.error('Error deleting product ingredient:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

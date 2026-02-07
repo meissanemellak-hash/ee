@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { runAllAlerts } from '@/lib/services/alerts'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +60,7 @@ export async function PATCH(
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/inventory/[id]] Erreur synchronisation:', error)
+          logger.error('[PATCH /api/inventory/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -126,12 +127,12 @@ export async function PATCH(
     try {
       await runAllAlerts(updatedInventory.restaurantId)
     } catch (alertError) {
-      console.error('[PATCH /api/inventory/[id]] runAllAlerts:', alertError)
+      logger.error('[PATCH /api/inventory/[id]] runAllAlerts:', alertError)
     }
 
     return NextResponse.json(updatedInventory)
   } catch (error) {
-    console.error('[PATCH /api/inventory/[id]] Erreur:', error)
+    logger.error('[PATCH /api/inventory/[id]] Erreur:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -194,7 +195,7 @@ export async function DELETE(
             }
           }
         } catch (error) {
-          console.error('[DELETE /api/inventory/[id]] Erreur synchronisation:', error)
+          logger.error('[DELETE /api/inventory/[id]] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -243,7 +244,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[DELETE /api/inventory/[id]] Erreur:', error)
+    logger.error('[DELETE /api/inventory/[id]] Erreur:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

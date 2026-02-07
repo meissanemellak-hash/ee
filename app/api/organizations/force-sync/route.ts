@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
             },
           })
         } catch (error) {
-          console.error('Error syncing organization:', error)
+          logger.error('Error syncing organization:', error)
           return NextResponse.json({ synced: false, error: 'Error syncing organization' }, { status: 500 })
         }
       }
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
       message: organization ? 'Organization synced' : 'Organization not found',
     })
   } catch (error) {
-    console.error('Error in force-sync:', error)
+    logger.error('Error in force-sync:', error)
     return NextResponse.json(
       {
         synced: false,

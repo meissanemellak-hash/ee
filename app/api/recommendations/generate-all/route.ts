@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/recommendations/generate-all] Erreur sync org:', error)
+          logger.error('[POST /api/recommendations/generate-all] Erreur sync org:', error)
         }
       }
     } else {
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Erreur inconnue'
           errors.push(`${restaurant.name}: ${msg}`)
-          console.error(`[generate-all STAFFING] ${restaurant.name}:`, err)
+          logger.error(`[generate-all STAFFING] ${restaurant.name}:`, err)
         }
       }
     } else {
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Erreur inconnue'
           errors.push(`${restaurant.name}: ${msg}`)
-          console.error(`[generate-all] ${restaurant.name}:`, err)
+          logger.error(`[generate-all] ${restaurant.name}:`, err)
         }
       }
     }
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       ...(errors.length > 0 && { errors }),
     })
   } catch (error) {
-    console.error('Error generate-all recommendations:', error)
+    logger.error('Error generate-all recommendations:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

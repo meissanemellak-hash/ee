@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    console.log('[GET /api/ingredients] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
+    logger.log('[GET /api/ingredients] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       
       // Si pas trouvée, essayer de synchroniser
       if (!organization) {
-        console.log('[GET /api/ingredients] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
+        logger.log('[GET /api/ingredients] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              console.log(`✅ Organisation "${organization.name}" synchronisée`)
+              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/ingredients] Erreur synchronisation:', error)
+          logger.error('[GET /api/ingredients] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -89,10 +90,10 @@ export async function GET(request: NextRequest) {
     }
     
     if (!organization) {
-      console.error('[GET /api/ingredients] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
+      logger.error('[GET /api/ingredients] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
       
       if (orgIdToUse) {
-        console.error('[GET /api/ingredients] ERREUR: orgIdToUse était défini mais organisation non trouvée après synchronisation')
+        logger.error('[GET /api/ingredients] ERREUR: orgIdToUse était défini mais organisation non trouvée après synchronisation')
       }
       
       return NextResponse.json({ 
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest) {
       }, { status: 404 })
     }
     
-    console.log('[GET /api/ingredients] Organisation trouvée:', organization.name, organization.id)
+    logger.log('[GET /api/ingredients] Organisation trouvée:', organization.name, organization.id)
 
     // Récupérer les paramètres de recherche et filtres
     const search = searchParams.get('search') || ''
@@ -166,7 +167,7 @@ export async function GET(request: NextRequest) {
       units: units.map(u => u.unit).filter((u): u is string => u !== null && u !== ''),
     })
   } catch (error) {
-    console.error('Error fetching ingredients:', error)
+    logger.error('Error fetching ingredients:', error)
     return NextResponse.json(
       { error: 'Error fetching ingredients', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -194,7 +195,7 @@ export async function POST(request: NextRequest) {
     // Utiliser clerkOrgId depuis le body si auth().orgId est undefined
     const orgIdToUse = authOrgId || validatedData.clerkOrgId
 
-    console.log('[POST /api/ingredients] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', validatedData.clerkOrgId, 'orgIdToUse:', orgIdToUse)
+    logger.log('[POST /api/ingredients] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', validatedData.clerkOrgId, 'orgIdToUse:', orgIdToUse)
 
     if (!orgIdToUse) {
       return NextResponse.json({ 
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
 
     // Si l'organisation n'existe pas dans la DB, la créer depuis Clerk
     if (!organization) {
-      console.log('[POST /api/ingredients] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
+      logger.log('[POST /api/ingredients] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
       try {
         const { clerkClient } = await import('@clerk/nextjs/server')
         const client = await clerkClient()
@@ -239,7 +240,7 @@ export async function POST(request: NextRequest) {
               shrinkPct: 0.1,
             },
           })
-          console.log(`✅ Organisation "${organization.name}" créée dans la DB`)
+          logger.log(`✅ Organisation "${organization.name}" créée dans la DB`)
         } catch (dbError) {
           // Si l'organisation existe déjà (race condition), la récupérer
           if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
@@ -251,8 +252,8 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (error) {
-        console.error('[POST /api/ingredients] Erreur lors de la synchronisation:', error)
-        console.error('[POST /api/ingredients] Détails de l\'erreur:', {
+        logger.error('[POST /api/ingredients] Erreur lors de la synchronisation:', error)
+        logger.error('[POST /api/ingredients] Détails de l\'erreur:', {
           message: error instanceof Error ? error.message : 'Unknown error',
           stack: error instanceof Error ? error.stack : undefined,
           orgIdToUse,
@@ -273,7 +274,7 @@ export async function POST(request: NextRequest) {
     }
     
     if (!organization) {
-      console.error('[POST /api/ingredients] Organisation non trouvée après synchronisation. orgIdToUse:', orgIdToUse)
+      logger.error('[POST /api/ingredients] Organisation non trouvée après synchronisation. orgIdToUse:', orgIdToUse)
       return NextResponse.json({ 
         error: 'Organization not found',
         details: 'L\'organisation n\'a pas pu être synchronisée. Veuillez rafraîchir la page.'
@@ -319,7 +320,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.error('Error creating ingredient:', error)
+    logger.error('Error creating ingredient:', error)
     return NextResponse.json(
       { error: 'Error creating ingredient', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

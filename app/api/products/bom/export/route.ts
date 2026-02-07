@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ bom: bomData })
   } catch (error) {
-    console.error('[GET /api/products/bom/export] Erreur:', error)
+    logger.error('[GET /api/products/bom/export] Erreur:', error)
     return NextResponse.json(
       {
         error: 'Erreur serveur',

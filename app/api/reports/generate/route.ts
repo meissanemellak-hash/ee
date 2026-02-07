@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { generateReport, type ReportType, type ReportFilters } from '@/lib/services/reports'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/reports/generate] Erreur synchronisation:', error)
+          logger.error('[POST /api/reports/generate] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(report)
   } catch (error) {
-    console.error('[POST /api/reports/generate] Erreur:', error)
+    logger.error('[POST /api/reports/generate] Erreur:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

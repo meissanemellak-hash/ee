@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { checkApiPermission, APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
+import { logger } from '@/lib/logger'
 
 const updateRoleSchema = z.object({
   role: z.enum(['admin', 'manager', 'staff']),
@@ -84,7 +85,7 @@ export async function PATCH(
       role: newRole,
     })
   } catch (error) {
-    console.error('[PATCH /api/organizations/members/[userId]]', error)
+    logger.error('[PATCH /api/organizations/members/[userId]]', error)
     const message =
       error instanceof Error ? error.message : 'Erreur lors de la mise à jour'
     return NextResponse.json(

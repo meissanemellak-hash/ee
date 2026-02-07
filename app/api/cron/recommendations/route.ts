@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { generateBOMOrderRecommendations } from '@/lib/services/recommender-bom'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -18,7 +19,7 @@ export const maxDuration = 120
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) {
-    console.error('[cron/recommendations] CRON_SECRET non configuré')
+    logger.error('[cron/recommendations] CRON_SECRET non configuré')
     return NextResponse.json(
       { error: 'Cron not configured' },
       { status: 503 }
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Erreur inconnue'
           orgErrors.push(`${restaurant.name}: ${msg}`)
-          console.error(`[cron/recommendations] ${restaurant.name}:`, err)
+          logger.error(`[cron/recommendations] ${restaurant.name}:`, err)
         }
       }
 
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
       ...(errors.length > 0 && { errors: errors.slice(0, 20) }),
     })
   } catch (error) {
-    console.error('[cron/recommendations]', error)
+    logger.error('[cron/recommendations]', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

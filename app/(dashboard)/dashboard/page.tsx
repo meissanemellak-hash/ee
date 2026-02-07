@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { calculateExecutiveDashboardMetrics } from '@/lib/services/dashboard-metrics'
+import { logger } from '@/lib/logger'
 import { TrendingUp, TrendingDown, AlertTriangle, Package, CheckCircle2, ArrowRight } from 'lucide-react'
 import { DashboardRecommendationsList } from '@/components/dashboard/dashboard-recommendations-list'
 import { ReloadButton } from '@/components/dashboard/reload-button'
@@ -80,7 +81,7 @@ export default async function DashboardPage(props: PageProps) {
                 shrinkPct: 0.1,
               },
             })
-            console.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk`)
+            logger.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk`)
           } catch (dbError) {
             // Si erreur de contrainte unique, récupérer l'organisation existante
             if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
@@ -94,7 +95,7 @@ export default async function DashboardPage(props: PageProps) {
         }
       }
     } catch (error) {
-      console.error('Error syncing organization:', error)
+      logger.error('Error syncing organization:', error)
       // En cas d'erreur, afficher le message d'attente
       // Le handler client fera la synchronisation
     }

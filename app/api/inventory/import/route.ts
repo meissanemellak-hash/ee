@@ -6,6 +6,7 @@ import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/
 import Papa from 'papaparse'
 import { csvInventoryRowSchema } from '@/lib/validations/inventory'
 import { runAllAlerts } from '@/lib/services/alerts'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -255,7 +256,7 @@ export async function POST(request: NextRequest) {
     try {
       await runAllAlerts(restaurant.id)
     } catch (alertError) {
-      console.error('[POST /api/inventory/import] runAllAlerts:', alertError)
+      logger.error('[POST /api/inventory/import] runAllAlerts:', alertError)
     }
 
     return NextResponse.json({
@@ -266,7 +267,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
-    console.error('[POST /api/inventory/import] Erreur:', error)
+    logger.error('[POST /api/inventory/import] Erreur:', error)
     return NextResponse.json(
       {
         error: 'Erreur serveur',

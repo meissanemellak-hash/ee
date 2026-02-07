@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { runAllAlerts, createTestAlerts } from '@/lib/services/alerts'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[GET /api/alerts] Erreur synchronisation:', error)
+          logger.error('[GET /api/alerts] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(alerts)
   } catch (error) {
-    console.error('Error fetching alerts:', error)
+    logger.error('Error fetching alerts:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
     const { restaurantId, clerkOrgId, createTest } = body
     const orgIdToUse = authOrgId || clerkOrgId
 
-    console.log('[POST /api/alerts] Début - userId:', userId, 'restaurantId:', restaurantId, 'createTest:', createTest, 'orgIdToUse:', orgIdToUse)
+    logger.log('[POST /api/alerts] Début - userId:', userId, 'restaurantId:', restaurantId, 'createTest:', createTest, 'orgIdToUse:', orgIdToUse)
 
     let organization: any = null
 
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[POST /api/alerts] Erreur synchronisation:', error)
+          logger.error('[POST /api/alerts] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -190,14 +191,14 @@ export async function POST(request: NextRequest) {
     })
 
     if (!restaurant) {
-      console.error('[POST /api/alerts] Restaurant non trouvé:', restaurantId, 'pour organisation:', organization.id)
+      logger.error('[POST /api/alerts] Restaurant non trouvé:', restaurantId, 'pour organisation:', organization.id)
       return NextResponse.json(
         { error: 'Restaurant not found or does not belong to your organization' },
         { status: 404 }
       )
     }
 
-    console.log('[POST /api/alerts] Restaurant trouvé:', restaurant.name, 'createTest:', createTest)
+    logger.log('[POST /api/alerts] Restaurant trouvé:', restaurant.name, 'createTest:', createTest)
 
     // Si createTest est true, créer des alertes de test
     if (createTest === true) {
@@ -209,7 +210,7 @@ export async function POST(request: NextRequest) {
           message: '3 alertes de test créées avec succès'
         })
       } catch (testError) {
-        console.error('[POST /api/alerts] Erreur lors de la création des alertes de test:', testError)
+        logger.error('[POST /api/alerts] Erreur lors de la création des alertes de test:', testError)
         return NextResponse.json(
           { 
             error: 'Erreur lors de la création des alertes de test',
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
     try {
       await runAllAlerts(restaurantId)
     } catch (alertError) {
-      console.error('[POST /api/alerts] Erreur lors de la génération des alertes:', alertError)
+      logger.error('[POST /api/alerts] Erreur lors de la génération des alertes:', alertError)
       // Ne pas échouer complètement, on continue pour compter les alertes existantes
     }
 
@@ -243,7 +244,7 @@ export async function POST(request: NextRequest) {
         : 'Aucune alerte générée. Vérifiez que vous avez configuré un inventaire avec des seuils min/max, ou utilisez "Générer des alertes de test" pour tester le système.'
     })
   } catch (error) {
-    console.error('[POST /api/alerts] Erreur complète:', error)
+    logger.error('[POST /api/alerts] Erreur complète:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -307,7 +308,7 @@ export async function PATCH(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.error('[PATCH /api/alerts] Erreur synchronisation:', error)
+          logger.error('[PATCH /api/alerts] Erreur synchronisation:', error)
         }
       }
     } else {
@@ -351,7 +352,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error('Error updating alert:', error)
+    logger.error('Error updating alert:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
