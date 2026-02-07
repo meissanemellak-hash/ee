@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 import { Loader2, Copy, Check } from 'lucide-react'
 
 type Props = {
@@ -31,7 +32,7 @@ export function GenerateCheckoutLinkButton({ clerkOrgId, organizationName }: Pro
       if (!res.ok) {
         toast({
           title: 'Erreur',
-          description: data.error ?? 'Impossible de générer le lien',
+          description: translateApiError(data.error) || 'Impossible de générer le lien',
           variant: 'destructive',
         })
         return

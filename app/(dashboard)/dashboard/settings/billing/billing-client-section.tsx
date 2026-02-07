@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { translateApiError } from '@/lib/translate-api-error'
 
 export function BillingClientSection() {
   const [loading, setLoading] = useState(false)
@@ -20,7 +21,7 @@ export function BillingClientSection() {
       }
       toast({
         title: 'Erreur',
-        description: data.error ?? 'Impossible d\'ouvrir le portail de facturation.',
+        description: translateApiError(data.error) || 'Impossible d\'ouvrir le portail de facturation.',
         variant: 'destructive',
       })
     } catch (e) {

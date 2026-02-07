@@ -60,11 +60,42 @@ const API_ERROR_MAP: Record<string, string> = {
   'Failed to load organization data': 'Impossible de charger les données de l\'organisation.',
   'Failed to load user data': 'Impossible de charger les données utilisateur.',
   'Failed to load members': 'Impossible de charger les membres.',
+  'You are not a member of this organization': 'Vous n\'êtes pas membre de cette organisation.',
+  'Organization required': 'Veuillez sélectionner une organisation.',
+  'Organization sync failed': 'Échec de la synchronisation de l\'organisation.',
 
   // Alertes
   'Failed to fetch alerts': 'Impossible de charger les alertes.',
   'Failed to generate alerts': 'Échec de la génération des alertes.',
   'Failed to update alert': 'Impossible de mettre à jour l\'alerte.',
+  'Alert not found or does not belong to your organization': 'Alerte introuvable ou n\'appartient pas à votre organisation.',
+
+  // Ressources introuvables (API)
+  'Ingredient not found': 'Ingrédient introuvable.',
+  'Ingredient not found or does not belong to your organization': 'Ingrédient introuvable ou n\'appartient pas à votre organisation.',
+  'Product not found': 'Produit introuvable.',
+  'Product not found or does not belong to your organization': 'Produit introuvable ou n\'appartient pas à votre organisation.',
+  'Product ingredient not found': 'Ingrédient du produit introuvable.',
+  'Sale not found': 'Vente introuvable.',
+  'Inventory not found': 'Élément d\'inventaire introuvable.',
+  'Inventory does not belong to your organization': 'Cet inventaire n\'appartient pas à votre organisation.',
+  'Recommendation not found': 'Recommandation introuvable.',
+  'Forecast not found': 'Prévision introuvable.',
+
+  // Erreurs serveur / requête
+  'Internal server error': 'Erreur serveur. Veuillez réessayer plus tard.',
+  'Email send failed': 'Échec de l\'envoi de l\'e-mail.',
+  'Validation error': 'Données invalides. Vérifiez les champs.',
+  'Forbidden': 'Accès refusé.',
+  'restaurantId is required': 'Le restaurant est obligatoire.',
+  'restaurantId and type are required': 'Le restaurant et le type sont obligatoires.',
+  'Invalid type. Must be ORDER or STAFFING': 'Type invalide. Doit être ORDER ou STAFFING.',
+  'Invalid status. Must be pending, accepted, or dismissed': 'Statut invalide. Doit être en attente, accepté ou rejeté.',
+  'Restaurant not found or does not belong to your organization': 'Restaurant introuvable ou n\'appartient pas à votre organisation.',
+  'name is required': 'Le nom est obligatoire.',
+  'No valid fields to update': 'Aucun champ valide à mettre à jour.',
+  'File and restaurantId are required': 'Fichier et restaurant obligatoires.',
+  'Invalid CSV format': 'Format CSV invalide.',
 
   // Générique
   'Unknown error': 'Erreur inconnue.',
