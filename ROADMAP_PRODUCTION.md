@@ -35,7 +35,7 @@
   - [ ] Créer modèle Prisma `Subscription` avec :
     - `organizationId`, `stripeCustomerId`, `stripeSubscriptionId`
     - `status` (active, canceled, past_due)
-    - `plan` (starter, pro, enterprise)
+    - `plan` (essentiel, croissance, pro — lookup_key Stripe)
     - `currentPeriodStart`, `currentPeriodEnd`
   - [ ] Migration Prisma pour `Subscription`
   
@@ -47,7 +47,7 @@
   - [ ] Gérer `invoice.payment_failed`
   
 - [ ] **Page de pricing** (`/pricing`)
-  - [ ] Afficher 3 plans (Starter 2000€, Pro 5000€, Enterprise 10000€)
+  - [ ] Afficher 3 plans (Essentiel 1500€, Croissance 3000€, Pro 5000€)
   - [ ] Bouton "Commencer" qui redirige vers Stripe Checkout
   - [ ] Design premium avec comparaison des features
   
@@ -360,7 +360,7 @@
 - Itérer avec feedback des clients beta
 
 ### Semaine 5-6 : Version 1.0
-- Finaliser les fonctionnalités enterprise
+- Finaliser les fonctionnalités avancées (plan Pro)
 - Lancer officiellement avec pricing public
 
 ---

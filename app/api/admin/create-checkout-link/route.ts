@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, currentUser } from '@clerk/nextjs/server'
-import { getStripe, STRIPE_PLANS } from '@/lib/stripe'
+import { getStripe, STRIPE_PLANS, type PlanId } from '@/lib/stripe'
 import { ensureOrganizationInDb } from '@/lib/auth'
 import { prisma } from '@/lib/db/prisma'
 import { logger } from '@/lib/logger'
@@ -11,9 +11,8 @@ const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase()
 
 /**
  * POST /api/admin/create-checkout-link
- * Body: { clerkOrgId: string } ou { organizationId: string }
- * Réservé au super-admin. Si clerkOrgId est fourni, on synchronise l'org depuis Clerk si besoin.
- * Crée une session Stripe Checkout (plan Pro) pour cette organisation.
+ * Body: { clerkOrgId?: string, organizationId?: string, plan?: 'starter' | 'growth' | 'pro' }
+ * Réservé au super-admin. Crée une session Stripe Checkout pour cette organisation (défaut: plan Pro).
  */
 export async function POST(request: NextRequest) {
   const { userId } = auth()
@@ -35,19 +34,20 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const plan = STRIPE_PLANS.pro
-  if (!plan?.priceId) {
-    return NextResponse.json(
-      { error: 'Plan Pro non configuré (STRIPE_PRICE_PRO)' },
-      { status: 500 }
-    )
-  }
-
-  let body: { clerkOrgId?: string; organizationId?: string }
+  let body: { clerkOrgId?: string; organizationId?: string; plan?: string }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Body JSON invalide' }, { status: 400 })
+  }
+
+  const planId = (body.plan ?? 'pro') as PlanId
+  const plan = STRIPE_PLANS[planId]
+  if (!plan?.priceId) {
+    return NextResponse.json(
+      { error: `Plan ${planId} invalide ou prix Stripe non configuré` },
+      { status: 500 }
+    )
   }
 
   const clerkOrgId = body.clerkOrgId && typeof body.clerkOrgId === 'string' ? body.clerkOrgId : null

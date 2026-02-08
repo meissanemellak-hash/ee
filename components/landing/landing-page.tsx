@@ -412,11 +412,11 @@ export function LandingPage() {
               Une offre pensée pour la croissance
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Tarification adaptée à votre périmètre. Bénéfice : un investissement qui se traduit par des économies mesurables, un pilotage simplifié et un accompagnement dédié (devis Pro et Enterprise).
+              Tarification adaptée à votre périmètre. Bénéfice : un investissement qui se traduit par des économies mesurables, un pilotage simplifié et un accompagnement dédié (devis Pro).
             </p>
             <div className="mt-12 flex flex-col items-center">
               <div className="rounded-xl border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-900/10 p-8 max-w-md w-full text-center">
-                <p className="text-sm font-medium text-teal-700 dark:text-teal-400 uppercase tracking-wide">Pro & Enterprise</p>
+                <p className="text-sm font-medium text-teal-700 dark:text-teal-400 uppercase tracking-wide">Pro</p>
                 <p className="mt-4 text-4xl font-bold text-foreground whitespace-nowrap">
                   À partir de <span className="text-teal-600 dark:text-teal-400">5 000 €</span><span className="text-lg font-normal text-muted-foreground"> / mois</span>
                 </p>
@@ -482,7 +482,7 @@ export function LandingPage() {
                 {
                   icon: LifeBuoy,
                   title: 'Support dédié',
-                  text: 'Équipe à l\'écoute pour l\'onboarding, la formation et le suivi (plans Pro et Enterprise).',
+                  text: 'Équipe à l\'écoute pour l\'onboarding, la formation et le suivi (plan Pro).',
                 },
               ].map((item) => (
                 <div
@@ -519,7 +519,7 @@ export function LandingPage() {
                 },
                 {
                   q: 'Comment sont calculés les tarifs ?',
-                  a: 'La tarification dépend du nombre d\'établissements et d\'utilisateurs. À partir de 5 000 € / mois pour les plans Pro et Enterprise, avec support dédié et accompagnement. Un devis personnalisé vous est proposé selon votre périmètre.',
+                  a: 'La tarification dépend du nombre d\'établissements et d\'utilisateurs. À partir de 5 000 € / mois pour le plan Pro, avec support dédié et accompagnement. Un devis personnalisé vous est proposé selon votre périmètre.',
                 },
                 {
                   q: 'Peut-on connecter nos outils existants (caisse, Excel) ?',
@@ -527,7 +527,7 @@ export function LandingPage() {
                 },
                 {
                   q: 'Comment se passe la mise en place et le support ?',
-                  a: 'Pour les plans Pro et Enterprise, nous assurons un onboarding, une formation des équipes et un support prioritaire. L\'équipe vous accompagne pour configurer les restaurants, les alertes et les rapports selon votre organisation.',
+                  a: 'Pour le plan Pro, nous assurons un onboarding, une formation des équipes et un support prioritaire. L\'équipe vous accompagne pour configurer les restaurants, les alertes et les rapports selon votre organisation.',
                 },
               ].map((item, i) => (
                 <details

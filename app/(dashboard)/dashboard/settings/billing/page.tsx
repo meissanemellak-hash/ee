@@ -10,16 +10,16 @@ import Link from 'next/link'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { BillingClientSection } from './billing-client-section'
 import { SyncSubscriptionButton } from './sync-subscription-button'
-import { STRIPE_PLANS, type PlanId } from '@/lib/stripe'
+import { getPlanDisplayName } from '@/lib/stripe'
 import { CreditCard, ArrowLeft, CheckCircle2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
 function planDisplayName(plan: string | null): string {
-  if (!plan) return 'Aucun plan'
-  const id = plan as PlanId
-  if (id === 'pro') return 'Plan Pro – Produits'
-  return STRIPE_PLANS[id]?.name ? `Plan ${STRIPE_PLANS[id].name}` : plan
+  const display = getPlanDisplayName(plan)
+  if (!display) return 'Aucun plan'
+  if (display === 'Pro') return 'Plan Pro – Produits'
+  return `Plan ${display}`
 }
 
 function statusLabel(sub: { status: string; cancelAtPeriodEnd: boolean }): string {

@@ -44,7 +44,7 @@ Ce document liste les écarts par rapport à un SaaS "premium" (5000€/mois). �
 2. Logger les actions sensibles : création/modification/suppression de ventes, produits, inventaire, etc.
 3. Ajouter une page "Historique des actions" (réservée aux admins)
 
-**Priorité** : Moyenne — utile pour les clients enterprise.
+**Priorité** : Moyenne — utile pour les grands comptes / plan Pro.
 
 ---
 

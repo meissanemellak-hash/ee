@@ -10,26 +10,46 @@ export function getStripe(): Stripe | null {
   return new Stripe(key)
 }
 
-/** Plans et prix (IDs Stripe Price) - à configurer dans le Dashboard Stripe. Cohérent avec la landing (5 000 € / mois). */
+/** Plans et prix (IDs Stripe Price) - à configurer dans le Dashboard Stripe. */
 export const STRIPE_PLANS = {
   starter: {
-    name: 'Starter',
+    name: 'Essentiel',
     priceId: process.env.STRIPE_PRICE_STARTER ?? '',
-    amount: 5000, // 5 000 € / mois (aligné landing + Stripe)
+    amount: 1500, // 1 500 € / mois (1–5 restaurants)
+  },
+  growth: {
+    name: 'Croissance',
+    priceId: process.env.STRIPE_PRICE_GROWTH ?? '',
+    amount: 3000, // 3 000 € / mois (6–10 restaurants)
   },
   pro: {
     name: 'Pro',
     priceId: process.env.STRIPE_PRICE_PRO ?? '',
-    amount: 5000, // 5 000 € / mois
-  },
-  enterprise: {
-    name: 'Enterprise',
-    priceId: process.env.STRIPE_PRICE_ENTERPRISE ?? '',
-    amount: 10000, // 10 000 € / mois (devis sur mesure)
+    amount: 5000, // 5 000 € / mois (10+ restaurants)
   },
 } as const
 
 export type PlanId = keyof typeof STRIPE_PLANS
+
+/**
+ * Libellés d'affichage des plans (lookup_key Stripe → nom affiché).
+ * essentiel / croissance / pro = clés utilisées dans Stripe.
+ * starter / growth = anciennes clés pour rétrocompatibilité.
+ */
+export const PLAN_DISPLAY_NAMES: Record<string, string> = {
+  essentiel: 'Essentiel',
+  croissance: 'Croissance',
+  pro: 'Pro',
+  starter: 'Essentiel',
+  growth: 'Croissance',
+}
+
+/** Retourne le libellé affichable du plan (ex. "Essentiel", "Pro") ou la valeur brute si inconnu. */
+export function getPlanDisplayName(plan: string | null): string {
+  if (!plan) return ''
+  const normalized = plan.toLowerCase().trim()
+  return PLAN_DISPLAY_NAMES[normalized] ?? plan
+}
 
 /** Clé publique Stripe pour le client (Elements, mise à jour carte in-app). Optionnel. */
 function sanitizePublishableKey(raw: string): string {

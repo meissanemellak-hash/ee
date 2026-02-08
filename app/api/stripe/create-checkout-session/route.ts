@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/stripe/create-checkout-session
- * Body: { plan: 'starter' | 'pro' | 'enterprise' }
+ * Body: { plan?: 'starter' | 'growth' | 'pro' } — défaut: 'pro'
  * Redirige l'utilisateur vers Stripe Checkout pour souscrire à un abonnement.
  */
 export async function POST(request: NextRequest) {

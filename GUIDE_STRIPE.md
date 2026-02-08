@@ -14,12 +14,12 @@ Ajoutez-les dans `.env.local`.
 ## 2. Créer les produits et prix (abonnements)
 
 1. Dans Stripe : **Produits** → **Ajouter un produit**.
-2. Créez 3 produits (ex. Starter, Pro, Enterprise) en **Abonnement** mensuel.
-3. Pour chaque prix créé, copiez l’**ID du prix** (price_xxx).
-4. Dans `.env.local`, ajoutez (optionnel, pour que les boutons « Choisir » fonctionnent) :
-   - `STRIPE_PRICE_STARTER=price_xxx`
-   - `STRIPE_PRICE_PRO=price_xxx`
-   - `STRIPE_PRICE_ENTERPRISE=price_xxx`
+2. Créez 3 produits (Essentiel, Croissance, Pro) en **Abonnement** mensuel.
+3. Pour chaque prix créé, renseignez le **Lookup key** (`essentiel`, `croissance`, `pro`) et copiez l’**ID du prix** (price_xxx).
+4. Dans `.env.local`, ajoutez (pour que le checkout fonctionne) :
+   - `STRIPE_PRICE_STARTER=price_xxx` (plan Essentiel)
+   - `STRIPE_PRICE_GROWTH=price_xxx` (plan Croissance)
+   - `STRIPE_PRICE_PRO=price_xxx` (plan Pro)
 
 Sans ces variables, la page `/pricing` s’affiche mais le checkout renverra « Plan invalide ou prix Stripe non configuré ».
 
