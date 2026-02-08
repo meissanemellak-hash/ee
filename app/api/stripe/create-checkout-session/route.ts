@@ -7,9 +7,16 @@ import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
+/** Mapping lookup_key Stripe (essentiel, croissance, pro) → PlanId. */
+const LOOKUP_KEY_TO_PLAN_ID: Record<string, PlanId> = {
+  essentiel: 'starter',
+  croissance: 'growth',
+  pro: 'pro',
+}
+
 /**
  * POST /api/stripe/create-checkout-session
- * Body: { plan: 'starter' | 'growth' | 'pro' }
+ * Body: { plan: 'starter' | 'growth' | 'pro' | 'essentiel' | 'croissance' | 'pro' }
  * Redirige l'utilisateur vers Stripe Checkout pour souscrire à un abonnement.
  */
 export async function POST(request: NextRequest) {
@@ -41,8 +48,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body JSON invalide' }, { status: 400 })
   }
 
-  const planInput = (body.plan ?? 'pro') as string
-  const planId = PLAN_INPUT_TO_ID[planInput.toLowerCase()] ?? 'pro'
+  const rawPlan = (body.plan ?? 'pro') as string
+  const planId: PlanId = LOOKUP_KEY_TO_PLAN_ID[rawPlan.toLowerCase()] ?? (rawPlan as PlanId)
   if (!STRIPE_PLANS[planId]?.priceId) {
     return NextResponse.json(
       { error: 'Plan invalide ou prix Stripe non configuré' },

@@ -41,12 +41,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body JSON invalide' }, { status: 400 })
   }
 
-  const planInput = (body.plan ?? 'pro') as string
-  const planId = PLAN_INPUT_TO_ID[planInput.toLowerCase()] ?? 'pro'
+  const rawPlan = (body.plan ?? 'pro') as string
+  const planId: PlanId = LOOKUP_KEY_TO_PLAN_ID[rawPlan.toLowerCase()] ?? (rawPlan as PlanId)
   const plan = STRIPE_PLANS[planId]
   if (!plan?.priceId) {
     return NextResponse.json(
-      { error: `Plan ${planId} non configuré (STRIPE_PRICE_STARTER / GROWTH / PRO)` },
+      { error: `Plan ${planId} non configuré (STRIPE_PRICE_${planId.toUpperCase()})` },
       { status: 500 }
     )
   }

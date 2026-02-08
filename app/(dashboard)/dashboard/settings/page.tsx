@@ -493,7 +493,7 @@ export default function SettingsPage() {
               <CardTitle className="text-lg font-semibold">Lien de paiement (admin)</CardTitle>
             </div>
             <CardDescription className="mt-1">
-              Générez un lien Stripe Plan Pro pour une organisation et envoyez-le au client après la visio.
+              Générez un lien Stripe (plan Essentiel, Croissance ou Pro) pour une organisation et envoyez-le au client après la visio.
             </CardDescription>
           </CardHeader>
           <CardContent>
