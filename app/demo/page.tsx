@@ -1,14 +1,22 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+const PLAN_LABELS: Record<string, string> = {
+  essentiel: 'Essentiel (1–5 restaurants)',
+  croissance: 'Croissance (6–10 restaurants)',
+  pro: 'Pro (10+ restaurants)',
+}
+
 export default function DemoPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const planFromUrl = searchParams.get('plan') ?? ''
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [societe, setSociete] = useState('')
@@ -16,6 +24,12 @@ export default function DemoPage() {
   const [message, setMessage] = useState('')
   const [douleurs, setDouleurs] = useState('')
   const [priorites, setPriorites] = useState('')
+
+  useEffect(() => {
+    if (planFromUrl && PLAN_LABELS[planFromUrl]) {
+      setNbRestaurants((prev) => (prev ? prev : planFromUrl === 'essentiel' ? '1–5' : planFromUrl === 'croissance' ? '6–10' : '10+'))
+    }
+  }, [planFromUrl])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -27,6 +41,7 @@ export default function DemoPage() {
     if (message.trim()) params.set('message', message.trim())
     if (douleurs.trim()) params.set('douleurs', douleurs.trim())
     if (priorites.trim()) params.set('priorites', priorites.trim())
+    if (planFromUrl && PLAN_LABELS[planFromUrl]) params.set('plan', planFromUrl)
     router.push(`/demo/merci?${params.toString()}`)
   }
 
@@ -51,6 +66,11 @@ export default function DemoPage() {
           <p className="mt-3 text-muted-foreground">
             Remplissez le formulaire ci-dessous. Vous serez ensuite invité à choisir un créneau pour votre démo personnalisée.
           </p>
+          {planFromUrl && PLAN_LABELS[planFromUrl] && (
+            <p className="mt-2 text-sm font-medium text-teal-700 dark:text-teal-400">
+              Offre concernée : {PLAN_LABELS[planFromUrl]}
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="mt-10 max-w-2xl mx-auto space-y-6 px-6 lg:px-0">

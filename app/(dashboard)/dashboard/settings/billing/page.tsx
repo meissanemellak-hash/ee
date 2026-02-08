@@ -16,10 +16,8 @@ import { CreditCard, ArrowLeft, CheckCircle2 } from 'lucide-react'
 export const dynamic = 'force-dynamic'
 
 function planDisplayName(plan: string | null): string {
-  const display = getPlanDisplayName(plan)
-  if (!display) return 'Aucun plan'
-  if (display === 'Pro') return 'Plan Pro – Produits'
-  return `Plan ${display}`
+  const name = getPlanDisplayName(plan)
+  return name === 'Aucun plan' ? name : `Plan ${name}`
 }
 
 function statusLabel(sub: { status: string; cancelAtPeriodEnd: boolean }): string {

@@ -45,10 +45,10 @@ export default async function LienPaiementAdminPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <Link2 className="h-8 w-8" />
-              Lien de paiement (Plan Pro)
+              Lien de paiement
             </h1>
             <p className="text-muted-foreground mt-1.5">
-              Générez un lien Stripe pour une organisation. Envoyez ce lien au client après la visio.
+              Choisissez le plan (Essentiel, Croissance ou Pro) puis générez le lien Stripe pour une organisation.
             </p>
           </div>
         </header>

@@ -15,12 +15,12 @@ L’app intègre déjà Stripe (modèle `Subscription`, webhook, page Tarifs, Fa
 
 ## 2. Produits et prix (Dashboard Stripe)
 
-1. **Products** → **Add product** pour chaque plan (Essentiel, Croissance, Pro).
+1. **Products** → **Add product** pour chaque plan (Starter, Pro, Enterprise).
 2. Pour chaque produit, ajoutez un **prix récurrent mensuel** (Recurring, Monthly).
 3. Dans le prix, renseignez le **Lookup key** (obligatoire pour que le webhook reconnaisse le plan) :
-   - `essentiel` pour le plan Essentiel (1–5 restaurants)
-   - `croissance` pour le plan Croissance (6–10 restaurants)
-   - `pro` pour le plan Pro (10+ restaurants)
+   - `starter` pour le plan Starter
+   - `pro` pour le plan Pro
+   - `enterprise` pour le plan Enterprise
 4. Copiez l’**ID du prix** (price_xxx) pour chaque plan.
 
 ---
@@ -43,7 +43,7 @@ SUPER_ADMIN_EMAIL=ton@email.com
 
 - **STRIPE_SECRET_KEY** : clé secrète Stripe (Developers → API keys).
 - **STRIPE_WEBHOOK_SECRET** : obtenu à l’étape 4 (webhook).
-- **STRIPE_PRICE_*** : IDs des prix créés à l’étape 2 (Essentiel, Croissance, Pro).
+- **STRIPE_PRICE_*** : IDs des prix créés à l’étape 2 (Starter, Pro, Enterprise).
 - **SUPER_ADMIN_EMAIL** : email de l’administrateur qui peut générer les liens de paiement (page back-office).
 
 Sans ces variables, l’app fonctionne mais le webhook et la génération de liens admin ne seront pas actifs.

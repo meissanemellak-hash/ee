@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/stripe/create-checkout-session
- * Body: { plan?: 'starter' | 'growth' | 'pro' } — défaut: 'pro'
+ * Body: { plan: 'starter' | 'growth' | 'pro' }
  * Redirige l'utilisateur vers Stripe Checkout pour souscrire à un abonnement.
  */
 export async function POST(request: NextRequest) {
@@ -41,7 +41,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body JSON invalide' }, { status: 400 })
   }
 
-  const planId = (body.plan ?? 'pro') as PlanId
+  const planInput = (body.plan ?? 'pro') as string
+  const planId = PLAN_INPUT_TO_ID[planInput.toLowerCase()] ?? 'pro'
   if (!STRIPE_PLANS[planId]?.priceId) {
     return NextResponse.json(
       { error: 'Plan invalide ou prix Stripe non configuré' },

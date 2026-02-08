@@ -32,29 +32,29 @@ export const STRIPE_PLANS = {
 export type PlanId = keyof typeof STRIPE_PLANS
 
 /**
- * Libellés d'affichage des plans (lookup_key Stripe → nom affiché).
- * essentiel / croissance / pro = clés utilisées dans Stripe.
- * starter / growth = anciennes clés pour rétrocompatibilité.
+ * Libellés d'affichage pour le plan (clé Stripe lookup_key ou PlanId → nom affiché).
+ * Utilisé sur la page Facturation et partout où on affiche le nom du plan.
  */
 export const PLAN_DISPLAY_NAMES: Record<string, string> = {
+  // lookup_key Stripe (minuscules)
   essentiel: 'Essentiel',
   croissance: 'Croissance',
   pro: 'Pro',
+  // PlanId (code)
   starter: 'Essentiel',
   growth: 'Croissance',
 }
 
-/** Retourne le libellé affichable du plan (ex. "Essentiel", "Pro") ou la valeur brute si inconnu. */
+/** Retourne le libellé affiché pour un plan (lookup_key ou PlanId stocké en base). */
 export function getPlanDisplayName(plan: string | null): string {
-  if (!plan) return ''
-  const normalized = plan.toLowerCase().trim()
-  return PLAN_DISPLAY_NAMES[normalized] ?? plan
+  if (!plan) return 'Aucun plan'
+  const key = plan.toLowerCase().trim()
+  return PLAN_DISPLAY_NAMES[key] ?? STRIPE_PLANS[key as PlanId]?.name ?? plan
 }
 
 /** Clé publique Stripe pour le client (Elements, mise à jour carte in-app). Optionnel. */
 function sanitizePublishableKey(raw: string): string {
   const trimmed = raw.trim()
-  // Garder uniquement les caractères valides (évite BOM, espaces, retours à la ligne copiés par erreur)
   return trimmed.replace(/[^a-zA-Z0-9_]/g, '')
 }
 

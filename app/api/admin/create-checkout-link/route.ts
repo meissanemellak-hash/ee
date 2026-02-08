@@ -11,8 +11,8 @@ const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase()
 
 /**
  * POST /api/admin/create-checkout-link
- * Body: { clerkOrgId?: string, organizationId?: string, plan?: 'starter' | 'growth' | 'pro' }
- * Réservé au super-admin. Crée une session Stripe Checkout pour cette organisation (défaut: plan Pro).
+ * Body: { clerkOrgId: string, plan?: 'starter' | 'growth' | 'pro' } ou { organizationId: string, plan?: ... }
+ * Réservé au super-admin. Crée une session Stripe Checkout pour le plan choisi.
  */
 export async function POST(request: NextRequest) {
   const { userId } = auth()
@@ -41,11 +41,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body JSON invalide' }, { status: 400 })
   }
 
-  const planId = (body.plan ?? 'pro') as PlanId
+  const planInput = (body.plan ?? 'pro') as string
+  const planId = PLAN_INPUT_TO_ID[planInput.toLowerCase()] ?? 'pro'
   const plan = STRIPE_PLANS[planId]
   if (!plan?.priceId) {
     return NextResponse.json(
-      { error: `Plan ${planId} invalide ou prix Stripe non configuré` },
+      { error: `Plan ${planId} non configuré (STRIPE_PRICE_STARTER / GROWTH / PRO)` },
       { status: 500 }
     )
   }

@@ -412,43 +412,54 @@ export function LandingPage() {
               Une offre pensée pour la croissance
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Tarification adaptée à votre périmètre. Bénéfice : un investissement qui se traduit par des économies mesurables, un pilotage simplifié et un accompagnement dédié (devis Pro).
+              Tarification selon le nombre de restaurants. Bénéfice : un investissement qui se traduit par des économies mesurables, un pilotage simplifié et un accompagnement dédié.
             </p>
-            <div className="mt-12 flex flex-col items-center">
-              <div className="rounded-xl border-2 border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-900/10 p-8 max-w-md w-full text-center">
-                <p className="text-sm font-medium text-teal-700 dark:text-teal-400 uppercase tracking-wide">Pro</p>
-                <p className="mt-4 text-4xl font-bold text-foreground whitespace-nowrap">
-                  À partir de <span className="text-teal-600 dark:text-teal-400">5 000 €</span><span className="text-lg font-normal text-muted-foreground"> / mois</span>
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Selon le nombre d&apos;établissements et d&apos;utilisateurs
-                </p>
-                <ul className="mt-6 text-left text-sm text-muted-foreground space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-                    Tableau de bord unifié multi-restaurants
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-                    Ventes et analyse par restaurant
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-                    Inventaire et stocks, suivi des ruptures
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-                    Alertes, prévisions et rapports
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-                    Support prioritaire et accompagnement
-                  </li>
-                </ul>
-                <Button asChild size="lg" className="mt-6 w-full bg-teal-600 hover:bg-teal-700 text-white border-0">
-                  <Link href="/demo">Demander une démo</Link>
-                </Button>
-              </div>
+            <div className="mt-12 grid gap-6 sm:grid-cols-3 max-w-5xl mx-auto">
+              {[
+                { plan: 'essentiel', name: 'Essentiel', range: '1 à 5 restaurants', price: '1 500', url: '/demo?plan=essentiel' },
+                { plan: 'croissance', name: 'Croissance', range: '6 à 10 restaurants', price: '3 000', url: '/demo?plan=croissance', featured: true },
+                { plan: 'pro', name: 'Pro', range: '10+ restaurants', price: '5 000', url: '/demo?plan=pro' },
+              ].map((tier) => (
+                <div
+                  key={tier.plan}
+                  className={`rounded-xl border-2 p-6 text-center flex flex-col ${
+                    tier.featured
+                      ? 'border-teal-500 dark:border-teal-600 bg-teal-50/50 dark:bg-teal-900/20'
+                      : 'border-teal-200 dark:border-teal-800 bg-teal-50/30 dark:bg-teal-900/10'
+                  }`}
+                >
+                  {tier.featured && (
+                    <p className="text-xs font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wide mb-2">Recommandé</p>
+                  )}
+                  <p className="text-lg font-semibold text-foreground">{tier.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{tier.range}</p>
+                  <p className="mt-4 text-3xl font-bold text-foreground whitespace-nowrap">
+                    <span className="text-teal-600 dark:text-teal-400">{tier.price} €</span>
+                    <span className="text-base font-normal text-muted-foreground"> / mois</span>
+                  </p>
+                  <ul className="mt-6 text-left text-sm text-muted-foreground space-y-2 flex-1">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                      Tableau de bord multi-restaurants
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                      Ventes, inventaire, alertes
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                      Prévisions et rapports
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                      Support et accompagnement
+                    </li>
+                  </ul>
+                  <Button asChild size="lg" className="mt-6 w-full bg-teal-600 hover:bg-teal-700 text-white border-0">
+                    <Link href={tier.url}>Demander une démo</Link>
+                  </Button>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -482,7 +493,7 @@ export function LandingPage() {
                 {
                   icon: LifeBuoy,
                   title: 'Support dédié',
-                  text: 'Équipe à l\'écoute pour l\'onboarding, la formation et le suivi (plan Pro).',
+                  text: 'Équipe à l\'écoute pour l\'onboarding, la formation et le suivi (plans Croissance et Pro).',
                 },
               ].map((item) => (
                 <div
@@ -519,7 +530,7 @@ export function LandingPage() {
                 },
                 {
                   q: 'Comment sont calculés les tarifs ?',
-                  a: 'La tarification dépend du nombre d\'établissements et d\'utilisateurs. À partir de 5 000 € / mois pour le plan Pro, avec support dédié et accompagnement. Un devis personnalisé vous est proposé selon votre périmètre.',
+                  a: 'La tarification dépend du nombre de restaurants : Essentiel (1–5), Croissance (6–10), Pro (10+). À partir de 1 500 € / mois. Un devis personnalisé vous est proposé selon votre périmètre.',
                 },
                 {
                   q: 'Peut-on connecter nos outils existants (caisse, Excel) ?',
@@ -527,7 +538,7 @@ export function LandingPage() {
                 },
                 {
                   q: 'Comment se passe la mise en place et le support ?',
-                  a: 'Pour le plan Pro, nous assurons un onboarding, une formation des équipes et un support prioritaire. L\'équipe vous accompagne pour configurer les restaurants, les alertes et les rapports selon votre organisation.',
+                  a: 'Pour les plans Croissance et Pro, nous assurons un onboarding, une formation des équipes et un support prioritaire. L\'équipe vous accompagne pour configurer les restaurants, les alertes et les rapports selon votre organisation.',
                 },
               ].map((item, i) => (
                 <details

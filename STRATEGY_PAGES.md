@@ -112,7 +112,7 @@
    - Formulaire de contact
 
 2. **Page Pricing** (simple)
-   - 3 plans (Essentiel, Croissance, Pro)
+   - 3 plans (Starter, Pro, Enterprise)
    - Prix clairs
    - CTA "Commencer" (redirige vers Stripe Checkout)
 

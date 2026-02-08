@@ -3,9 +3,23 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { translateApiError } from '@/lib/translate-api-error'
+import type { PlanId } from '@/lib/stripe'
 import { Loader2, Copy, Check } from 'lucide-react'
+
+const PLAN_OPTIONS: { value: PlanId; label: string }[] = [
+  { value: 'starter', label: 'Essentiel (1–5 restos)' },
+  { value: 'growth', label: 'Croissance (6–10 restos)' },
+  { value: 'pro', label: 'Pro (10+ restos)' },
+]
 
 type Props = {
   /** ID de l'organisation dans Clerk (org_xxx). Utilisé pour lister les orgs depuis Clerk puis synchro à la génération. */
@@ -17,6 +31,7 @@ export function GenerateCheckoutLinkButton({ clerkOrgId, organizationName }: Pro
   const [loading, setLoading] = useState(false)
   const [url, setUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [plan, setPlan] = useState<PlanId>('pro')
   const { toast } = useToast()
 
   const handleGenerate = async () => {
@@ -26,7 +41,7 @@ export function GenerateCheckoutLinkButton({ clerkOrgId, organizationName }: Pro
       const res = await fetch('/api/admin/create-checkout-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clerkOrgId }),
+        body: JSON.stringify({ clerkOrgId, plan }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -73,7 +88,19 @@ export function GenerateCheckoutLinkButton({ clerkOrgId, organizationName }: Pro
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-wrap">
+      <Select value={plan} onValueChange={(v) => setPlan(v as PlanId)}>
+        <SelectTrigger className="w-[200px] h-9 shrink-0" aria-label="Choisir le plan">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {PLAN_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button
         onClick={handleGenerate}
         disabled={loading}
@@ -87,7 +114,7 @@ export function GenerateCheckoutLinkButton({ clerkOrgId, organizationName }: Pro
             Génération...
           </>
         ) : (
-          'Générer le lien Plan Pro'
+          'Générer le lien'
         )}
       </Button>
       {url && (
