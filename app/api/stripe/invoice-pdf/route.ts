@@ -8,11 +8,16 @@ import { logger } from '@/lib/logger'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/stripe/create-portal-session
- * Crée une session Stripe Customer Portal (gérer abonnement, factures, moyen de paiement).
- * Utilise le même fallback org que la page Facturation / API invoices si aucune org en session.
+ * GET /api/stripe/invoice-pdf?invoiceId=in_xxx
+ * Proxy du PDF de facture Stripe pour forcer le nom de fichier en français (Facture-xxx.pdf).
  */
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const invoiceId = searchParams.get('invoiceId')?.trim()
+  if (!invoiceId) {
+    return NextResponse.json({ error: 'invoiceId requis' }, { status: 400 })
+  }
+
   let organization = await getCurrentOrganization()
   if (!organization) {
     try {
@@ -50,47 +55,59 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (e) {
-      logger.error('[stripe/create-portal-session] Fallback org:', e)
+      logger.error('[stripe/invoice-pdf] Fallback org:', e)
     }
   }
   if (!organization) {
-    return NextResponse.json(
-      { error: 'Aucune organisation sélectionnée' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Aucune organisation sélectionnée' }, { status: 400 })
   }
 
   const stripe = getStripe()
   if (!stripe) {
-    return NextResponse.json(
-      { error: 'Stripe n\'est pas configuré' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Stripe non configuré' }, { status: 500 })
   }
 
   const sub = await prisma.subscription.findUnique({
     where: { organizationId: organization.id },
     select: { stripeCustomerId: true },
   })
-
   if (!sub?.stripeCustomerId) {
-    return NextResponse.json(
-      { error: 'Aucun abonnement lié à cette organisation' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Aucun abonnement' }, { status: 403 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-
   try {
-    const session = await stripe.billingPortal.sessions.create({
-      customer: sub.stripeCustomerId,
-      return_url: `${appUrl}/dashboard/settings/billing`,
-    })
+    const invoice = await stripe.invoices.retrieve(invoiceId)
+    const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id
+    if (customerId !== sub.stripeCustomerId) {
+      return NextResponse.json({ error: 'Facture non autorisée' }, { status: 403 })
+    }
+    const pdfUrl = invoice.invoice_pdf
+    if (!pdfUrl) {
+      return NextResponse.json({ error: 'PDF non disponible' }, { status: 404 })
+    }
 
-    return NextResponse.json({ url: session.url })
+    const pdfRes = await fetch(pdfUrl, {
+      headers: process.env.STRIPE_SECRET_KEY
+        ? { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` }
+        : undefined,
+    })
+    if (!pdfRes.ok) {
+      logger.error('[stripe/invoice-pdf] Fetch PDF failed:', pdfRes.status)
+      return NextResponse.json({ error: 'Impossible de récupérer le PDF' }, { status: 502 })
+    }
+    const pdfBuffer = await pdfRes.arrayBuffer()
+    const number = (invoice.number || invoice.id).replace(/[^a-zA-Z0-9-_]/g, '_')
+    const filename = `Facture-${number}.pdf`
+
+    return new NextResponse(pdfBuffer, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    })
   } catch (err) {
-    logger.error('[stripe/create-portal-session]', err)
+    logger.error('[stripe/invoice-pdf]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur Stripe' },
       { status: 500 }

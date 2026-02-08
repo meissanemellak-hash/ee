@@ -223,19 +223,24 @@ export async function generateSalesReport(
     },
   })
 
+  // Revenu basé sur le prix actuel du produit (quantity × unitPrice), comme le dashboard
+  const saleRevenue = (s: { quantity: number; product: { unitPrice: number } }) =>
+    s.quantity * s.product.unitPrice
+
   const totalSales = sales.reduce((sum, sale) => sum + sale.quantity, 0)
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0)
+  const totalRevenue = sales.reduce((sum, sale) => sum + saleRevenue(sale), 0)
   const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
   const averagePerDay = daysDiff > 0 ? totalSales / daysDiff : 0
 
   // Top produits
   const productStats = new Map<string, { name: string; quantity: number; revenue: number }>()
   for (const sale of sales) {
+    const rev = saleRevenue(sale)
     const existing = productStats.get(sale.productId) || { name: sale.product.name, quantity: 0, revenue: 0 }
     productStats.set(sale.productId, {
       name: sale.product.name,
       quantity: existing.quantity + sale.quantity,
-      revenue: existing.revenue + sale.amount,
+      revenue: existing.revenue + rev,
     })
   }
 
@@ -253,22 +258,24 @@ export async function generateSalesReport(
   // Breakdown quotidien
   const dailyBreakdown = new Map<string, { sales: number; revenue: number }>()
   for (const sale of sales) {
+    const rev = saleRevenue(sale)
     const dateKey = sale.saleDate.toISOString().split('T')[0]
     const existing = dailyBreakdown.get(dateKey) || { sales: 0, revenue: 0 }
     dailyBreakdown.set(dateKey, {
       sales: existing.sales + sale.quantity,
-      revenue: existing.revenue + sale.amount,
+      revenue: existing.revenue + rev,
     })
   }
 
   // Breakdown horaire
   const hourlyBreakdown = new Map<number, { sales: number; revenue: number }>()
   for (const sale of sales) {
+    const rev = saleRevenue(sale)
     const hour = sale.saleHour
     const existing = hourlyBreakdown.get(hour) || { sales: 0, revenue: 0 }
     hourlyBreakdown.set(hour, {
       sales: existing.sales + sale.quantity,
-      revenue: existing.revenue + sale.amount,
+      revenue: existing.revenue + rev,
     })
   }
 
@@ -350,7 +357,10 @@ export async function generatePerformanceReport(
         },
       })
 
-      const revenue = sales.reduce((sum, sale) => sum + sale.amount, 0)
+      const revenue = sales.reduce(
+        (sum, sale) => sum + sale.quantity * sale.product.unitPrice,
+        0
+      )
       const salesCount = sales.reduce((sum, sale) => sum + sale.quantity, 0)
 
       // Top produit
@@ -689,19 +699,22 @@ export async function generateSummaryReport(
     },
   })
 
+  const summarySaleRevenue = (s: { quantity: number; product: { unitPrice: number } }) =>
+    s.quantity * s.product.unitPrice
   const totalSales = sales.reduce((sum, sale) => sum + sale.quantity, 0)
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0)
+  const totalRevenue = sales.reduce((sum, sale) => sum + summarySaleRevenue(sale), 0)
   const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
   const averagePerDay = daysDiff > 0 ? totalRevenue / daysDiff : 0
 
   // Top produits
   const productStats = new Map<string, { name: string; quantity: number; revenue: number }>()
   for (const sale of sales) {
+    const rev = summarySaleRevenue(sale)
     const existing = productStats.get(sale.productId) || { name: sale.product.name, quantity: 0, revenue: 0 }
     productStats.set(sale.productId, {
       name: sale.product.name,
       quantity: existing.quantity + sale.quantity,
-      revenue: existing.revenue + sale.amount,
+      revenue: existing.revenue + rev,
     })
   }
 

@@ -54,7 +54,7 @@ export async function calculateExecutiveDashboardMetrics(
     ? { organizationId, id: restaurantId }
     : { organizationId }
 
-  // 1. Récupérer toutes les recommandations acceptées ce mois-ci
+  // 1. Récupérer toutes les recommandations acceptées ce mois-ci (pour les économies du mois)
   const acceptedRecommendationsThisMonth = await prisma.recommendation.findMany({
     where: {
       restaurant: restaurantWhere,
@@ -65,6 +65,14 @@ export async function calculateExecutiveDashboardMetrics(
     },
     include: {
       restaurant: true,
+    },
+  })
+
+  // Nombre total de recommandations acceptées (toutes périodes), pour alignement avec la page Recommandations et les rapports
+  const totalAcceptedCount = await prisma.recommendation.count({
+    where: {
+      restaurant: restaurantWhere,
+      status: 'accepted',
     },
   })
 
@@ -310,7 +318,7 @@ export async function calculateExecutiveDashboardMetrics(
   return {
     totalSavingsThisMonth,
     savingsChangePercent,
-    acceptedRecommendationsCount: acceptedRecommendationsThisMonth.length,
+    acceptedRecommendationsCount: totalAcceptedCount,
     acceptedRecommendationsSavings: totalSavingsThisMonth,
     criticalAlertsCount: criticalAlerts.length,
     criticalAlertsRisk,

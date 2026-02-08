@@ -30,3 +30,15 @@ export const STRIPE_PLANS = {
 } as const
 
 export type PlanId = keyof typeof STRIPE_PLANS
+
+/** Clé publique Stripe pour le client (Elements, mise à jour carte in-app). Optionnel. */
+function sanitizePublishableKey(raw: string): string {
+  const trimmed = raw.trim()
+  // Garder uniquement les caractères valides (évite BOM, espaces, retours à la ligne copiés par erreur)
+  return trimmed.replace(/[^a-zA-Z0-9_]/g, '')
+}
+
+export const STRIPE_PUBLISHABLE_KEY =
+  typeof process !== 'undefined'
+    ? sanitizePublishableKey(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? process.env.STRIPE_PUBLISHABLE_KEY ?? '')
+    : ''

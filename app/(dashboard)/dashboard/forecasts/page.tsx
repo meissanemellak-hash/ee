@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { Loader2, TrendingUp, Calendar, Store, Package, Trash2, Sparkles, X } from 'lucide-react'
+import { Loader2, TrendingUp, Calendar, Store, Package, Trash2, X, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -86,6 +86,7 @@ export default function ForecastsPage() {
   const [endDate, setEndDate] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [forecastToDelete, setForecastToDelete] = useState<Forecast | null>(null)
+  const [showConfidenceHelp, setShowConfidenceHelp] = useState(false)
 
   useEffect(() => {
     setSelectedRestaurant(urlRestaurant || 'all')
@@ -122,6 +123,7 @@ export default function ForecastsPage() {
 
   const resetFilters = () => {
     setSelectedRestaurant('all')
+    setActiveRestaurantId(null)
     setStartDate('')
     setEndDate('')
   }
@@ -254,16 +256,16 @@ export default function ForecastsPage() {
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-sm" aria-hidden>
-                <Sparkles className="h-4 w-4 text-white" />
+                <TrendingUp className="h-4 w-4 text-white" />
               </div>
               Générer des prévisions
             </CardTitle>
             <CardDescription className="mt-1">
-              Créez des prévisions pour une date ou une plage de dates (jusqu’à 31 jours)
+              Générez des prévisions pour une date ou une plage de dates (jusqu’à 31 jours)
             </CardDescription>
             <div className="mt-3 p-3 rounded-xl bg-teal-100/50 dark:bg-teal-900/20 border border-teal-200/80 dark:border-teal-900/30">
               <p className="text-xs text-teal-800 dark:text-teal-300">
-                💡 Les prévisions se basent sur l’historique des ventes des jours précédant la date sélectionnée. En plage, une prévision est générée pour chaque jour.
+                Les prévisions se basent sur l’historique des ventes des jours précédant la date sélectionnée. En plage, une prévision est générée pour chaque jour.
               </p>
             </div>
             {selectedRestaurantHasNoSales && (
@@ -330,8 +332,8 @@ export default function ForecastsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="moving_average">Moyenne mobile</SelectItem>
-                        <SelectItem value="seasonality">Saisonnalité</SelectItem>
+                        <SelectItem value="moving_average">Moyenne sur 7 jours</SelectItem>
+                        <SelectItem value="seasonality">Par jour de la semaine</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -348,7 +350,7 @@ export default function ForecastsPage() {
                         </>
                       ) : (
                         <>
-                          <Sparkles className="mr-2 h-4 w-4" />
+                          <TrendingUp className="mr-2 h-4 w-4" />
                           Générer
                         </>
                       )}
@@ -388,8 +390,8 @@ export default function ForecastsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="moving_average">Moyenne mobile</SelectItem>
-                        <SelectItem value="seasonality">Saisonnalité</SelectItem>
+                        <SelectItem value="moving_average">Moyenne sur 7 jours</SelectItem>
+                        <SelectItem value="seasonality">Par jour de la semaine</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -406,7 +408,7 @@ export default function ForecastsPage() {
                         </>
                       ) : (
                         <>
-                          <Sparkles className="mr-2 h-4 w-4" />
+                          <TrendingUp className="mr-2 h-4 w-4" />
                           Générer la plage
                         </>
                       )}
@@ -442,10 +444,25 @@ export default function ForecastsPage() {
           </Card>
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Confiance moyenne</CardTitle>
-              <Sparkles className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                Confiance moyenne
+                <button
+                  type="button"
+                  onClick={() => setShowConfidenceHelp((v) => !v)}
+                  className="inline-flex text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded focus:outline-none"
+                  aria-label="Afficher l'explication du niveau de confiance"
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                </button>
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
+              {showConfidenceHelp && (
+                <p className="text-xs text-muted-foreground mb-2 p-2 rounded-md bg-muted/60 border border-border">
+                  Le pourcentage repose sur l&apos;historique des ventes : plus il y a de jours avec des ventes (avant la date prévue), plus la confiance est élevée (jusqu&apos;à 85 %). Un petit bonus (+5 %) est ajouté lorsque les ventes sont régulières. Chaque prévision a son propre niveau ; ici s&apos;affiche la moyenne.
+                </p>
+              )}
               <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{(avgConfidence * 100).toFixed(0)}%</div>
               <p className="text-xs text-muted-foreground mt-2">Niveau de confiance</p>
             </CardContent>
@@ -563,7 +580,7 @@ export default function ForecastsPage() {
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Méthode: {forecast.method === 'moving_average' ? 'Moyenne mobile' : 'Saisonnalité'} • Confiance: {forecast.confidence ? `${(forecast.confidence * 100).toFixed(0)}%` : 'N/A'}
+                            Méthode: {forecast.method === 'moving_average' ? 'Moyenne sur 7 jours' : 'Par jour de la semaine'} • Confiance: {forecast.confidence ? `${(forecast.confidence * 100).toFixed(0)}%` : 'N/A'}
                           </p>
                         </div>
                       </div>

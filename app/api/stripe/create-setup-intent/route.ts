@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { getCurrentOrganization } from '@/lib/auth'
 import { getStripe } from '@/lib/stripe'
@@ -8,11 +8,10 @@ import { logger } from '@/lib/logger'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/stripe/create-portal-session
- * Crée une session Stripe Customer Portal (gérer abonnement, factures, moyen de paiement).
- * Utilise le même fallback org que la page Facturation / API invoices si aucune org en session.
+ * POST /api/stripe/create-setup-intent
+ * Crée un SetupIntent pour le client Stripe de l'organisation (mise à jour du moyen de paiement in-app).
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   let organization = await getCurrentOrganization()
   if (!organization) {
     try {
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (e) {
-      logger.error('[stripe/create-portal-session] Fallback org:', e)
+      logger.error('[stripe/create-setup-intent] Fallback org:', e)
     }
   }
   if (!organization) {
@@ -80,17 +79,14 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-
   try {
-    const session = await stripe.billingPortal.sessions.create({
+    const setupIntent = await stripe.setupIntents.create({
       customer: sub.stripeCustomerId,
-      return_url: `${appUrl}/dashboard/settings/billing`,
+      usage: 'off_session',
     })
-
-    return NextResponse.json({ url: session.url })
+    return NextResponse.json({ clientSecret: setupIntent.client_secret })
   } catch (err) {
-    logger.error('[stripe/create-portal-session]', err)
+    logger.error('[stripe/create-setup-intent]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur Stripe' },
       { status: 500 }

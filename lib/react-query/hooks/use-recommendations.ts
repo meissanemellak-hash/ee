@@ -66,7 +66,7 @@ export function useRecommendations(filters?: {
       if (filters?.type && filters.type !== 'all') {
         queryParams.append('type', filters.type)
       }
-      if (filters?.status && filters.status !== 'all') {
+      if (filters?.status !== undefined && filters?.status !== null) {
         queryParams.append('status', filters.status)
       }
       

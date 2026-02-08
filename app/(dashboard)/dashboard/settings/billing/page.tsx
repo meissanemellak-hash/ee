@@ -1,28 +1,76 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient, currentUser } from '@clerk/nextjs/server'
 import { getCurrentOrganization } from '@/lib/auth'
 import { prisma } from '@/lib/db/prisma'
+import { logger } from '@/lib/logger'
+import { syncStripeSubscriptionToOrg, refreshSubscriptionFromStripe } from '@/lib/sync-stripe-subscription'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { BillingClientSection } from './billing-client-section'
+import { SyncSubscriptionButton } from './sync-subscription-button'
 import { STRIPE_PLANS, type PlanId } from '@/lib/stripe'
 import { CreditCard, ArrowLeft, CheckCircle2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-function planLabel(plan: string | null): string {
+function planDisplayName(plan: string | null): string {
   if (!plan) return 'Aucun plan'
   const id = plan as PlanId
-  return STRIPE_PLANS[id]?.name ?? plan
+  if (id === 'pro') return 'Plan Pro – Produits'
+  return STRIPE_PLANS[id]?.name ? `Plan ${STRIPE_PLANS[id].name}` : plan
+}
+
+function statusLabel(sub: { status: string; cancelAtPeriodEnd: boolean }): string {
+  if (sub.cancelAtPeriodEnd) return 'Annulé à la fin de la période'
+  if (sub.status === 'active' || sub.status === 'trialing') return 'Actif'
+  return sub.status
 }
 
 export default async function BillingPage() {
   const { userId } = auth()
   if (!userId) redirect('/sign-in')
 
-  const organization = await getCurrentOrganization()
+  let organization = await getCurrentOrganization()
+
+  // Si pas d'org dans la session (ex. navigation client), utiliser la première org de l'utilisateur (comme la page Dashboard)
+  if (!organization) {
+    try {
+      const client = await clerkClient()
+      const userMemberships = await client.users.getOrganizationMembershipList({ userId })
+      if (userMemberships.data && userMemberships.data.length > 0) {
+        const firstOrg = userMemberships.data[0].organization
+        const clerkOrgId = firstOrg.id
+        organization = await prisma.organization.findUnique({
+          where: { clerkOrgId },
+        })
+        if (!organization) {
+          try {
+            organization = await prisma.organization.create({
+              data: {
+                name: firstOrg.name,
+                clerkOrgId,
+                shrinkPct: 0.1,
+              },
+            })
+            logger.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk (billing)`)
+          } catch (dbError) {
+            if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+              organization = await prisma.organization.findUnique({
+                where: { clerkOrgId },
+              })
+            } else {
+              throw dbError
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('[billing] Error syncing organization:', error)
+    }
+  }
+
   if (!organization) {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
@@ -40,9 +88,29 @@ export default async function BillingPage() {
     )
   }
 
-  const subscription = await prisma.subscription.findUnique({
+  let subscription = await prisma.subscription.findUnique({
     where: { organizationId: organization.id },
   })
+
+  // Synchronisation automatique : si pas d'abonnement en base, tenter de le récupérer depuis Stripe (même email)
+  if (!subscription) {
+    const user = await currentUser()
+    const email = user?.emailAddresses?.[0]?.emailAddress?.trim()
+    if (email) {
+      const synced = await syncStripeSubscriptionToOrg(organization.id, email)
+      if (synced) {
+        subscription = await prisma.subscription.findUnique({
+          where: { organizationId: organization.id },
+        })
+      }
+    }
+  } else {
+    // Rafraîchir depuis Stripe à chaque chargement (réactivation/annulation dans le portail)
+    await refreshSubscriptionFromStripe(organization.id)
+    subscription = await prisma.subscription.findUnique({
+      where: { organizationId: organization.id },
+    })
+  }
 
   const isActive =
     subscription &&
@@ -86,23 +154,24 @@ export default async function BillingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {subscription && (
-              <div className="flex flex-wrap items-center gap-4 text-sm">
-                <span className="font-medium">Plan :</span>
-                <span className="capitalize">{planLabel(subscription.plan)}</span>
+              <dl className="grid gap-2 text-sm sm:grid-cols-1">
+                <div>
+                  <dt className="font-medium text-muted-foreground">Plan</dt>
+                  <dd>{planDisplayName(subscription.plan)}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-muted-foreground">Statut</dt>
+                  <dd>{statusLabel(subscription)}</dd>
+                </div>
                 {subscription.currentPeriodEnd && (
-                  <>
-                    <span className="text-muted-foreground">·</span>
-                    <span>
-                      {subscription.status === 'active' || subscription.status === 'trialing'
-                        ? `Renouvellement le ${subscription.currentPeriodEnd.toLocaleDateString('fr-FR')}`
-                        : `Fin le ${subscription.currentPeriodEnd.toLocaleDateString('fr-FR')}`}
-                    </span>
-                  </>
+                  <div>
+                    <dt className="font-medium text-muted-foreground">
+                      {subscription.cancelAtPeriodEnd ? 'Fin de l\'accès le' : 'Prochain renouvellement le'}
+                    </dt>
+                    <dd>{subscription.currentPeriodEnd.toLocaleDateString('fr-FR')}</dd>
+                  </div>
                 )}
-                {subscription.cancelAtPeriodEnd && (
-                  <span className="text-amber-600 dark:text-amber-400">(annulation en fin de période)</span>
-                )}
-              </div>
+              </dl>
             )}
 
             {!subscription && (
@@ -114,11 +183,20 @@ export default async function BillingPage() {
 
             <div className="flex flex-wrap gap-3 pt-2">
               {subscription?.stripeCustomerId ? (
-                <BillingClientSection />
+                <BillingClientSection
+                  canCancel={
+                    !!subscription.stripeSubscriptionId &&
+                    !subscription.cancelAtPeriodEnd &&
+                    (subscription.status === 'active' || subscription.status === 'trialing')
+                  }
+                />
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Demandez à votre administrateur un lien de souscription pour activer votre accès.
-                </p>
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Demandez à votre administrateur un lien de souscription pour activer votre accès.
+                  </p>
+                  <SyncSubscriptionButton />
+                </div>
               )}
             </div>
           </CardContent>

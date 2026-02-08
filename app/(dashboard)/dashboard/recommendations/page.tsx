@@ -99,8 +99,15 @@ export default function RecommendationsPage() {
   }
 
   const calculateTotalSavings = () => {
-    const pendingRecs = safeRecommendations.filter((r) => r.status === 'pending')
-    return pendingRecs.reduce((total, rec) => {
+    const recsToSum =
+      selectedStatus === 'all'
+        ? safeRecommendations.filter((r) => r.status === 'accepted')
+        : selectedStatus === 'pending'
+          ? safeRecommendations.filter((r) => r.status === 'pending')
+          : selectedStatus === 'accepted'
+            ? safeRecommendations.filter((r) => r.status === 'accepted')
+            : []
+    return recsToSum.reduce((total, rec) => {
       const data = rec.data as RecommendationDetails
       return total + (data?.estimatedSavings ?? 0)
     }, 0)
@@ -276,7 +283,7 @@ export default function RecommendationsPage() {
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Gain estimé (en attente)
+                {selectedStatus === 'all' ? 'Économies estimées' : selectedStatus === 'accepted' ? 'Économies estimées (acceptées)' : 'Gain estimé (en attente)'}
                 <button
                   type="button"
                   onClick={() => setShowGainExplanationCard((v) => !v)}

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { getCurrentOrganization } from '@/lib/auth'
 import { getStripe } from '@/lib/stripe'
@@ -8,11 +8,12 @@ import { logger } from '@/lib/logger'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/stripe/create-portal-session
- * Crée une session Stripe Customer Portal (gérer abonnement, factures, moyen de paiement).
- * Utilise le même fallback org que la page Facturation / API invoices si aucune org en session.
+ * POST /api/stripe/cancel-subscription
+ * Annule l'abonnement à la fin de la période en cours (cancel_at_period_end).
+ * Le webhook Stripe mettra à jour la base ; on met aussi à jour en local pour un retour immédiat.
+ * Utilise le même fallback org que la page Facturation si aucune org en session.
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   let organization = await getCurrentOrganization()
   if (!organization) {
     try {
@@ -28,9 +29,9 @@ export async function POST(request: NextRequest) {
             if (org) {
               const sub = await prisma.subscription.findUnique({
                 where: { organizationId: org.id },
-                select: { stripeCustomerId: true },
+                select: { stripeSubscriptionId: true },
               })
-              if (sub?.stripeCustomerId) {
+              if (sub?.stripeSubscriptionId) {
                 organization = org
                 break
               }
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (e) {
-      logger.error('[stripe/create-portal-session] Fallback org:', e)
+      logger.error('[stripe/cancel-subscription] Fallback org:', e)
     }
   }
   if (!organization) {
@@ -70,27 +71,36 @@ export async function POST(request: NextRequest) {
 
   const sub = await prisma.subscription.findUnique({
     where: { organizationId: organization.id },
-    select: { stripeCustomerId: true },
+    select: { stripeSubscriptionId: true, cancelAtPeriodEnd: true },
   })
 
-  if (!sub?.stripeCustomerId) {
+  if (!sub?.stripeSubscriptionId) {
     return NextResponse.json(
-      { error: 'Aucun abonnement lié à cette organisation' },
+      { error: 'Aucun abonnement actif à résilier' },
       { status: 400 }
     )
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  if (sub.cancelAtPeriodEnd) {
+    return NextResponse.json(
+      { error: 'L\'abonnement est déjà programmé pour prendre fin à la fin de la période' },
+      { status: 400 }
+    )
+  }
 
   try {
-    const session = await stripe.billingPortal.sessions.create({
-      customer: sub.stripeCustomerId,
-      return_url: `${appUrl}/dashboard/settings/billing`,
+    await stripe.subscriptions.update(sub.stripeSubscriptionId, {
+      cancel_at_period_end: true,
     })
 
-    return NextResponse.json({ url: session.url })
+    await prisma.subscription.update({
+      where: { organizationId: organization.id },
+      data: { cancelAtPeriodEnd: true },
+    })
+
+    return NextResponse.json({ success: true })
   } catch (err) {
-    logger.error('[stripe/create-portal-session]', err)
+    logger.error('[stripe/cancel-subscription]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur Stripe' },
       { status: 500 }

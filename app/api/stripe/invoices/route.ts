@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { getCurrentOrganization } from '@/lib/auth'
 import { getStripe } from '@/lib/stripe'
@@ -8,11 +8,10 @@ import { logger } from '@/lib/logger'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/stripe/create-portal-session
- * Crée une session Stripe Customer Portal (gérer abonnement, factures, moyen de paiement).
- * Utilise le même fallback org que la page Facturation / API invoices si aucune org en session.
+ * GET /api/stripe/invoices
+ * Liste les factures Stripe du client de l'organisation.
  */
-export async function POST(request: NextRequest) {
+export async function GET() {
   let organization = await getCurrentOrganization()
   if (!organization) {
     try {
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (e) {
-      logger.error('[stripe/create-portal-session] Fallback org:', e)
+      logger.error('[stripe/invoices] Fallback org:', e)
     }
   }
   if (!organization) {
@@ -74,23 +73,26 @@ export async function POST(request: NextRequest) {
   })
 
   if (!sub?.stripeCustomerId) {
-    return NextResponse.json(
-      { error: 'Aucun abonnement lié à cette organisation' },
-      { status: 400 }
-    )
+    return NextResponse.json({ invoices: [] })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-
   try {
-    const session = await stripe.billingPortal.sessions.create({
+    const list = await stripe.invoices.list({
       customer: sub.stripeCustomerId,
-      return_url: `${appUrl}/dashboard/settings/billing`,
+      limit: 24,
     })
-
-    return NextResponse.json({ url: session.url })
+    const invoices = (list.data ?? []).map((inv) => ({
+      id: inv.id,
+      created: inv.created,
+      amountPaid: inv.amount_paid,
+      currency: inv.currency,
+      status: inv.status,
+      hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
+      invoicePdf: inv.invoice_pdf ?? null,
+    }))
+    return NextResponse.json({ invoices })
   } catch (err) {
-    logger.error('[stripe/create-portal-session]', err)
+    logger.error('[stripe/invoices]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur Stripe' },
       { status: 500 }

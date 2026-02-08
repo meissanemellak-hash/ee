@@ -8,6 +8,35 @@ interface ForecastInput {
   method?: ForecastMethod
 }
 
+/** Résultat d'un calcul de prévision avec métadonnées pour la confiance */
+interface ForecastResult {
+  value: number
+  daysWithSales: number
+  dailyQuantities: number[]
+}
+
+/**
+ * Calcule le niveau de confiance (0..1) à partir des données historiques.
+ * - Base : nombre de jours avec ventes (< 3 → 40 %, 3-6 → 55 %, 7-13 → 70 %, 14+ → 85 %)
+ * - Bonus régularité : si variance faible (cv < 0.3), +5 % (plafond 95 %)
+ */
+function computeConfidence(daysWithSales: number, dailyQuantities: number[]): number {
+  let base = 0.4
+  if (daysWithSales >= 14) base = 0.85
+  else if (daysWithSales >= 7) base = 0.7
+  else if (daysWithSales >= 3) base = 0.55
+
+  let confidence = base
+  if (dailyQuantities.length >= 3) {
+    const mean = dailyQuantities.reduce((s, q) => s + q, 0) / dailyQuantities.length
+    const variance = dailyQuantities.reduce((s, q) => s + (q - mean) ** 2, 0) / dailyQuantities.length
+    const std = Math.sqrt(variance)
+    const cv = mean > 0 ? std / mean : 1
+    if (cv < 0.3) confidence = Math.min(0.95, confidence + 0.05)
+  }
+  return Math.round(confidence * 100) / 100
+}
+
 /**
  * Calcule une prévision basée sur la moyenne mobile
  * Calcule la moyenne quotidienne des ventes sur les X derniers jours AVANT la date cible
@@ -17,7 +46,7 @@ async function calculateMovingAverage(
   productId: string,
   days: number = 7,
   targetDate?: Date
-): Promise<number> {
+): Promise<ForecastResult> {
   // Si une date cible est fournie, calculer les jours AVANT cette date
   // Sinon, utiliser aujourd'hui comme référence
   const referenceDate = targetDate ? new Date(targetDate) : new Date()
@@ -44,7 +73,7 @@ async function calculateMovingAverage(
   })
 
   if (sales.length === 0) {
-    return 0
+    return { value: 0, daysWithSales: 0, dailyQuantities: [] }
   }
 
   // Grouper les ventes par jour et calculer la quantité totale par jour
@@ -61,7 +90,11 @@ async function calculateMovingAverage(
   const totalDailyQuantity = dailyQuantities.reduce((sum, qty) => sum + qty, 0)
   const averageDailyQuantity = totalDailyQuantity / dailyQuantities.length
 
-  return averageDailyQuantity
+  return {
+    value: averageDailyQuantity,
+    daysWithSales: dailyQuantities.length,
+    dailyQuantities,
+  }
 }
 
 /**
@@ -73,7 +106,7 @@ async function calculateSeasonality(
   productId: string,
   targetDate: Date,
   weeks: number = 4
-): Promise<number> {
+): Promise<ForecastResult> {
   const dayOfWeek = targetDate.getDay()
   const endDate = new Date(targetDate)
   endDate.setDate(endDate.getDate() - 1)
@@ -120,7 +153,11 @@ async function calculateSeasonality(
   const totalDailyQuantity = dailyQuantities.reduce((sum, qty) => sum + qty, 0)
   const averageDailyQuantity = totalDailyQuantity / dailyQuantities.length
 
-  return averageDailyQuantity
+  return {
+    value: averageDailyQuantity,
+    daysWithSales: dailyQuantities.length,
+    dailyQuantities,
+  }
 }
 
 /**
@@ -129,32 +166,29 @@ async function calculateSeasonality(
 export async function generateForecast(input: ForecastInput) {
   const { restaurantId, productId, forecastDate, method = 'moving_average' } = input
 
-  let forecastedQuantity: number
-  let confidence: number = 0.7
+  let result: ForecastResult
 
   switch (method) {
     case 'seasonality':
-      forecastedQuantity = await calculateSeasonality(
+      result = await calculateSeasonality(
         restaurantId,
         productId,
         forecastDate
       )
-      confidence = 0.75
       break
     case 'moving_average':
     default:
-      forecastedQuantity = await calculateMovingAverage(
+      result = await calculateMovingAverage(
         restaurantId,
         productId,
         7, // 7 jours
         forecastDate // Passer la date cible pour calculer les jours AVANT
       )
-      confidence = 0.7
       break
   }
 
-  // Arrondir à l'entier supérieur
-  forecastedQuantity = Math.ceil(forecastedQuantity)
+  const forecastedQuantity = Math.ceil(result.value)
+  const confidence = computeConfidence(result.daysWithSales, result.dailyQuantities)
 
   // Vérifier si une prévision existe déjà (même jour)
   const startOfDay = new Date(forecastDate)

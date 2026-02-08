@@ -1,17 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserButton, OrganizationSwitcher } from '@clerk/nextjs'
 import { MobileSidebar } from './mobile-sidebar'
 import { HeaderActivationHandler } from './header-activation-handler'
 import { RestaurantSwitcher } from './restaurant-switcher'
-import { Search, X } from 'lucide-react'
+import { Search, X, Store } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 export function Header() {
   const router = useRouter()
   const [query, setQuery] = useState('')
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,21 +61,35 @@ export function Header() {
             </button>
           </form>
           
-          {/* Restaurant actif (filtre global) */}
+          {/* Restaurant actif (filtre global) — rendu après montage pour éviter erreur d'hydratation (Select/Portal) */}
           <div className="min-w-0 max-w-[180px] sm:max-w-[220px]">
-            <RestaurantSwitcher />
+            {mounted ? (
+              <RestaurantSwitcher />
+            ) : (
+              <div
+                className="w-full min-w-0 max-w-[200px] h-9 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg flex items-center gap-2"
+                aria-hidden
+              >
+                <Store className="h-4 w-4 shrink-0 text-gray-600 dark:text-gray-400" />
+                <span className="flex-1 min-w-0 truncate text-sm text-gray-600 dark:text-gray-400">…</span>
+              </div>
+            )}
           </div>
-          {/* Sélecteur d'organisation Clerk - Solution native et fiable */}
-          <div className="hidden sm:block">
-            <OrganizationSwitcher
-              hidePersonal
-              appearance={{
-                elements: {
-                  organizationSwitcherTrigger: 'px-3 py-2 text-sm border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors',
-                  organizationPreview: 'px-3 py-2',
-                },
-              }}
-            />
+          {/* Sélecteur d'organisation Clerk — rendu après montage pour éviter erreur d'hydratation (Portal) */}
+          <div className="hidden sm:block min-w-0 max-w-[160px]">
+            {mounted ? (
+              <OrganizationSwitcher
+                hidePersonal
+                appearance={{
+                  elements: {
+                    organizationSwitcherTrigger: 'px-3 py-2 text-sm border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors',
+                    organizationPreview: 'px-3 py-2',
+                  },
+                }}
+              />
+            ) : (
+              <div className="h-9 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 animate-pulse" aria-hidden />
+            )}
           </div>
         </div>
 

@@ -69,7 +69,7 @@ export default function AlertsPage() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>(() => urlRestaurant || 'all')
   const [selectedType, setSelectedType] = useState<string>('all')
   const [selectedSeverity, setSelectedSeverity] = useState<string>('all')
-  const [showResolved, setShowResolved] = useState<boolean>(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'resolved'>('active')
 
   useEffect(() => {
     setSelectedRestaurant(urlRestaurant || 'all')
@@ -79,12 +79,12 @@ export default function AlertsPage() {
   const { data: restaurantsData } = useRestaurants(1, 100)
   const restaurants = restaurantsData?.restaurants || []
 
-  // Charger les alertes avec filtres
+  // Charger les alertes avec filtres (resolved undefined = toutes)
   const { data: alerts = [], isLoading, error, refetch } = useAlerts({
     restaurantId: selectedRestaurant,
     type: selectedType,
     severity: selectedSeverity,
-    resolved: showResolved,
+    resolved: statusFilter === 'all' ? undefined : statusFilter === 'resolved',
   })
 
   const generateAlerts = useGenerateAlerts()
@@ -387,13 +387,14 @@ export default function AlertsPage() {
               <div className="space-y-2">
                 <Label htmlFor="alert-filter-status">Statut</Label>
                 <Select
-                  value={showResolved ? 'resolved' : 'active'}
-                  onValueChange={(value) => setShowResolved(value === 'resolved')}
+                  value={statusFilter}
+                  onValueChange={(value: 'all' | 'active' | 'resolved') => setStatusFilter(value)}
                 >
-                  <SelectTrigger id="alert-filter-status" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par statut (actives ou résolues)">
+                  <SelectTrigger id="alert-filter-status" className="bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par statut (tous, actives ou résolues)">
                     <SelectValue placeholder="Statut" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
                     <SelectItem value="active">Actives</SelectItem>
                     <SelectItem value="resolved">Résolues</SelectItem>
                   </SelectContent>
@@ -412,12 +413,14 @@ export default function AlertsPage() {
                 <AlertTriangle className="h-8 w-8 text-teal-600 dark:text-teal-400" />
               </div>
               <h3 className="text-xl font-semibold mb-2">
-                {showResolved ? 'Aucune alerte résolue' : 'Aucune alerte active'}
+                {statusFilter === 'resolved' ? 'Aucune alerte résolue' : statusFilter === 'active' ? 'Aucune alerte active' : 'Aucune alerte'}
               </h3>
               <p className="text-muted-foreground max-w-md mx-auto">
-                {showResolved
+                {statusFilter === 'resolved'
                   ? 'Aucune alerte résolue trouvée avec ces filtres.'
-                  : 'Aucune alerte active. Tout va bien !'}
+                  : statusFilter === 'active'
+                    ? 'Aucune alerte active. Tout va bien !'
+                    : 'Aucune alerte trouvée avec ces filtres.'}
               </p>
             </CardContent>
           </Card>

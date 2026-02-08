@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
-import { Loader2, Save, Building2, User, Shield, Trash2, AlertCircle, LogOut, Link2 } from 'lucide-react'
+import { Loader2, Save, Building2, User, Shield, Trash2, AlertCircle, LogOut, Link2, CreditCard, ArrowRight } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -456,6 +456,29 @@ export default function SettingsPage() {
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Section Facturation */}
+      <Card className="rounded-xl border shadow-sm bg-card">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center" aria-hidden="true">
+              <CreditCard className="h-4 w-4 text-white" />
+            </div>
+            <CardTitle className="text-lg font-semibold">Facturation</CardTitle>
+          </div>
+          <CardDescription className="mt-1">
+            Gérez votre abonnement, votre moyen de paiement et consultez vos factures.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="bg-gray-50 dark:bg-gray-800 border-border hover:bg-gray-100 dark:hover:bg-gray-700">
+            <Link href="/dashboard/settings/billing">
+              Voir la facturation et l&apos;abonnement
+              <ArrowRight className="h-4 w-4 ml-2" aria-hidden="true" />
+            </Link>
+          </Button>
         </CardContent>
       </Card>
 
