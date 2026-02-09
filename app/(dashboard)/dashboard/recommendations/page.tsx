@@ -54,9 +54,20 @@ export default function RecommendationsPage() {
   const [generationType, setGenerationType] = useState<'bom' | 'staffing'>('bom')
   const scrollPositionRef = useRef<number | null>(null)
 
+  // Charger les restaurants pour les filtres (déclaré avant les useEffect qui l'utilisent)
+  const { data: restaurantsData } = useRestaurants(1, 100)
+  const restaurants = restaurantsData?.restaurants || []
+
   useEffect(() => {
     setSelectedRestaurant(urlRestaurant || 'all')
   }, [urlRestaurant])
+
+  // Pré-sélectionner le seul restaurant pour activer "Générer (1 restaurant)" quand il n'y en a qu'un
+  useEffect(() => {
+    if (restaurants.length === 1 && (selectedRestaurant === 'all' || !selectedRestaurant)) {
+      setSelectedRestaurant(restaurants[0].id)
+    }
+  }, [restaurants, selectedRestaurant])
 
   // Restaurer la position du scroll après un changement de filtre (évite que la page remonte)
   useEffect(() => {
@@ -66,10 +77,6 @@ export default function RecommendationsPage() {
       requestAnimationFrame(() => window.scrollTo(0, y))
     }
   }, [selectedRestaurant, selectedType, selectedStatus])
-
-  // Charger les restaurants pour les filtres
-  const { data: restaurantsData } = useRestaurants(1, 100)
-  const restaurants = restaurantsData?.restaurants || []
 
   // Charger les recommandations avec filtres
   const { data: recommendations = [], isLoading, error, refetch } = useRecommendations({

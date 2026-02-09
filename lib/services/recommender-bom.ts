@@ -216,34 +216,97 @@ export async function generateBOMOrderRecommendations(
   }
 
   if (forecasts.length === 0) {
-    // Vérifier pourquoi il n'y a pas de prévisions
+    // Fallback : recommandations basées sur les ruptures de stock (stock < seuil min), sans prévisions
+    const inventory = await prisma.inventory.findMany({
+      where: { restaurantId },
+      include: { ingredient: true },
+    })
+
+    const recommendationsFromThresholds: OrderRecommendation[] = []
+    const detailsIngredientsFromThresholds: RecommendationDetails['ingredients'] = []
+
+    for (const inv of inventory) {
+      const minThreshold = inv.minThreshold ?? 0
+      if (minThreshold <= 0) continue
+      const currentStock = inv.currentStock
+      if (currentStock >= minThreshold) continue
+
+      let quantityToOrder = minThreshold - currentStock
+      let numberOfPacks: number | null = null
+      const packSize = inv.ingredient.packSize ?? null
+      if (packSize && packSize > 0) {
+        numberOfPacks = Math.ceil(quantityToOrder / packSize)
+        quantityToOrder = numberOfPacks * packSize
+      }
+      // Ne pas dépasser le seuil max (éviter surstock)
+      const maxThreshold = inv.maxThreshold ?? null
+      if (maxThreshold != null && currentStock + quantityToOrder > maxThreshold) {
+        quantityToOrder = Math.max(0, maxThreshold - currentStock)
+        numberOfPacks = packSize && packSize > 0 ? Math.ceil(quantityToOrder / packSize) : null
+      }
+      if (quantityToOrder <= 0) continue
+
+      recommendationsFromThresholds.push({
+        ingredientId: inv.ingredient.id,
+        ingredientName: inv.ingredient.name,
+        currentStock,
+        recommendedQuantity: quantityToOrder,
+        unit: inv.ingredient.unit,
+        estimatedCost: quantityToOrder * (inv.ingredient.costPerUnit || 0),
+        reason: `Rupture de stock : en dessous du seuil minimum (${minThreshold} ${inv.ingredient.unit}). Réapprovisionnement recommandé.`,
+      })
+      detailsIngredientsFromThresholds.push({
+        ingredientId: inv.ingredient.id,
+        ingredientName: inv.ingredient.name,
+        neededQuantity: minThreshold,
+        currentStock,
+        quantityToOrder,
+        packSize,
+        numberOfPacks,
+        supplierName: inv.ingredient.supplierName,
+      })
+    }
+
+    if (recommendationsFromThresholds.length > 0) {
+      const estimatedOrderCost = recommendationsFromThresholds.reduce((s, r) => s + (r.estimatedCost || 0), 0)
+      return {
+        recommendations: recommendationsFromThresholds,
+        details: {
+          restaurantId,
+          restaurantName: restaurant.name,
+          period: {
+            start: targetDate.toISOString().split('T')[0],
+            end: endDate.toISOString().split('T')[0],
+          },
+          ingredients: detailsIngredientsFromThresholds,
+          assumptions: { shrinkPct, forecastDays: days },
+          estimatedOrderCost,
+          estimatedSavings: estimatedOrderCost * 0.2,
+          reason: 'Recommandations basées sur les seuils minimums (ruptures de stock). Aucune vente récente pour calculer des prévisions.',
+        },
+        estimatedSavings: estimatedOrderCost * 0.2,
+      }
+    }
+
+    // Aucune prévision et aucune rupture : message explicatif
     const hasProducts = organization.products.length > 0
-    
     const startDateCheck = new Date(targetDate)
     startDateCheck.setDate(startDateCheck.getDate() - 14)
     startDateCheck.setHours(0, 0, 0, 0)
     const endDateCheck = new Date(targetDate)
     endDateCheck.setHours(23, 59, 59, 999)
-    
     const hasSales = await prisma.sale.count({
       where: {
         restaurantId,
-        saleDate: {
-          gte: startDateCheck,
-          lte: endDateCheck,
-        },
+        saleDate: { gte: startDateCheck, lte: endDateCheck },
       },
     }) > 0
-    
-    // Vérifier si les produits ont des recettes
     let productsWithRecipes = 0
     for (const product of organization.products) {
-      const recipeCount = await prisma.productIngredient.count({
-        where: { productId: product.id },
-      })
+      const recipeCount = await prisma.productIngredient.count({ where: { productId: product.id } })
       if (recipeCount > 0) productsWithRecipes++
     }
-    
+
     return {
       recommendations: [],
       details: {
@@ -254,17 +317,14 @@ export async function generateBOMOrderRecommendations(
           end: endDate.toISOString().split('T')[0],
         },
         ingredients: [],
-        assumptions: {
-          shrinkPct,
-          forecastDays: days,
-        },
-        reason: !hasProducts 
+        assumptions: { shrinkPct, forecastDays: days },
+        reason: !hasProducts
           ? 'Aucun produit trouvé dans l\'organisation. Ajoutez des produits pour générer des recommandations.'
           : !hasSales
-          ? 'Aucune vente historique trouvée sur les 14 derniers jours (incluant aujourd\'hui). Les recommandations nécessitent des données de ventes pour calculer les prévisions.'
-          : productsWithRecipes === 0
-          ? 'Aucun produit n\'a de recette (ingrédients) définie. Allez dans "Produits" → Modifier un produit → Section "Recette du produit" pour ajouter des ingrédients.'
-          : `Seulement ${productsWithRecipes} produit(s) sur ${organization.products.length} a/ont des recettes. Ajoutez des ingrédients aux autres produits pour générer plus de recommandations.`,
+            ? 'Aucune vente sur les 14 derniers jours. Des recommandations de commande ont été générées uniquement si vous aviez des ruptures de stock (stock < seuil min).'
+            : productsWithRecipes === 0
+              ? 'Aucun produit n\'a de recette (ingrédients). Allez dans "Produits" → Modifier un produit → "Recette du produit".'
+              : `Seulement ${productsWithRecipes} produit(s) sur ${organization.products.length} ont des recettes.`,
       },
       estimatedSavings: 0,
     }
@@ -304,11 +364,26 @@ export async function generateBOMOrderRecommendations(
     // Calculer la quantité à commander (besoin - stock actuel)
     let quantityToOrder = Math.max(0, neededWithShrink - currentStock)
 
+    // Aligner avec les alertes : si stock sous le seuil min, recommander au moins jusqu'au seuil
+    const minThreshold = inv?.minThreshold ?? 0
+    if (minThreshold > 0 && currentStock < minThreshold) {
+      const toMin = minThreshold - currentStock
+      quantityToOrder = Math.max(quantityToOrder, toMin)
+    }
+
     // Si un pack est défini, arrondir au pack supérieur
     let numberOfPacks: number | null = null
     if (need.packSize && need.packSize > 0) {
       numberOfPacks = Math.ceil(quantityToOrder / need.packSize)
       quantityToOrder = numberOfPacks * need.packSize
+    }
+
+    // Ne pas recommander plus que le seuil max pour éviter le surstock
+    const maxThreshold = inv?.maxThreshold ?? null
+    if (maxThreshold != null && currentStock + quantityToOrder > maxThreshold) {
+      quantityToOrder = Math.max(0, maxThreshold - currentStock)
+      if (quantityToOrder <= 0) continue
+      numberOfPacks = need.packSize && need.packSize > 0 ? Math.ceil(quantityToOrder / need.packSize) : null
     }
 
     if (quantityToOrder > 0) {
@@ -345,6 +420,50 @@ export async function generateBOMOrderRecommendations(
       // Compter les ingrédients avec stock suffisant
       ingredientsWithSufficientStock++
     }
+  }
+
+  // Ingrédients en rupture (sous seuil min) non couverts par les prévisions : les ajouter aux recommandations
+  const recommendedIds = new Set(recommendations.map((r) => r.ingredientId))
+  for (const inv of inventory) {
+    const minThreshold = inv.minThreshold ?? 0
+    if (minThreshold <= 0 || inv.currentStock >= minThreshold) continue
+    if (recommendedIds.has(inv.ingredient.id)) continue
+
+    let quantityToOrder = minThreshold - inv.currentStock
+    let numberOfPacks: number | null = null
+    const packSize = inv.ingredient.packSize ?? null
+    if (packSize && packSize > 0) {
+      numberOfPacks = Math.ceil(quantityToOrder / packSize)
+      quantityToOrder = numberOfPacks * packSize
+    }
+    // Ne pas dépasser le seuil max (éviter surstock)
+    const maxThreshold = inv.maxThreshold ?? null
+    if (maxThreshold != null && inv.currentStock + quantityToOrder > maxThreshold) {
+      quantityToOrder = Math.max(0, maxThreshold - inv.currentStock)
+      numberOfPacks = packSize && packSize > 0 ? Math.ceil(quantityToOrder / packSize) : null
+    }
+    if (quantityToOrder <= 0) continue
+
+    recommendedIds.add(inv.ingredient.id)
+    recommendations.push({
+      ingredientId: inv.ingredient.id,
+      ingredientName: inv.ingredient.name,
+      currentStock: inv.currentStock,
+      recommendedQuantity: quantityToOrder,
+      unit: inv.ingredient.unit,
+      estimatedCost: quantityToOrder * (inv.ingredient.costPerUnit || 0),
+      reason: `Rupture de stock : en dessous du seuil minimum (${minThreshold} ${inv.ingredient.unit}). Réapprovisionnement recommandé.`,
+    })
+    detailsIngredients.push({
+      ingredientId: inv.ingredient.id,
+      ingredientName: inv.ingredient.name,
+      neededQuantity: minThreshold,
+      currentStock: inv.currentStock,
+      quantityToOrder,
+      packSize,
+      numberOfPacks,
+      supplierName: inv.ingredient.supplierName,
+    })
   }
 
   // Si aucune recommandation générée mais qu'on a des besoins calculés, c'est que les stocks sont suffisants

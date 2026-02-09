@@ -23,12 +23,13 @@ export async function createAlert(input: AlertInput) {
   })
 
   if (existingAlert) {
-    // Mettre à jour l'alerte existante
+    // Mettre à jour l'alerte existante (date mise à jour pour refléter le dernier déclenchement)
     return prisma.alert.update({
       where: { id: existingAlert.id },
       data: {
         severity: input.severity,
         message: input.message,
+        createdAt: new Date(),
       },
     })
   }

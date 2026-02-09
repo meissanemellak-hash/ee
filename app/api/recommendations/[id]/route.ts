@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { runAllAlerts } from '@/lib/services/alerts'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -105,21 +106,33 @@ export async function PATCH(
 
     // Quand on accepte une recommandation de type ORDER, appliquer la réception de commande (mise à jour inventaire)
     if (status === 'accepted' && recommendation.type === 'ORDER') {
-      const data = recommendation.data as any
+      const data = recommendation.data as Record<string, unknown> | unknown[] | null | undefined
       const items: { ingredientId: string; quantity: number }[] = []
+
+      const readQty = (r: any): number =>
+        Number(r?.quantityToOrder ?? r?.recommendedQuantity ?? r?.quantity ?? r?.toOrder ?? 0)
 
       if (Array.isArray(data)) {
         for (const r of data) {
-          if (r?.ingredientId && (r.recommendedQuantity ?? 0) > 0) {
-            items.push({ ingredientId: r.ingredientId, quantity: Number(r.recommendedQuantity) })
+          const qty = readQty(r)
+          if (r?.ingredientId && qty > 0) {
+            items.push({ ingredientId: String(r.ingredientId), quantity: qty })
           }
         }
-      } else if (data?.ingredients && Array.isArray(data.ingredients)) {
-        for (const ing of data.ingredients) {
-          if (ing?.ingredientId && (ing.quantityToOrder ?? 0) > 0) {
-            items.push({ ingredientId: ing.ingredientId, quantity: Number(ing.quantityToOrder) })
+      } else if (data && typeof data === 'object') {
+        const ingredients = (data as any).ingredients ?? (data as any).recommendations
+        if (Array.isArray(ingredients)) {
+          for (const ing of ingredients) {
+            const qty = readQty(ing)
+            if (ing?.ingredientId && qty > 0) {
+              items.push({ ingredientId: String(ing.ingredientId), quantity: qty })
+            }
           }
         }
+      }
+
+      if (items.length > 0) {
+        logger.log('[PATCH /api/recommendations/[id]] Mise à jour inventaire:', items.length, 'ligne(s)')
       }
 
       await prisma.$transaction(async (tx) => {

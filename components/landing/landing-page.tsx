@@ -21,6 +21,71 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+/** URL brute depuis .env (embed YouTube/Vimeo ou YouTube watch). */
+const RAW_DEMO_VIDEO_URL = process.env.NEXT_PUBLIC_LANDING_DEMO_VIDEO_URL?.trim() || ''
+
+/** Retourne une URL d'embed valide (accepte youtube.com/watch?v= ou youtu.be/ en entrée). */
+function getDemoVideoEmbedUrl(raw: string): string {
+  if (!raw) return ''
+  try {
+    const url = new URL(raw)
+    // YouTube watch → embed
+    if (url.hostname === 'www.youtube.com' && url.pathname === '/watch' && url.searchParams.get('v')) {
+      return `https://www.youtube.com/embed/${url.searchParams.get('v')}`
+    }
+    if (url.hostname === 'youtube.com' && url.pathname === '/watch' && url.searchParams.get('v')) {
+      return `https://www.youtube.com/embed/${url.searchParams.get('v')}`
+    }
+    if (url.hostname === 'youtu.be') {
+      const id = url.pathname.slice(1).split('/')[0]
+      return id ? `https://www.youtube.com/embed/${id}` : ''
+    }
+    // Déjà embed YouTube / Vimeo ou autre
+    return raw
+  } catch {
+    return raw
+  }
+}
+
+const DEMO_VIDEO_URL = getDemoVideoEmbedUrl(RAW_DEMO_VIDEO_URL)
+
+function DemoVideoBlock() {
+  if (DEMO_VIDEO_URL) {
+    return (
+      <div className="mt-10 flex justify-center" aria-labelledby="demo-video-label">
+        <h2 id="demo-video-label" className="sr-only">
+          Vidéo de démonstration
+        </h2>
+        <div className="relative w-full max-w-2xl aspect-video rounded-xl border border-border bg-muted/30 overflow-hidden shadow-lg">
+          <iframe
+            src={DEMO_VIDEO_URL}
+            title="Vidéo de démonstration IA Restaurant Manager"
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="mt-10 flex justify-center">
+      <div
+        className="relative w-full max-w-2xl aspect-video rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center group"
+        role="presentation"
+      >
+        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400">
+            <Play className="h-8 w-8 ml-1" fill="currentColor" aria-hidden />
+          </div>
+          <span className="text-sm font-medium">Vidéo de démonstration</span>
+          <span className="text-xs">Disponible sur demande</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-muted/25">
@@ -156,21 +221,8 @@ export function LandingPage() {
               ))}
             </div>
 
-            {/* Emplacement vidéo démo (placeholder) */}
-            <div className="mt-10 flex justify-center">
-              <div
-                className="relative w-full max-w-2xl aspect-video rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center group cursor-pointer"
-                role="presentation"
-              >
-                <div className="flex flex-col items-center gap-2 text-muted-foreground group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400">
-                    <Play className="h-8 w-8 ml-1" fill="currentColor" aria-hidden />
-                  </div>
-                  <span className="text-sm font-medium">Vidéo de démonstration</span>
-                  <span className="text-xs">Disponible sur demande</span>
-                </div>
-              </div>
-            </div>
+            {/* Vidéo de démonstration : iframe si URL configurée, sinon placeholder */}
+            <DemoVideoBlock />
           </div>
         </section>
 

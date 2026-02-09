@@ -46,6 +46,18 @@
 - [ ] Variables Stripe en prod : `STRIPE_SECRET_KEY` (clé Live), `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO` (ou les price IDs utilisés).
 - [ ] **Clerk – Redirection après invitation** : dans le Dashboard Clerk (Configure → Paths / Redirect URLs), configurer la redirection après acceptation d’invitation vers **`/dashboard`** (URL de prod, ex. `https://ton-domaine.com/dashboard`). L’utilisateur arrive toujours sur le tableau de bord. (La page `/pricing` n’existe plus ; toute requête vers `/pricing` est redirigée vers `/dashboard`.)
 - [ ] **Clerk – Page « compléter le profil » en français (optionnel)** : si tu veux que la page après « Accepter l’invitation » soit en français (au lieu de la page hébergée Clerk en anglais), mettre en place l’**option 2** : redirection vers une page de ton app (ex. `/accept-invitation`) qui affiche le formulaire avec les composants Clerk — nécessite le nom de domaine en prod. Voir la conversation / doc pour le détail.
+- [ ] **Rappel – Cron recommandations** : définir **`CRON_SECRET`** dans Vercel pour que la génération automatique des recommandations (tous les jours à 6h UTC) fonctionne. Voir la section « Cron Vercel – Recommandations » ci-dessous.
+
+---
+
+## Rappel – Génération automatique des recommandations (cron)
+
+> **Avant la mise en prod**, ne pas oublier de configurer la **génération automatique** des recommandations de commande :
+>
+> 1. **Variable `CRON_SECRET`** : à définir dans Vercel (Settings → Environment Variables) avec une valeur secrète forte. Sans elle, le cron ne pourra pas s’exécuter (réponse 503).
+> 2. **Planification** : déjà définie dans `vercel.json` (tous les jours à 6h UTC). Après déploiement, le cron apparaît dans Vercel → Project → Settings → Crons.
+>
+> Sans cette config, les recommandations ne seront créées que lorsque les utilisateurs cliqueront manuellement sur « Générer » dans l’app.
 
 ---
 
