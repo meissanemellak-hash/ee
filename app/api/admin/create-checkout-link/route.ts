@@ -9,6 +9,13 @@ export const dynamic = 'force-dynamic'
 
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase()
 
+/** Mapping lookup_key Stripe (essentiel, croissance, pro) → PlanId. */
+const LOOKUP_KEY_TO_PLAN_ID: Record<string, PlanId> = {
+  essentiel: 'starter',
+  croissance: 'growth',
+  pro: 'pro',
+}
+
 /**
  * POST /api/admin/create-checkout-link
  * Body: { clerkOrgId: string, plan?: 'starter' | 'growth' | 'pro' } ou { organizationId: string, plan?: ... }

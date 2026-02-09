@@ -38,22 +38,24 @@ export default async function DemoMerciPage({ searchParams }: Props) {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Merci pour votre demande</h1>
-        <p className="mt-3 text-muted-foreground max-w-xl">
-          Nous vous recontactons sous 48 h ouvrées. En attendant, choisissez un créneau pour votre démo personnalisée.
-        </p>
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Merci pour votre demande</h1>
+          <p className="mt-3 text-muted-foreground">
+            Nous vous recontactons sous 48 h ouvrées. En attendant, choisissez un créneau pour votre démo personnalisée.
+          </p>
 
-        <div className="mt-10">
-          <Button asChild size="lg" className="bg-teal-600 hover:bg-teal-700 text-white border-0">
-            <a href={calendlyFullUrl} target="_blank" rel="noopener noreferrer">
-              Choisir un créneau pour ma démo
-            </a>
-          </Button>
+          <div className="mt-10 flex justify-center">
+            <Button asChild size="lg" className="bg-teal-600 hover:bg-teal-700 text-white border-0">
+              <a href={calendlyFullUrl} target="_blank" rel="noopener noreferrer">
+                Choisir un créneau pour ma démo
+              </a>
+            </Button>
+          </div>
+
+          <p className="mt-6 text-sm text-muted-foreground">
+            Vous serez redirigé vers notre outil de prise de rendez-vous. Après réservation, vous recevrez un email de confirmation.
+          </p>
         </div>
-
-        <p className="mt-6 text-sm text-muted-foreground">
-          Vous serez redirigé vers notre outil de prise de rendez-vous. Après réservation, vous recevrez un email de confirmation.
-        </p>
       </main>
 
       <footer className="border-t border-border/60 py-6 mt-12">

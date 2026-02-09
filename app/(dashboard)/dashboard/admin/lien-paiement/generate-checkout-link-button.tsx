@@ -43,11 +43,23 @@ export function GenerateCheckoutLinkButton({ clerkOrgId, organizationName }: Pro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clerkOrgId, plan }),
       })
-      const data = await res.json()
+      const raw = await res.text()
+      let data: { url?: string; error?: string } = {}
+      try {
+        data = raw ? JSON.parse(raw) : {}
+      } catch {
+        // Réponse non-JSON (ex. page d'erreur HTML)
+        toast({
+          title: 'Erreur',
+          description: res.ok ? 'Réponse invalide du serveur.' : `Erreur serveur (${res.status}). Vérifiez la console et les variables d\'environnement (Stripe, SUPER_ADMIN_EMAIL).`,
+          variant: 'destructive',
+        })
+        return
+      }
       if (!res.ok) {
         toast({
           title: 'Erreur',
-          description: translateApiError(data.error) || 'Impossible de générer le lien',
+          description: translateApiError(data.error) || data.error || 'Impossible de générer le lien',
           variant: 'destructive',
         })
         return
@@ -63,7 +75,7 @@ export function GenerateCheckoutLinkButton({ clerkOrgId, organizationName }: Pro
       console.error(e)
       toast({
         title: 'Erreur',
-        description: 'Erreur réseau',
+        description: 'Erreur réseau. Vérifiez que le serveur tourne et que Stripe est configuré (.env.local).',
         variant: 'destructive',
       })
     } finally {
@@ -90,7 +102,7 @@ export function GenerateCheckoutLinkButton({ clerkOrgId, organizationName }: Pro
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-wrap">
       <Select value={plan} onValueChange={(v) => setPlan(v as PlanId)}>
-        <SelectTrigger className="w-[200px] h-9 shrink-0" aria-label="Choisir le plan">
+        <SelectTrigger className="min-w-[220px] w-[240px] h-9 shrink-0" aria-label="Choisir le plan">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

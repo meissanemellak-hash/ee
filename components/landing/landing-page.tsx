@@ -36,7 +36,7 @@ export function LandingPage() {
                 <Link href="/sign-in">Se connecter</Link>
               </Button>
               <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
-                <Link href="/demo">Demander une démo</Link>
+                <Link href="#tarifs">Demander une démo</Link>
               </Button>
             </nav>
           </div>
@@ -412,21 +412,17 @@ export function LandingPage() {
               Une offre pensée pour la croissance
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Tarification adaptée à votre périmètre. Essentiel, Croissance ou Pro : un investissement qui se traduit par des économies mesurables et un pilotage simplifié.
+              Tarification adaptée à votre périmètre (Essentiel, Croissance, Pro). Un investissement qui se traduit par des économies concrètes et le pilotage de vos restaurants sur une seule plate-forme.
             </p>
             <div className="mt-12 grid gap-6 sm:grid-cols-3 max-w-5xl mx-auto">
               {[
-                { plan: 'essentiel', name: 'Essentiel', range: '1 à 5 restaurants', price: '1 500', cta: 'Demander une démo', href: '/demo?plan=essentiel' },
-                { plan: 'croissance', name: 'Croissance', range: '6 à 10 restaurants', price: '3 000', cta: 'Demander une démo', href: '/demo?plan=croissance', featured: true },
-                { plan: 'pro', name: 'Pro', range: '10+ restaurants', price: '5 000', cta: 'Demander une démo', href: '/demo?plan=pro' },
+                { plan: 'essentiel', name: 'Essentiel', range: '1 à 5 restaurants', price: '1 500', cta: 'Planifier ma démo', href: '/demo?plan=essentiel' },
+                { plan: 'croissance', name: 'Croissance', range: '6 à 10 restaurants', price: '3 000', cta: 'Planifier ma démo', href: '/demo?plan=croissance' },
+                { plan: 'pro', name: 'Pro', range: '10+ restaurants', price: '5 000', cta: 'Planifier ma démo', href: '/demo?plan=pro' },
               ].map((tier) => (
                 <div
                   key={tier.plan}
-                  className={`rounded-xl border-2 p-6 text-center flex flex-col ${
-                    tier.featured
-                      ? 'border-teal-500 dark:border-teal-600 bg-teal-50/50 dark:bg-teal-900/20 shadow-md'
-                      : 'border-border bg-card'
-                  }`}
+                  className="rounded-xl border-2 border-border bg-card p-6 text-center flex flex-col"
                 >
                   <p className="text-sm font-medium text-teal-700 dark:text-teal-400 uppercase tracking-wide">{tier.name}</p>
                   <p className="mt-2 text-xs text-muted-foreground">{tier.range}</p>
@@ -434,26 +430,29 @@ export function LandingPage() {
                     <span className="text-teal-600 dark:text-teal-400">{tier.price} €</span>
                     <span className="text-base font-normal text-muted-foreground"> / mois</span>
                   </p>
-                  <ul className="mt-6 text-left text-sm text-muted-foreground space-y-2 flex-1">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-                      Tableau de bord multi-restaurants
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-                      Ventes, inventaire, alertes
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-                      Prévisions et rapports
-                    </li>
-                  </ul>
-                  <Button asChild size="lg" className={`mt-6 w-full border-0 ${tier.featured ? 'bg-teal-600 hover:bg-teal-700' : 'bg-teal-600 hover:bg-teal-700'} text-white`}>
+                  <Button asChild size="lg" className="mt-6 w-full border-0 bg-teal-600 hover:bg-teal-700 text-white">
                     <Link href={tier.href}>{tier.cta}</Link>
                   </Button>
                 </div>
               ))}
             </div>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Tous les plans incluent les mêmes fonctionnalités.
+            </p>
+            <ul className="mt-4 flex flex-wrap justify-center gap-x-8 gap-y-2 text-sm text-muted-foreground list-none">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                Tableau de bord multi-restaurants
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                Ventes, inventaire, alertes
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                Prévisions et rapports
+              </li>
+            </ul>
           </div>
         </section>
 
@@ -552,23 +551,6 @@ export function LandingPage() {
                 </details>
               ))}
             </dl>
-          </div>
-        </section>
-
-        {/* CTA final */}
-        <section className="py-16 lg:py-20 border-t border-border/60 bg-muted/30">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
-            <h2 className="text-2xl font-bold text-foreground sm:text-3xl">
-              Prêt à piloter vos restaurants sereinement ?
-            </h2>
-            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              Moins de stress, plus de bénéfices et d&apos;économies. Essayez la plateforme.
-            </p>
-            <div className="mt-8 flex justify-center">
-              <Button asChild size="lg" className="bg-teal-600 hover:bg-teal-700 text-white border-0 text-base px-8">
-                <Link href="/demo">Demander une démo</Link>
-              </Button>
-            </div>
           </div>
         </section>
 
