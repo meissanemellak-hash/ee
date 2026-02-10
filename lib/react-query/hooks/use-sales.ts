@@ -28,6 +28,7 @@ export interface Sale {
 export interface SalesResponse {
   sales: Sale[]
   total: number
+  totalRevenue?: number
   page?: number
   limit?: number
   totalPages?: number
@@ -66,6 +67,7 @@ export function getSalesListQueryOptions(
         return {
           sales: data.sales,
           total: data.total || data.sales.length,
+          totalRevenue: typeof data.totalRevenue === 'number' ? data.totalRevenue : undefined,
           page: data.page || page,
           limit: data.limit || limit,
           totalPages: data.totalPages || Math.ceil((data.total || data.sales.length) / (data.limit || limit)),

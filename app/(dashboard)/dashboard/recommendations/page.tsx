@@ -50,6 +50,7 @@ export default function RecommendationsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showGainExplanationCard, setShowGainExplanationCard] = useState(false)
   const [gainExplanationRecId, setGainExplanationRecId] = useState<string | null>(null)
+  const [besoinExplanationRecId, setBesoinExplanationRecId] = useState<string | null>(null)
   const [showStaffingExplanation, setShowStaffingExplanation] = useState(false)
   const [generationType, setGenerationType] = useState<'bom' | 'staffing'>('bom')
   const scrollPositionRef = useRef<number | null>(null)
@@ -679,7 +680,19 @@ export default function RecommendationsPage() {
                                 <tr>
                                   <th className="px-4 py-2 text-left">Ingrédient</th>
                                   <th className="px-4 py-2 text-right">Stock actuel</th>
-                                  <th className="px-4 py-2 text-right">Besoin</th>
+                                  <th className="px-4 py-2 text-right">
+                                    <span className="inline-flex items-center gap-1">
+                                      Besoin
+                                      <button
+                                        type="button"
+                                        onClick={() => setBesoinExplanationRecId((id) => (id === recommendation.id ? null : recommendation.id))}
+                                        className="inline-flex text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded focus:outline-none"
+                                        aria-label="D’où provient le besoin"
+                                      >
+                                        <HelpCircle className="h-3.5 w-3.5" />
+                                      </button>
+                                    </span>
+                                  </th>
                                   <th className="px-4 py-2 text-right">À commander</th>
                                   <th className="px-4 py-2 text-right">Pack</th>
                                   <th className="px-4 py-2 text-right">Fournisseur</th>
@@ -711,6 +724,11 @@ export default function RecommendationsPage() {
                               </tbody>
                             </table>
                           </div>
+                          {besoinExplanationRecId === recommendation.id && (
+                            <p className="text-xs text-muted-foreground p-3 rounded-md bg-muted/60 border border-border">
+                              <strong>D’où provient le besoin ?</strong> Quantité calculée à partir de vos ventes prévues et de vos recettes pour la période. Une marge de sécurité (shrink) est incluse pour limiter les ruptures.
+                            </p>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"

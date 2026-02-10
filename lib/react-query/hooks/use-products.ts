@@ -362,8 +362,13 @@ export function useImportProducts() {
       const result = await response.json()
 
       if (!response.ok) {
-        const message = result.details || result.error || 'Erreur lors de l\'import'
-        throw new Error(typeof message === 'string' ? message : Array.isArray(message) ? message[0] || result.error : result.error)
+        const raw = result.details || result.error || 'Erreur lors de l\'import'
+        const message = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] || result.error : result.error
+        const displayMessage =
+          typeof message === 'string' && (message.startsWith('[') || message.startsWith('{'))
+            ? 'Le fichier ne correspond pas au format attendu pour l\'import produits. Vérifiez les colonnes (nom, prix_unitaire) ou téléchargez le modèle sur la page.'
+            : message
+        throw new Error(displayMessage || result.error || 'Erreur lors de l\'import')
       }
 
       return result as {

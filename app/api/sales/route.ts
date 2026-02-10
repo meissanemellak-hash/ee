@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
       const limit = parseInt(limitParam || '50')
       const skip = (page - 1) * limit
 
-      const [sales, total] = await Promise.all([
+      const [sales, total, salesForRevenue] = await Promise.all([
         prisma.sale.findMany({
           where,
           skip,
@@ -151,11 +151,22 @@ export async function GET(request: NextRequest) {
           },
         }),
         prisma.sale.count({ where }),
+        prisma.sale.findMany({
+          where,
+          select: { quantity: true, product: { select: { unitPrice: true } } },
+          take: 100000,
+        }),
       ])
+
+      const totalRevenue = salesForRevenue.reduce(
+        (sum, s) => sum + s.quantity * (s.product?.unitPrice ?? 0),
+        0
+      )
 
       return NextResponse.json({
         sales,
         total,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
         page,
         limit,
         totalPages: Math.ceil(total / limit),

@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
 import Papa from 'papaparse'
+import { z } from 'zod'
 import { csvProductRowSchema } from '@/lib/validations/products'
 import { logger } from '@/lib/logger'
 
@@ -100,9 +101,15 @@ export async function POST(request: NextRequest) {
         productsToCreate.push({ name, category, unitPrice })
         existingNames.add(name.toLowerCase())
       } catch (err) {
-        errors.push(
-          `Ligne ${i + 2}: ${err instanceof Error ? err.message : 'Erreur de validation'}`
-        )
+        if (err instanceof z.ZodError) {
+          errors.push(
+            `Ligne ${i + 2}: Le fichier ne correspond pas au format attendu pour l'import produits. Il doit contenir les colonnes « nom » (ou name) et « prix_unitaire » (ou unitPrice). Téléchargez le modèle « Import produits » sur cette page. Si vous souhaitez importer des ventes, utilisez la page Import ventes.`
+          )
+        } else {
+          errors.push(
+            `Ligne ${i + 2}: ${err instanceof Error ? err.message : 'Erreur de validation'}`
+          )
+        }
       }
     }
 

@@ -132,11 +132,13 @@ export default function SalesPage() {
   const canDelete = permissions.canDeleteSale(currentRole)
   const canImportSales = permissions.canImportSales(currentRole)
 
-  // Chiffre d'affaires basé sur le prix actuel du produit (quantity × unitPrice) pour refléter les changements de prix
-  const totalRevenue = sales.reduce(
+  // Chiffre d'affaires : total sur toutes les ventes (filtres appliqués) si l'API le fournit, sinon somme de la page courante
+  const totalRevenueFromApi = data?.totalRevenue
+  const totalRevenuePage = sales.reduce(
     (sum, sale) => sum + sale.quantity * (sale.product?.unitPrice ?? sale.amount / sale.quantity),
     0
   )
+  const totalRevenue = typeof totalRevenueFromApi === 'number' ? totalRevenueFromApi : totalRevenuePage
   const totalQuantity = sales.reduce((sum, sale) => sum + sale.quantity, 0)
 
   const handleDelete = async () => {
@@ -305,7 +307,9 @@ export default function SalesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(totalRevenue)}</div>
-              <p className="text-xs text-muted-foreground mt-2">Revenus (cette page)</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {typeof totalRevenueFromApi === 'number' ? 'Chiffre d\'affaires (filtres appliqués)' : 'Revenus (page affichée)'}
+              </p>
             </CardContent>
           </Card>
           <Card className="rounded-xl border shadow-sm bg-card">
