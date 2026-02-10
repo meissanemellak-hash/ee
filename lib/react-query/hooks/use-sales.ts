@@ -90,6 +90,7 @@ export function useSales(
   return useQuery({
     ...getSalesListQueryOptions(organization?.id, page, limit, filters),
     enabled: !!organization?.id,
+    placeholderData: (previousData) => previousData,
   })
 }
 
@@ -124,6 +125,7 @@ export function useSalesAnalyze(filters?: {
 
   return useQuery({
     queryKey: ['salesAnalyze', organization?.id, filters],
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       if (!organization?.id) {
         return {

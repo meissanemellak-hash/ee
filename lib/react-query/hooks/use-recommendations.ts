@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { QueryKey } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
 import { translateApiError } from '@/lib/translate-api-error'
@@ -54,41 +55,41 @@ export interface RecommendationDetails {
   reason?: string
 }
 
-export function useRecommendations(filters?: {
+type RecommendationsFilters = {
   restaurantId?: string
   type?: string
   status?: string
-}) {
-  const { organization } = useOrganization()
+}
 
-  return useQuery({
-    queryKey: ['recommendations', organization?.id, filters],
-    queryFn: async () => {
-      if (!organization?.id) return []
-      
+/** Options pour préchargement (sidebar). */
+export function recommendationsQueryOptions(organizationId: string | undefined, filters?: RecommendationsFilters) {
+  return {
+    queryKey: ['recommendations', organizationId, filters] as QueryKey,
+    queryFn: async (): Promise<Recommendation[]> => {
+      if (!organizationId) return []
       const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      
+      queryParams.append('clerkOrgId', organizationId)
       if (filters?.restaurantId && filters.restaurantId !== 'all') {
         queryParams.append('restaurantId', filters.restaurantId)
       }
-      if (filters?.type && filters.type !== 'all') {
-        queryParams.append('type', filters.type)
-      }
+      if (filters?.type && filters.type !== 'all') queryParams.append('type', filters.type)
       if (filters?.status !== undefined && filters?.status !== null) {
         queryParams.append('status', filters.status)
       }
-      
       const response = await fetch(`/api/recommendations?${queryParams.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch recommendations')
-      }
-      
+      if (!response.ok) throw new Error('Failed to fetch recommendations')
       const data = await response.json()
       return Array.isArray(data) ? data : []
     },
+  }
+}
+
+export function useRecommendations(filters?: RecommendationsFilters) {
+  const { organization } = useOrganization()
+  return useQuery({
+    ...recommendationsQueryOptions(organization?.id, filters),
     enabled: !!organization?.id,
+    placeholderData: (previousData) => previousData,
   })
 }
 

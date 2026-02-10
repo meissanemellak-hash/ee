@@ -182,11 +182,23 @@ export async function checkForecastAlerts(restaurantId: string) {
         const severity: AlertSeverity =
           shortage > inv.minThreshold * 2 ? 'critical' : 'high'
 
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        const forecastDay = new Date(forecast.forecastDate)
+        forecastDay.setHours(0, 0, 0, 0)
+        const diffDays = Math.round((forecastDay.getTime() - todayStart.getTime()) / (24 * 60 * 60 * 1000))
+        const whenLabel =
+          diffDays === 0
+            ? "aujourd'hui"
+            : diffDays === 1
+              ? 'demain'
+              : `dans ${diffDays} jours`
+
         await createAlert({
           restaurantId,
           type: 'SHORTAGE',
           severity,
-          message: `Risque de rupture pour ${productIngredient.ingredient.name} le ${forecast.forecastDate.toLocaleDateString('fr-FR')}. Stock actuel: ${inv.currentStock} ${productIngredient.ingredient.unit}, besoin estimé: ${neededQuantity.toFixed(2)}`,
+          message: `Risque de rupture pour ${productIngredient.ingredient.name} ${whenLabel} (le ${forecast.forecastDate.toLocaleDateString('fr-FR')}). Stock actuel: ${inv.currentStock} ${productIngredient.ingredient.unit}, besoin estimé: ${neededQuantity.toFixed(2)}`,
         })
       }
     }

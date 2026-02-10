@@ -110,6 +110,18 @@ export default function ForecastsPage() {
     setSeasonalityDayOfWeek(monBased)
   }, [forecastDate, generationMode])
 
+  // Plage limitée à 7 jours : ramener la date de fin si elle dépasse après changement de date de début
+  useEffect(() => {
+    if (!startDateRange || !endDateRange) return
+    const start = new Date(startDateRange + 'T12:00:00')
+    const maxEnd = new Date(start)
+    maxEnd.setDate(maxEnd.getDate() + 6)
+    const maxEndIso = maxEnd.toISOString().split('T')[0]
+    if (endDateRange > maxEndIso) {
+      setEndDateRange(maxEndIso)
+    }
+  }, [startDateRange])
+
   /** Retourne la date (ISO string) du jour choisi dans la semaine de la date donnée. dayIndex 0 = Lundi, 6 = Dimanche. */
   const getDateOfDayInWeek = (isoDate: string, dayIndex: number): string => {
     const d = new Date(isoDate + 'T12:00:00')
@@ -154,6 +166,26 @@ export default function ForecastsPage() {
       ? displayedForecasts.reduce((sum, f) => sum + (f.confidence || 0), 0) / displayedForecasts.length
       : 0
   const hasActiveFilters = selectedRestaurant !== 'all' || startDate || endDate || hideInsufficientData
+  const todayIso = new Date().toISOString().split('T')[0]
+  const dateToUseSingle =
+    forecastDate && generationMode === 'single'
+      ? getDateOfDayInWeek(forecastDate, seasonalityDayOfWeek)
+      : ''
+  const isPastDateSingle = !!forecastDate && dateToUseSingle < todayIso
+  const isPastDateRange = !!startDateRange && startDateRange < todayIso
+  // Plage limitée à 7 jours : date de fin au plus start + 6
+  const maxEndDateRange =
+    startDateRange
+      ? (() => {
+          const d = new Date(startDateRange + 'T12:00:00')
+          d.setDate(d.getDate() + 6)
+          return d.toISOString().split('T')[0]
+        })()
+      : ''
+  const isRangeOver7Days =
+    !!startDateRange &&
+    !!endDateRange &&
+    new Date(endDateRange) > new Date(maxEndDateRange)
   const emptyListTitle =
     forecasts.length === 0
       ? hasActiveFilters
@@ -365,7 +397,7 @@ export default function ForecastsPage() {
                       type="date"
                       value={forecastDate}
                       onChange={(e) => setForecastDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
+                      min={todayIso}
                       className="bg-muted/50 dark:bg-gray-900 border-border"
                       aria-label="Date de prévision"
                     />
@@ -407,7 +439,7 @@ export default function ForecastsPage() {
                   <div className="space-y-2 flex items-end">
                     <Button
                       onClick={handleGenerate}
-                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !forecastDate || selectedRestaurantHasNoSales}
+                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !forecastDate || selectedRestaurantHasNoSales || isPastDateSingle}
                       className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                     >
                       {generateForecasts.isPending ? (
@@ -433,7 +465,7 @@ export default function ForecastsPage() {
                       type="date"
                       value={startDateRange}
                       onChange={(e) => setStartDateRange(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
+                      min={todayIso}
                       className="bg-muted/50 dark:bg-gray-900 border-border"
                       aria-label="Date de début de la plage"
                     />
@@ -445,9 +477,10 @@ export default function ForecastsPage() {
                       type="date"
                       value={endDateRange}
                       onChange={(e) => setEndDateRange(e.target.value)}
-                      min={startDateRange || new Date().toISOString().split('T')[0]}
+                      min={startDateRange || todayIso}
+                      max={maxEndDateRange || undefined}
                       className="bg-muted/50 dark:bg-gray-900 border-border"
-                      aria-label="Date de fin de la plage"
+                      aria-label="Date de fin de la plage (max. 7 jours)"
                     />
                   </div>
                   <div className="space-y-2">
@@ -463,7 +496,7 @@ export default function ForecastsPage() {
                   <div className="space-y-2 flex items-end">
                     <Button
                       onClick={handleGenerate}
-                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !startDateRange || !endDateRange || new Date(startDateRange) > new Date(endDateRange) || selectedRestaurantHasNoSales}
+                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !startDateRange || !endDateRange || new Date(startDateRange) > new Date(endDateRange) || selectedRestaurantHasNoSales || isPastDateRange || isRangeOver7Days}
                       className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                     >
                       {generateForecasts.isPending ? (

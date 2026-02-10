@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { QueryKey } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
 import { translateApiError } from '@/lib/translate-api-error'
@@ -32,23 +33,22 @@ export interface ForecastsResponse {
   totalPages?: number
 }
 
-export function useForecasts(filters?: {
+type ForecastsFilters = {
   restaurantId?: string
   productId?: string
   startDate?: string
   endDate?: string
   method?: string
-}) {
-  const { organization } = useOrganization()
+}
 
-  return useQuery({
-    queryKey: ['forecasts', organization?.id, filters],
-    queryFn: async () => {
-      if (!organization?.id) return { forecasts: [] }
-      
+/** Options pour préchargement (sidebar). */
+export function forecastsQueryOptions(organizationId: string | undefined, filters?: ForecastsFilters) {
+  return {
+    queryKey: ['forecasts', organizationId, filters] as QueryKey,
+    queryFn: async (): Promise<ForecastsResponse> => {
+      if (!organizationId) return { forecasts: [] }
       const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      
+      queryParams.append('clerkOrgId', organizationId)
       if (filters?.restaurantId && filters.restaurantId !== 'all') {
         queryParams.append('restaurantId', filters.restaurantId)
       }
@@ -56,16 +56,9 @@ export function useForecasts(filters?: {
       if (filters?.startDate) queryParams.append('startDate', filters.startDate)
       if (filters?.endDate) queryParams.append('endDate', filters.endDate)
       if (filters?.method) queryParams.append('method', filters.method)
-      
       const response = await fetch(`/api/forecasts?${queryParams.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch forecasts')
-      }
-      
+      if (!response.ok) throw new Error('Failed to fetch forecasts')
       const data = await response.json()
-      
-      // Support des deux formats : nouveau (avec pagination) et ancien (tableau simple)
       if (data.forecasts && Array.isArray(data.forecasts)) {
         return {
           forecasts: data.forecasts,
@@ -75,27 +68,20 @@ export function useForecasts(filters?: {
           totalPages: data.totalPages || 1,
         }
       }
-      
-      // Format ancien (tableau simple)
       if (Array.isArray(data)) {
-        return {
-          forecasts: data,
-          total: data.length,
-          page: 1,
-          limit: 50,
-          totalPages: 1,
-        }
+        return { forecasts: data, total: data.length, page: 1, limit: 50, totalPages: 1 }
       }
-      
-      return {
-        forecasts: [],
-        total: 0,
-        page: 1,
-        limit: 50,
-        totalPages: 0,
-      }
+      return { forecasts: [], total: 0, page: 1, limit: 50, totalPages: 0 }
     },
+  }
+}
+
+export function useForecasts(filters?: ForecastsFilters) {
+  const { organization } = useOrganization()
+  return useQuery({
+    ...forecastsQueryOptions(organization?.id, filters),
     enabled: !!organization?.id,
+    placeholderData: (previousData) => previousData,
   })
 }
 

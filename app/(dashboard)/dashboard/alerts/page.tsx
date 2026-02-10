@@ -320,7 +320,7 @@ export default function AlertsPage() {
                 État actuel (d&apos;après l&apos;inventaire)
               </CardTitle>
               <CardDescription className="mt-1">
-                Reflète l&apos;inventaire en temps réel. Les alertes sont synchronisées automatiquement à l&apos;ouverture de la page.
+                Reflète l&apos;inventaire en temps réel. Les alertes sont synchronisées automatiquement à l&apos;ouverture de la page. La liste des alertes ci-dessous peut aussi contenir des «&nbsp;risque de rupture&nbsp;» basées sur les prévisions (ex. demain). Le total d&apos;alertes peut être supérieur au nombre de ruptures affichées dans l&apos;état actuel.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">

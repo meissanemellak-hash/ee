@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { useOrganization } from '@clerk/nextjs'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
@@ -17,6 +19,10 @@ import {
 } from 'lucide-react'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
+import { alertsQueryOptions, alertsCurrentStateQueryOptions } from '@/lib/react-query/hooks/use-alerts'
+import { forecastsQueryOptions } from '@/lib/react-query/hooks/use-forecasts'
+import { recommendationsQueryOptions } from '@/lib/react-query/hooks/use-recommendations'
+import { getSalesListQueryOptions } from '@/lib/react-query/hooks/use-sales'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard:view' as const },
@@ -52,12 +58,30 @@ export function Sidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const activeRestaurantId = searchParams.get('restaurant')
+  const queryClient = useQueryClient()
+  const { organization } = useOrganization()
+  const orgId = organization?.id
   const { data: role, isLoading: roleLoading } = useUserRole()
   const currentRole = role ?? 'staff'
   // Afficher tous les liens (dont Paramètres) pendant le chargement du rôle pour éviter le délai visuel
   const visibleNav = roleLoading || role === undefined
     ? navigation
     : navigation.filter((item) => canView(item.permission, currentRole))
+
+  const handleLinkMouseEnter = (item: (typeof navigation)[0]) => {
+    if (!orgId) return
+    const restaurantId = activeRestaurantId || 'all'
+    if (item.href === '/dashboard/sales') {
+      void queryClient.prefetchQuery(getSalesListQueryOptions(orgId, 1, 50, { restaurantId }))
+    } else if (item.href === '/dashboard/alerts') {
+      void queryClient.prefetchQuery(alertsQueryOptions(orgId, { restaurantId }))
+      void queryClient.prefetchQuery(alertsCurrentStateQueryOptions(orgId, activeRestaurantId || null))
+    } else if (item.href === '/dashboard/forecasts') {
+      void queryClient.prefetchQuery(forecastsQueryOptions(orgId, { restaurantId }))
+    } else if (item.href === '/dashboard/recommendations') {
+      void queryClient.prefetchQuery(recommendationsQueryOptions(orgId, { restaurantId, status: 'pending' }))
+    }
+  }
 
   return (
     <div className="flex h-full w-64 flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-sm">
@@ -86,6 +110,7 @@ export function Sidebar() {
               key={item.name}
               href={href}
               prefetch={true}
+              onMouseEnter={() => handleLinkMouseEnter(item)}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 isActive

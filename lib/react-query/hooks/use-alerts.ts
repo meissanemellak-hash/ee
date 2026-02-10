@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { QueryKey } from '@tanstack/react-query'
 import { useOrganization } from '@clerk/nextjs'
 import { useToast } from '@/hooks/use-toast'
 import { translateApiError } from '@/lib/translate-api-error'
@@ -18,45 +19,41 @@ export interface Alert {
   }
 }
 
-export function useAlerts(filters?: {
+type AlertsFilters = {
   restaurantId?: string
   type?: string
   severity?: string
   resolved?: boolean
-}) {
-  const { organization } = useOrganization()
+}
 
-  return useQuery({
-    queryKey: ['alerts', organization?.id, filters],
-    queryFn: async () => {
-      if (!organization?.id) return []
-      
+/** Options de requête pour préchargement au survol du menu (sidebar). */
+export function alertsQueryOptions(organizationId: string | undefined, filters?: AlertsFilters) {
+  return {
+    queryKey: ['alerts', organizationId, filters] as QueryKey,
+    queryFn: async (): Promise<Alert[]> => {
+      if (!organizationId) return []
       const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
-      
+      queryParams.append('clerkOrgId', organizationId)
       if (filters?.restaurantId && filters.restaurantId !== 'all') {
         queryParams.append('restaurantId', filters.restaurantId)
       }
-      if (filters?.type && filters.type !== 'all') {
-        queryParams.append('type', filters.type)
-      }
-      if (filters?.severity && filters.severity !== 'all') {
-        queryParams.append('severity', filters.severity)
-      }
-      if (filters?.resolved !== undefined) {
-        queryParams.append('resolved', filters.resolved.toString())
-      }
-      
+      if (filters?.type && filters.type !== 'all') queryParams.append('type', filters.type)
+      if (filters?.severity && filters.severity !== 'all') queryParams.append('severity', filters.severity)
+      if (filters?.resolved !== undefined) queryParams.append('resolved', filters.resolved.toString())
       const response = await fetch(`/api/alerts?${queryParams.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch alerts')
-      }
-      
+      if (!response.ok) throw new Error('Failed to fetch alerts')
       const data = await response.json()
       return Array.isArray(data) ? data : []
     },
+  }
+}
+
+export function useAlerts(filters?: AlertsFilters) {
+  const { organization } = useOrganization()
+  return useQuery({
+    ...alertsQueryOptions(organization?.id, filters),
     enabled: !!organization?.id,
+    placeholderData: (previousData) => previousData,
   })
 }
 
@@ -116,17 +113,16 @@ export interface AlertsCurrentState {
   items: Array<{ type: 'SHORTAGE' | 'OVERSTOCK'; ingredientName: string; message: string; severity?: string }>
 }
 
-export function useAlertsCurrentState(restaurantId: string | null) {
-  const { organization } = useOrganization()
-
-  return useQuery({
-    queryKey: ['alerts-current-state', organization?.id, restaurantId],
+/** Options pour préchargement état actuel (sidebar). */
+export function alertsCurrentStateQueryOptions(organizationId: string | undefined, restaurantId: string | null) {
+  return {
+    queryKey: ['alerts-current-state', organizationId, restaurantId] as QueryKey,
     queryFn: async (): Promise<AlertsCurrentState> => {
-      if (!organization?.id || !restaurantId || restaurantId === 'all') {
+      if (!organizationId || !restaurantId || restaurantId === 'all') {
         return { shortages: 0, overstocks: 0, items: [] }
       }
       const queryParams = new URLSearchParams()
-      queryParams.append('clerkOrgId', organization.id)
+      queryParams.append('clerkOrgId', organizationId)
       queryParams.append('restaurantId', restaurantId)
       const response = await fetch(`/api/alerts/current-state?${queryParams.toString()}`)
       if (!response.ok) throw new Error('Failed to fetch alerts current state')
@@ -137,7 +133,15 @@ export function useAlertsCurrentState(restaurantId: string | null) {
         items: Array.isArray(data.items) ? data.items : [],
       }
     },
+  }
+}
+
+export function useAlertsCurrentState(restaurantId: string | null) {
+  const { organization } = useOrganization()
+  return useQuery({
+    ...alertsCurrentStateQueryOptions(organization?.id, restaurantId),
     enabled: !!organization?.id && !!restaurantId && restaurantId !== 'all',
+    placeholderData: (previousData) => previousData,
   })
 }
 
