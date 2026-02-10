@@ -108,16 +108,32 @@ export async function POST(request: NextRequest) {
       reason: (result.details as any)?.reason,
     })
 
-    // Sauvegarder la recommandation
+    // Sauvegarder la recommandation : soit des commandes à passer, soit une recommandation "surstocks" (ne pas commander)
+    const details = result.details as { overstockIngredients?: Array<unknown>; reason?: string; [k: string]: unknown }
+    const hasOverstock = (details?.overstockIngredients?.length ?? 0) > 0
+
     if (result.recommendations.length > 0) {
-      // S'assurer que estimatedSavings est inclus dans les données sauvegardées
       const dataToSave = {
         ...result.details,
         estimatedSavings: result.estimatedSavings,
       }
-      
       logger.log('[POST /api/recommendations/bom] Sauvegarde recommandation avec estimatedSavings:', result.estimatedSavings)
-      
+      await prisma.recommendation.create({
+        data: {
+          restaurantId,
+          type: 'ORDER',
+          data: dataToSave as any,
+          priority: 'medium',
+          status: 'pending',
+        },
+      })
+    } else if (hasOverstock) {
+      // Créer une recommandation "surstock" pour lier alertes et recommandations : ne pas commander ces ingrédients
+      const dataToSave = {
+        ...result.details,
+        estimatedSavings: 0,
+      }
+      logger.log('[POST /api/recommendations/bom] Sauvegarde recommandation surstocks (ne pas commander):', details.overstockIngredients?.length)
       await prisma.recommendation.create({
         data: {
           restaurantId,
@@ -128,8 +144,7 @@ export async function POST(request: NextRequest) {
         },
       })
     } else {
-      // Si aucune recommandation, retourner un message explicatif
-      const reason = (result.details as any)?.reason || 'Aucune recommandation générée. Vérifiez que vous avez des produits avec des recettes et des ventes historiques.'
+      const reason = details?.reason || 'Aucune recommandation générée. Vérifiez que vous avez des produits avec des recettes et des ventes historiques.'
       logger.log('[POST /api/recommendations/bom] Aucune recommandation générée. Raison:', reason)
     }
 

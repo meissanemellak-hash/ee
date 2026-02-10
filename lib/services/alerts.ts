@@ -40,6 +40,59 @@ export async function createAlert(input: AlertInput) {
 }
 
 /**
+ * État actuel des alertes dérivé de l'inventaire (sans écrire en base).
+ * Utilisé pour afficher "État actuel" sur la page Alertes et éviter les faux négatifs.
+ */
+export interface CurrentAlertsStateItem {
+  type: 'SHORTAGE' | 'OVERSTOCK'
+  ingredientName: string
+  message: string
+  severity?: string
+}
+
+export interface CurrentAlertsState {
+  shortages: number
+  overstocks: number
+  items: CurrentAlertsStateItem[]
+}
+
+export async function getCurrentAlertsStateFromInventory(restaurantId: string): Promise<CurrentAlertsState> {
+  const inventory = await prisma.inventory.findMany({
+    where: { restaurantId },
+    include: { ingredient: true },
+  })
+
+  const items: CurrentAlertsStateItem[] = []
+
+  for (const inv of inventory) {
+    if (inv.maxThreshold != null && inv.currentStock > inv.maxThreshold) {
+      items.push({
+        type: 'OVERSTOCK',
+        ingredientName: inv.ingredient.name,
+        message: `Surstock pour ${inv.ingredient.name}: ${inv.currentStock} ${inv.ingredient.unit} (seuil max: ${inv.maxThreshold})`,
+        severity: 'medium',
+      })
+    }
+    if (inv.currentStock < inv.minThreshold) {
+      const percentage = (inv.currentStock / inv.minThreshold) * 100
+      const severity = percentage < 20 ? 'critical' : percentage < 50 ? 'high' : 'medium'
+      items.push({
+        type: 'SHORTAGE',
+        ingredientName: inv.ingredient.name,
+        message: `Rupture imminente pour ${inv.ingredient.name}: ${inv.currentStock} ${inv.ingredient.unit} (seuil min: ${inv.minThreshold})`,
+        severity,
+      })
+    }
+  }
+
+  return {
+    shortages: items.filter((i) => i.type === 'SHORTAGE').length,
+    overstocks: items.filter((i) => i.type === 'OVERSTOCK').length,
+    items,
+  }
+}
+
+/**
  * Vérifie les stocks et génère des alertes
  */
 export async function checkInventoryAlerts(restaurantId: string) {

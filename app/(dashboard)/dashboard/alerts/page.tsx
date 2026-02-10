@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Loader2, AlertTriangle, CheckCircle2, RefreshCw, Filter, XCircle } from 'lucide-react'
+import { Loader2, AlertTriangle, CheckCircle2, RefreshCw, Filter, XCircle, Lightbulb, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { formatDateTime } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { useAlerts, useGenerateAlerts, useUpdateAlertStatus } from '@/lib/react-query/hooks/use-alerts'
+import { useAlerts, useAlertsCurrentState, useGenerateAlerts, useUpdateAlertStatus } from '@/lib/react-query/hooks/use-alerts'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
@@ -87,8 +87,49 @@ export default function AlertsPage() {
     resolved: statusFilter === 'all' ? undefined : statusFilter === 'resolved',
   })
 
+  // État actuel dérivé de l'inventaire (une seule source de vérité, pas d'écart avec le gaspillage)
+  const { data: currentState, isLoading: currentStateLoading } = useAlertsCurrentState(
+    selectedRestaurant !== 'all' ? selectedRestaurant : null
+  )
+
   const generateAlerts = useGenerateAlerts()
   const updateAlertStatus = useUpdateAlertStatus()
+
+  // Synchronisation automatique : si l'état actuel (inventaire) signale des ruptures/surstocks
+  // et qu'il n'y a aucune alerte active en base, on génère les alertes sans clic utilisateur.
+  const hasAutoSyncedRef = useRef(false)
+  useEffect(() => {
+    if (selectedRestaurant === 'all') {
+      hasAutoSyncedRef.current = false
+      return
+    }
+    const hasCurrentStateIssues =
+      currentState &&
+      !currentStateLoading &&
+      (currentState.shortages > 0 || currentState.overstocks > 0)
+    const noActiveAlerts = !isLoading && alerts.length === 0
+    const shouldAutoSync =
+      statusFilter === 'active' &&
+      hasCurrentStateIssues &&
+      noActiveAlerts &&
+      !generateAlerts.isPending &&
+      !hasAutoSyncedRef.current
+    if (shouldAutoSync) {
+      hasAutoSyncedRef.current = true
+      generateAlerts.mutate({ restaurantId: selectedRestaurant, createTest: false })
+    }
+  }, [
+    selectedRestaurant,
+    statusFilter,
+    currentState,
+    currentStateLoading,
+    isLoading,
+    alerts.length,
+    generateAlerts.isPending,
+  ])
+  useEffect(() => {
+    if (selectedRestaurant === 'all') hasAutoSyncedRef.current = false
+  }, [selectedRestaurant])
 
   const { data: roleData } = useUserRole()
   const currentRole = roleData ?? 'staff'
@@ -212,6 +253,11 @@ export default function AlertsPage() {
                 {alerts.length} alerte{alerts.length !== 1 ? 's' : ''}
               </p>
             )}
+            {selectedRestaurant === 'all' && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Sélectionnez un restaurant pour voir l&apos;état actuel (ruptures / surstocks) en temps réel.
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
             <Button
@@ -265,6 +311,56 @@ export default function AlertsPage() {
             )}
           </div>
         </header>
+
+        {selectedRestaurant !== 'all' && (
+          <Card className="rounded-xl border shadow-sm bg-card border-teal-200 dark:border-teal-800/50 bg-teal-50/30 dark:bg-teal-950/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                État actuel (d&apos;après l&apos;inventaire)
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Reflète l&apos;inventaire en temps réel. Les alertes sont synchronisées automatiquement à l&apos;ouverture de la page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {currentStateLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Chargement de l&apos;état actuel…</span>
+                </div>
+              ) : currentState ? (
+                <>
+                  <div className="flex flex-wrap gap-4">
+                    <span className="text-sm">
+                      <strong className="text-red-700 dark:text-red-400">{currentState.shortages}</strong> rupture{currentState.shortages !== 1 ? 's' : ''} imminente{currentState.shortages !== 1 ? 's' : ''}
+                    </span>
+                    <span className="text-sm">
+                      <strong className="text-amber-700 dark:text-amber-400">{currentState.overstocks}</strong> surstock{currentState.overstocks !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {currentState.shortages === 0 && currentState.overstocks === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Aucune rupture ni surstock détecté selon les seuils actuels.
+                    </p>
+                  )}
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="rounded-xl border shadow-sm bg-card border-muted">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              Comment agir
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Consultez les <Link href="/dashboard/recommendations" className="text-teal-600 dark:text-teal-400 font-medium hover:underline inline-flex items-center gap-1">Recommandations <ArrowRight className="h-3.5 w-3.5" /></Link> pour les actions proposées : commandes en cas de rupture de stock, effectifs. Pour un surstock, ajustez les quantités dans l&apos;Inventaire ou évitez de commander cet ingrédient jusqu&apos;à descente du stock.
+            </CardDescription>
+          </CardHeader>
+        </Card>
 
         <div className="grid gap-4 md:grid-cols-5">
           <Card className="rounded-xl border shadow-sm bg-card">
@@ -419,7 +515,9 @@ export default function AlertsPage() {
                 {statusFilter === 'resolved'
                   ? 'Aucune alerte résolue trouvée avec ces filtres.'
                   : statusFilter === 'active'
-                    ? 'Aucune alerte active. Tout va bien !'
+                    ? (selectedRestaurant !== 'all' && currentState && (currentState.shortages > 0 || currentState.overstocks > 0))
+                      ? 'Des ruptures ou surstocks sont détectés dans l\'inventaire. La synchronisation des alertes est automatique ; la liste se met à jour en quelques secondes.'
+                      : 'Aucune alerte active. Tout va bien !'
                     : 'Aucune alerte trouvée avec ces filtres.'}
               </p>
             </CardContent>

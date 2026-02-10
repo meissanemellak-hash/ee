@@ -1,0 +1,82 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
+import { prisma } from '@/lib/db/prisma'
+import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
+
+export const dynamic = 'force-dynamic'
+
+/**
+ * GET /api/recommendations/last-generated?clerkOrgId=xxx&restaurantId=xxx (optionnel)
+ * Retourne la date de la dernière génération de recommandations (max createdAt) pour l'org, optionnellement filtrée par restaurant.
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const { userId, orgId: authOrgId } = auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const searchParams = request.nextUrl.searchParams
+    const clerkOrgId = searchParams.get('clerkOrgId')
+    const restaurantId = searchParams.get('restaurantId')
+    const orgIdToUse = authOrgId || clerkOrgId
+
+    let organization: { id: string } | null = null
+
+    if (orgIdToUse) {
+      organization = await prisma.organization.findUnique({
+        where: { clerkOrgId: orgIdToUse },
+        select: { id: true },
+      })
+      if (!organization) {
+        try {
+          const { clerkClient } = await import('@clerk/nextjs/server')
+          const client = await clerkClient()
+          const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
+          const userMemberships = await client.users.getOrganizationMembershipList({ userId })
+          const isMember = userMemberships.data?.some((m) => m.organization.id === orgIdToUse)
+          if (isMember) {
+            const created = await prisma.organization.create({
+              data: { name: clerkOrg.name, clerkOrgId: orgIdToUse, shrinkPct: 0.1 },
+              select: { id: true },
+            })
+            organization = created
+          }
+        } catch (e) {
+          logger.error('[GET /api/recommendations/last-generated] Erreur sync org:', e)
+        }
+      }
+    } else {
+      const org = await getCurrentOrganization()
+      organization = org ? { id: org.id } : null
+    }
+
+    if (!organization) {
+      return NextResponse.json({ lastGeneratedAt: null })
+    }
+
+    const where: { restaurant: { organizationId: string }; restaurantId?: string } = {
+      restaurant: { organizationId: organization.id },
+    }
+    if (restaurantId && restaurantId !== 'all') {
+      where.restaurantId = restaurantId
+    }
+
+    const latest = await prisma.recommendation.findFirst({
+      where,
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    })
+
+    return NextResponse.json({
+      lastGeneratedAt: latest?.createdAt ? latest.createdAt.toISOString() : null,
+    })
+  } catch (error) {
+    logger.error('[GET /api/recommendations/last-generated]', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

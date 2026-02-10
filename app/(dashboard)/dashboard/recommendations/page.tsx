@@ -16,9 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { useRecommendations, useGenerateBOMRecommendations, useGenerateClassicRecommendations, useGenerateAllRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
+import { useRecommendations, useRecommendationsLastGenerated, useGenerateBOMRecommendations, useGenerateClassicRecommendations, useGenerateAllRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
@@ -84,6 +84,8 @@ export default function RecommendationsPage() {
     type: selectedType,
     status: selectedStatus,
   })
+
+  const { data: lastGeneratedData } = useRecommendationsLastGenerated(selectedRestaurant)
 
   const generateRecommendations = useGenerateBOMRecommendations()
   const generateClassicRecommendations = useGenerateClassicRecommendations()
@@ -243,6 +245,16 @@ export default function RecommendationsPage() {
             {safeRecommendations.length >= 0 && (
               <p className="text-xs text-muted-foreground mt-1 font-medium">
                 {safeRecommendations.length} recommandation{safeRecommendations.length !== 1 ? 's' : ''}
+              </p>
+            )}
+            {lastGeneratedData?.lastGeneratedAt && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Dernière génération : {formatDateTime(lastGeneratedData.lastGeneratedAt)}
+              </p>
+            )}
+            {lastGeneratedData && !lastGeneratedData.lastGeneratedAt && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Aucune génération récente. Générez des recommandations pour commencer.
               </p>
             )}
           </div>
@@ -597,7 +609,7 @@ export default function RecommendationsPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {recommendation.type === 'ORDER' && details?.ingredients && (
+                  {recommendation.type === 'ORDER' && (details?.ingredients?.length > 0 || details?.overstockIngredients?.length) ? (
                     <div className="space-y-4">
                       <div className="rounded-xl bg-muted/50 dark:bg-gray-800/30 p-4 border border-border">
                         <div className="grid grid-cols-2 gap-4 text-sm">
@@ -612,7 +624,7 @@ export default function RecommendationsPage() {
                             <span className="text-muted-foreground">Shrink:</span>
                             <p className="font-medium">{(details.assumptions.shrinkPct * 100).toFixed(1)}%</p>
                           </div>
-                          {typeof details.estimatedOrderCost === 'number' && (
+                          {typeof details.estimatedOrderCost === 'number' && details.estimatedOrderCost > 0 && (
                             <div>
                               <span className="text-muted-foreground">Coût estimé de la commande:</span>
                               <p className="font-medium">{formatCurrency(details.estimatedOrderCost)}</p>
@@ -642,6 +654,8 @@ export default function RecommendationsPage() {
                         </div>
                       </div>
 
+                      {details.ingredients && details.ingredients.length > 0 && (
+                      <>
                       {!isExpanded ? (
                         <div>
                           <p className="text-sm text-muted-foreground mb-2">
@@ -708,6 +722,12 @@ export default function RecommendationsPage() {
                           </Button>
                         </div>
                       )}
+                      </>
+                      )}
+
+                      {details?.reason && (details.ingredients?.length === 0) && (
+                        <p className="text-sm text-muted-foreground">{details.reason}</p>
+                      )}
 
                       {canAccept && (
                       <div className="flex gap-2 pt-4 border-t">
@@ -745,7 +765,7 @@ export default function RecommendationsPage() {
                       </div>
                       )}
                     </div>
-                  )}
+                  ) : null}
 
                   {recommendation.type === 'STAFFING' && (
                     <div className="space-y-3">

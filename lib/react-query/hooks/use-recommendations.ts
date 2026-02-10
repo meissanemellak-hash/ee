@@ -43,6 +43,15 @@ export interface RecommendationDetails {
   estimatedOrderCost?: number
   /** Gain estimé (ruptures/gaspillage évités, indicateur) */
   estimatedSavings?: number
+  /** Ingrédients en surstock (lien avec les alertes) : ne pas commander */
+  overstockIngredients?: Array<{
+    ingredientId: string
+    ingredientName: string
+    currentStock: number
+    maxThreshold: number
+    unit: string | null
+  }>
+  reason?: string
 }
 
 export function useRecommendations(filters?: {
@@ -83,6 +92,25 @@ export function useRecommendations(filters?: {
   })
 }
 
+export function useRecommendationsLastGenerated(restaurantId?: string | null) {
+  const { organization } = useOrganization()
+
+  return useQuery({
+    queryKey: ['recommendations-last-generated', organization?.id, restaurantId],
+    queryFn: async (): Promise<{ lastGeneratedAt: string | null }> => {
+      if (!organization?.id) return { lastGeneratedAt: null }
+      const params = new URLSearchParams()
+      params.append('clerkOrgId', organization.id)
+      if (restaurantId && restaurantId !== 'all') params.append('restaurantId', restaurantId)
+      const res = await fetch(`/api/recommendations/last-generated?${params.toString()}`)
+      if (!res.ok) return { lastGeneratedAt: null }
+      const data = await res.json()
+      return { lastGeneratedAt: data.lastGeneratedAt ?? null }
+    },
+    enabled: !!organization?.id,
+  })
+}
+
 export function useGenerateBOMRecommendations() {
   const queryClient = useQueryClient()
   const { organization } = useOrganization()
@@ -115,6 +143,7 @@ export function useGenerateBOMRecommendations() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
+      queryClient.invalidateQueries({ queryKey: ['recommendations-last-generated', organization?.id] })
       
       const recommendationsCount = Array.isArray(result.recommendations) ? result.recommendations.length : 0
       
@@ -226,6 +255,7 @@ export function useGenerateAllRecommendations() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
+      queryClient.invalidateQueries({ queryKey: ['recommendations-last-generated', organization?.id] })
       const total = result.generated
       if (total === 0 && (!result.byRestaurant || result.byRestaurant.length === 0)) {
         toast({

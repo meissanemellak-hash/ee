@@ -6,6 +6,23 @@
 
 ---
 
+## Variables Vercel – Production (à faire en priorité)
+
+À définir dans **Vercel → Project → Settings → Environment Variables**, pour l'environnement **Production** (et Preview si besoin) :
+
+| Variable | Obligatoire pour | Description |
+|----------|------------------|--------------|
+| **`CRON_SECRET`** | Crons (alertes + recommandations) | Secret partagé pour sécuriser les appels planifiés. **Sans cette variable**, les crons répondent 503 et ne s'exécutent pas. Générer une valeur forte (ex. `openssl rand -hex 32`) et l'ajouter en Production. Vercel envoie alors `Authorization: Bearer <CRON_SECRET>` aux routes `/api/cron/alerts` (toutes les heures) et `/api/cron/recommendations` (tous les jours à 6h UTC). |
+| `DATABASE_URL` | App + Prisma | URL de connexion à la base (ex. Supabase). |
+| `STRIPE_SECRET_KEY` | Paiements | Clé secrète Stripe (mode **Live** en prod). |
+| `STRIPE_WEBHOOK_SECRET` | Abonnements | Signing secret du webhook Stripe (endpoint prod). |
+| Clerk / Resend / Sentry | Auth, mails, erreurs | Selon ta config (voir sections ci-dessous). |
+
+- [ ] **CRON_SECRET** défini en production sur Vercel (crons alertes + recommandations).
+- [ ] Autres variables critiques (DATABASE_URL, Stripe, Clerk, etc.) renseignées pour Production.
+
+---
+
 ## Rappel production – Mails Clerk (tous les templates)
 
 > **En production**, pour **tous** les e-mails Clerk (Account Locked, Reset password, Invitation, Verification, etc.) :
@@ -46,7 +63,7 @@
 - [ ] Variables Stripe en prod : `STRIPE_SECRET_KEY` (clé Live), `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO` (ou les price IDs utilisés).
 - [ ] **Clerk – Redirection après invitation** : dans le Dashboard Clerk (Configure → Paths / Redirect URLs), configurer la redirection après acceptation d’invitation vers **`/dashboard`** (URL de prod, ex. `https://ton-domaine.com/dashboard`). L’utilisateur arrive toujours sur le tableau de bord. (La page `/pricing` n’existe plus ; toute requête vers `/pricing` est redirigée vers `/dashboard`.)
 - [ ] **Clerk – Page « compléter le profil » en français (optionnel)** : si tu veux que la page après « Accepter l’invitation » soit en français (au lieu de la page hébergée Clerk en anglais), mettre en place l’**option 2** : redirection vers une page de ton app (ex. `/accept-invitation`) qui affiche le formulaire avec les composants Clerk — nécessite le nom de domaine en prod. Voir la conversation / doc pour le détail.
-- [ ] **Rappel – Cron recommandations** : définir **`CRON_SECRET`** dans Vercel pour que la génération automatique des recommandations (tous les jours à 6h UTC) fonctionne. Voir la section « Cron Vercel – Recommandations » ci-dessous.
+- [ ] **Rappel – Crons (alertes + recommandations)** : définir **`CRON_SECRET`** dans Vercel (voir section « Variables Vercel – Production » ci-dessus et « Cron Vercel – Recommandations » ci-dessous).
 
 ---
 
@@ -61,11 +78,16 @@
 
 ---
 
-## Cron Vercel – Recommandations (génération automatique)
+## Cron Vercel – Alertes et Recommandations
 
-Le cron génère des recommandations BOM pour **tous les restaurants** de toutes les organisations (ex. tous les jours à 6h UTC). Il appelle `GET /api/cron/recommendations`, sécurisé par un secret.
+Une **même variable `CRON_SECRET`** sécurise les deux crons (voir section « Variables Vercel – Production » ci-dessus).
 
-- [ ] **CRON_SECRET en production** : dans Vercel (Project → Settings → Environment Variables), ajouter la variable **`CRON_SECRET`** avec une valeur forte (ex. `openssl rand -hex 32`). **Important** : tant que `CRON_SECRET` est défini, Vercel envoie automatiquement `Authorization: Bearer <CRON_SECRET>` lors de l’appel du cron ; la route vérifie ce secret et refuse les appels non autorisés.
+| Route | Planification (`vercel.json`) | Rôle |
+|-------|-------------------------------|------|
+| `GET /api/cron/alerts` | Toutes les heures (`0 * * * *`) | Génère les alertes (ruptures / surstocks) pour tous les restaurants. |
+| `GET /api/cron/recommendations` | Tous les jours à 6h UTC (`0 6 * * *`) | Génère les recommandations BOM pour tous les restaurants. |
+
+- [ ] **CRON_SECRET en production** : dans Vercel (Project → Settings → Environment Variables), ajouter **`CRON_SECRET`** avec une valeur forte (ex. `openssl rand -hex 32`). **Important** : tant que `CRON_SECRET` est défini, Vercel envoie automatiquement `Authorization: Bearer <CRON_SECRET>` lors de l’appel du cron ; la route vérifie ce secret et refuse les appels non autorisés.
 - [ ] **Planification** : le fichier `vercel.json` définit déjà un cron `0 6 * * *` (tous les jours à 6h UTC) sur `/api/cron/recommendations`. Après déploiement, le cron apparaît dans Vercel (Project → Settings → Crons) et s’exécute automatiquement.
 - [ ] **Test (optionnel)** : après le premier déploiement, vérifier dans les logs Vercel qu’une exécution du cron a bien eu lieu, ou appeler manuellement l’URL avec le secret : `curl -H "Authorization: Bearer VOTRE_CRON_SECRET" https://ton-domaine.com/api/cron/recommendations` et contrôler la réponse JSON (success, recommendationsCreated, etc.).
 

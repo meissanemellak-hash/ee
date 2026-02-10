@@ -42,6 +42,14 @@ interface RecommendationDetails {
   /** Gain estimé lié aux ruptures et au gaspillage évités (indicateur) */
   estimatedSavings?: number
   reason?: string
+  /** Ingrédients en surstock (stock > seuil max) : à ne pas commander, en lien avec les alertes */
+  overstockIngredients?: Array<{
+    ingredientId: string
+    ingredientName: string
+    currentStock: number
+    maxThreshold: number
+    unit: string | null
+  }>
 }
 
 /**
@@ -466,8 +474,22 @@ export async function generateBOMOrderRecommendations(
     })
   }
 
-  // Si aucune recommandation générée mais qu'on a des besoins calculés, c'est que les stocks sont suffisants
+  // Si aucune recommandation générée mais qu'on a des besoins calculés, c'est que les stocks sont suffisants.
+  // On ajoute la liste des surstocks (lien avec les alertes) pour proposer une action : ne pas commander ces ingrédients.
   if (recommendations.length === 0 && ingredientNeeds.size > 0) {
+    const overstockIngredients: RecommendationDetails['overstockIngredients'] = inventory
+      .filter((inv) => inv.maxThreshold != null && inv.currentStock > inv.maxThreshold)
+      .map((inv) => ({
+        ingredientId: inv.ingredient.id,
+        ingredientName: inv.ingredient.name,
+        currentStock: inv.currentStock,
+        maxThreshold: inv.maxThreshold as number,
+        unit: inv.ingredient.unit,
+      }))
+    const overstockSentence =
+      overstockIngredients.length > 0
+        ? ` Surstocks détectés (${overstockIngredients.length}) : ne pas commander ces ingrédients jusqu'à descente du stock.`
+        : ''
     return {
       recommendations: [],
       details: {
@@ -482,7 +504,8 @@ export async function generateBOMOrderRecommendations(
           shrinkPct,
           forecastDays: days,
         },
-        reason: `Aucune commande nécessaire. Vos stocks actuels sont suffisants pour couvrir les besoins prévus pour les ${days} prochains jours. Besoin total: ${totalNeededQuantity.toFixed(2)}, Stock actuel: ${totalCurrentStock.toFixed(2)}.`,
+        reason: `Aucune commande nécessaire. Vos stocks actuels sont suffisants pour couvrir les besoins prévus pour les ${days} prochains jours. Besoin total: ${totalNeededQuantity.toFixed(2)}, Stock actuel: ${totalCurrentStock.toFixed(2)}.${overstockSentence}`,
+        overstockIngredients: overstockIngredients.length > 0 ? overstockIngredients : undefined,
       },
       estimatedSavings: 0,
     }

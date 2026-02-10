@@ -91,7 +91,8 @@ export function useGenerateAlerts() {
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['alerts', organization?.id] })
-      
+      queryClient.invalidateQueries({ queryKey: ['alerts-current-state', organization?.id] })
+
       toast({
         title: variables.createTest ? 'Alertes de test créées' : 'Alertes générées',
         description: data.message || (variables.createTest 
@@ -106,6 +107,37 @@ export function useGenerateAlerts() {
         variant: 'destructive',
       })
     },
+  })
+}
+
+export interface AlertsCurrentState {
+  shortages: number
+  overstocks: number
+  items: Array<{ type: 'SHORTAGE' | 'OVERSTOCK'; ingredientName: string; message: string; severity?: string }>
+}
+
+export function useAlertsCurrentState(restaurantId: string | null) {
+  const { organization } = useOrganization()
+
+  return useQuery({
+    queryKey: ['alerts-current-state', organization?.id, restaurantId],
+    queryFn: async (): Promise<AlertsCurrentState> => {
+      if (!organization?.id || !restaurantId || restaurantId === 'all') {
+        return { shortages: 0, overstocks: 0, items: [] }
+      }
+      const queryParams = new URLSearchParams()
+      queryParams.append('clerkOrgId', organization.id)
+      queryParams.append('restaurantId', restaurantId)
+      const response = await fetch(`/api/alerts/current-state?${queryParams.toString()}`)
+      if (!response.ok) throw new Error('Failed to fetch alerts current state')
+      const data = await response.json()
+      return {
+        shortages: data.shortages ?? 0,
+        overstocks: data.overstocks ?? 0,
+        items: Array.isArray(data.items) ? data.items : [],
+      }
+    },
+    enabled: !!organization?.id && !!restaurantId && restaurantId !== 'all',
   })
 }
 
