@@ -10,30 +10,12 @@ interface AlertInput {
 }
 
 /**
- * Crée une alerte
+ * Crée une alerte.
+ * runAllAlerts supprime d'abord les alertes non résolues du restaurant, puis appelle
+ * checkInventoryAlerts / checkForecastAlerts qui créent une alerte par situation :
+ * on crée donc toujours une nouvelle alerte (pas de mise à jour d'une existante).
  */
 export async function createAlert(input: AlertInput) {
-  // Vérifier si une alerte similaire non résolue existe déjà
-  const existingAlert = await prisma.alert.findFirst({
-    where: {
-      restaurantId: input.restaurantId,
-      type: input.type,
-      resolved: false,
-    },
-  })
-
-  if (existingAlert) {
-    // Mettre à jour l'alerte existante (date mise à jour pour refléter le dernier déclenchement)
-    return prisma.alert.update({
-      where: { id: existingAlert.id },
-      data: {
-        severity: input.severity,
-        message: input.message,
-        createdAt: new Date(),
-      },
-    })
-  }
-
   return prisma.alert.create({
     data: input,
   })
@@ -212,10 +194,16 @@ export async function checkForecastAlerts(restaurantId: string) {
 }
 
 /**
- * Exécute toutes les vérifications d'alertes pour un restaurant
+ * Exécute toutes les vérifications d'alertes pour un restaurant.
+ * On supprime d'abord les alertes non résolues du restaurant, puis on en recrée
+ * à partir de l'état actuel (inventaire + prévisions), pour que la liste affiche
+ * une alerte par situation (ex. 4 ruptures = 4 alertes).
  */
 export async function runAllAlerts(restaurantId: string) {
   logger.log(`[runAllAlerts] Début de la vérification des alertes pour le restaurant ${restaurantId}`)
+  await prisma.alert.deleteMany({
+    where: { restaurantId, resolved: false },
+  })
   await checkInventoryAlerts(restaurantId)
   await checkForecastAlerts(restaurantId)
   logger.log(`[runAllAlerts] Fin de la vérification des alertes pour le restaurant ${restaurantId}`)

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { Loader2, TrendingUp, Calendar, Store, Package, Trash2, X, HelpCircle } from 'lucide-react'
+import { Loader2, TrendingUp, Calendar, Store, Package, Trash2, X, HelpCircle, EyeOff, Eye } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -87,6 +87,7 @@ export default function ForecastsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [forecastToDelete, setForecastToDelete] = useState<Forecast | null>(null)
   const [showConfidenceHelp, setShowConfidenceHelp] = useState(false)
+  const [hideInsufficientData, setHideInsufficientData] = useState(false)
 
   useEffect(() => {
     setSelectedRestaurant(urlRestaurant || 'all')
@@ -111,21 +112,31 @@ export default function ForecastsPage() {
   })
 
   const forecasts = (data?.forecasts || []) as Forecast[]
+  const displayedForecasts = hideInsufficientData
+    ? forecasts.filter((f) => f.forecastedQuantity > 0)
+    : forecasts
   const generateForecasts = useGenerateForecasts()
   const deleteForecast = useDeleteForecast()
 
-  // Calculer les statistiques
+  // Calculer les statistiques (sur toutes les prévisions)
   const totalForecasted = forecasts.reduce((sum, f) => sum + f.forecastedQuantity, 0)
   const avgConfidence = forecasts.length > 0
     ? forecasts.reduce((sum, f) => sum + (f.confidence || 0), 0) / forecasts.length
     : 0
-  const hasActiveFilters = selectedRestaurant !== 'all' || startDate || endDate
+  const hasActiveFilters = selectedRestaurant !== 'all' || startDate || endDate || hideInsufficientData
+  const emptyListTitle =
+    forecasts.length === 0
+      ? hasActiveFilters
+        ? 'Aucune prévision trouvée'
+        : "Aucune prévision pour l'instant"
+      : 'Aucune prévision affichée'
 
   const resetFilters = () => {
     setSelectedRestaurant('all')
     setActiveRestaurantId(null)
     setStartDate('')
     setEndDate('')
+    setHideInsufficientData(false)
   }
 
   const handleGenerate = async () => {
@@ -470,20 +481,23 @@ export default function ForecastsPage() {
         </div>
 
         <Card className="rounded-xl border shadow-sm bg-card">
-          <CardHeader>
+          <CardHeader className="border-b-0 pb-2">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <CardTitle className="text-lg font-semibold">Liste des prévisions</CardTitle>
-                <CardDescription className="mt-1">
-                  {data?.forecasts ? `${data.forecasts.length} prévision${data.forecasts.length !== 1 ? 's' : ''} trouvée${data.forecasts.length !== 1 ? 's' : ''}` : 'Chargement...'}
-                  {hasActiveFilters && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      (filtrée{data?.forecasts && data.forecasts.length !== 1 ? 's' : ''})
-                    </span>
+                <CardDescription className="mt-1 block">
+                  {data?.forecasts
+                    ? `${displayedForecasts.length} prévision${displayedForecasts.length !== 1 ? 's' : ''} affichée${displayedForecasts.length !== 1 ? 's' : ''}`
+                    : 'Chargement...'}
+                  {hasActiveFilters && !hideInsufficientData && (
+                    <span className="ml-2">(filtrée{data?.forecasts && data.forecasts.length !== 1 ? 's' : ''})</span>
                   )}
                 </CardDescription>
+                {hideInsufficientData && forecasts.length > displayedForecasts.length && (
+                  <p className="text-xs text-muted-foreground mt-0.5">(données insuffisantes masquées)</p>
+                )}
               </div>
-              <div className="flex items-end gap-2 flex-wrap" role="search" aria-label="Filtres liste prévisions">
+              <div className="flex items-end gap-2 flex-nowrap overflow-x-auto pb-1" role="search" aria-label="Filtres liste prévisions">
                 <div className="space-y-1.5">
                   <Label htmlFor="list-forecast-restaurant" className="text-xs text-muted-foreground">Restaurant</Label>
                   <Select
@@ -528,35 +542,68 @@ export default function ForecastsPage() {
                     aria-label="Date de fin"
                   />
                 </div>
-                {hasActiveFilters && (
-                  <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 text-xs shadow-sm" aria-label="Réinitialiser les filtres">
-                    <X className="h-3 w-3 mr-1" />
-                    Réinitialiser
-                  </Button>
-                )}
+                <div className="space-y-1.5 shrink-0">
+                  <Label className="text-xs text-muted-foreground block h-5 cursor-default opacity-0 select-none" aria-hidden="true">
+                    Actions
+                  </Label>
+                  <div className="flex gap-2 flex-nowrap w-[17.5rem] h-9 items-stretch" aria-label="Actions filtres">
+                    <Button
+                      variant={hideInsufficientData ? 'secondary' : 'outline'}
+                      size="sm"
+                      onClick={() => setHideInsufficientData((v) => !v)}
+                      className="h-9 text-xs shadow-sm flex-1 min-w-0"
+                      aria-label={hideInsufficientData ? 'Afficher les prévisions avec données insuffisantes' : 'Masquer les prévisions avec données insuffisantes'}
+                    >
+                      {hideInsufficientData ? (
+                        <>
+                          <Eye className="h-3 w-3 mr-1 shrink-0" />
+                          <span className="truncate">Afficher insuffisantes</span>
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="h-3 w-3 mr-1 shrink-0" />
+                          <span className="truncate">Masquer insuffisantes</span>
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={resetFilters}
+                      disabled={!hasActiveFilters}
+                      className="h-9 text-xs shadow-sm shrink-0"
+                      aria-label="Réinitialiser les filtres"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Réinitialiser
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <ForecastListSkeleton />
-            ) : forecasts.length === 0 ? (
+            ) : displayedForecasts.length === 0 ? (
               <div className="text-center py-16">
                 <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-teal-100 to-emerald-100 dark:from-teal-900/30 dark:to-emerald-900/30 flex items-center justify-center mb-5">
                   <TrendingUp className="h-8 w-8 text-teal-600 dark:text-teal-400" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">
-                  {hasActiveFilters ? 'Aucune prévision trouvée' : 'Aucune prévision pour l’instant'}
+                  {emptyListTitle}
                 </h3>
                 <p className="text-muted-foreground max-w-md mx-auto mb-2">
-                  {hasActiveFilters
-                    ? 'Aucune prévision ne correspond à vos critères. Modifiez les filtres ou générez des prévisions.'
-                    : 'Utilisez le formulaire ci-dessus pour générer des prévisions de ventes.'}
+                  {forecasts.length === 0
+                    ? (hasActiveFilters
+                      ? 'Aucune prévision ne correspond à vos critères. Modifiez les filtres ou générez des prévisions.'
+                      : 'Utilisez le formulaire ci-dessus pour générer des prévisions de ventes.')
+                    : 'Toutes les prévisions ont des données insuffisantes. Désactivez le filtre « Masquer insuffisantes » pour les afficher.'}
                 </p>
               </div>
             ) : (
               <ul className="space-y-3 list-none p-0 m-0" aria-label="Liste des prévisions">
-                {forecasts.map((forecast) => (
+                {displayedForecasts.map((forecast) => (
                   <li
                     key={forecast.id}
                     className="flex items-center justify-between p-4 rounded-xl border bg-muted/30 dark:bg-gray-800/30 border-border hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors"
@@ -587,12 +634,20 @@ export default function ForecastsPage() {
                     </div>
                     <div className="flex items-center gap-4 ml-4">
                       <div className="text-right">
-                        <p className="font-bold text-teal-700 dark:text-teal-400 text-sm">
-                          {forecast.forecastedQuantity.toFixed(0)} unités
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCurrency(forecast.forecastedQuantity * forecast.product.unitPrice)}
-                        </p>
+                        {forecast.forecastedQuantity === 0 ? (
+                          <p className="text-sm text-muted-foreground italic" title="Pas assez de ventes historiques pour ce produit à cette date">
+                            Données insuffisantes
+                          </p>
+                        ) : (
+                          <>
+                            <p className="font-bold text-teal-700 dark:text-teal-400 text-sm">
+                              {forecast.forecastedQuantity.toFixed(0)} unités
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatCurrency(forecast.forecastedQuantity * forecast.product.unitPrice)}
+                            </p>
+                          </>
+                        )}
                       </div>
                       {canGenerate && (
                         <Button
