@@ -69,7 +69,8 @@ export default function ForecastsPage() {
   const urlRestaurant = searchParams.get('restaurant')
 
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>(() => urlRestaurant || 'all')
-  const [selectedMethod, setSelectedMethod] = useState<string>('moving_average')
+  // Une date = seasonality, Plage = moving_average (une méthode par mode)
+  const [selectedMethod, setSelectedMethod] = useState<string>('seasonality')
   const [generationMode, setGenerationMode] = useState<'single' | 'range'>('single')
   const [forecastDate, setForecastDate] = useState(() => {
     const date = new Date()
@@ -88,10 +89,38 @@ export default function ForecastsPage() {
   const [forecastToDelete, setForecastToDelete] = useState<Forecast | null>(null)
   const [showConfidenceHelp, setShowConfidenceHelp] = useState(false)
   const [hideInsufficientData, setHideInsufficientData] = useState(false)
+  // Jour pour la méthode "Par jour de la semaine" : 0 = Lundi, 1 = Mardi, ..., 6 = Dimanche
+  const [seasonalityDayOfWeek, setSeasonalityDayOfWeek] = useState<number>(1)
 
   useEffect(() => {
     setSelectedRestaurant(urlRestaurant || 'all')
   }, [urlRestaurant])
+
+  // Une méthode par mode : une date → jour de la semaine, plage → moyenne 7 jours
+  useEffect(() => {
+    setSelectedMethod(generationMode === 'single' ? 'seasonality' : 'moving_average')
+  }, [generationMode])
+
+  // Synchroniser le jour avec la date quand on change la date (mode une date)
+  useEffect(() => {
+    if (generationMode !== 'single' || !forecastDate) return
+    const d = new Date(forecastDate + 'T12:00:00')
+    const jsDay = d.getDay() // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+    const monBased = jsDay === 0 ? 6 : jsDay - 1 // 0 = Lundi, ..., 6 = Dimanche
+    setSeasonalityDayOfWeek(monBased)
+  }, [forecastDate, generationMode])
+
+  /** Retourne la date (ISO string) du jour choisi dans la semaine de la date donnée. dayIndex 0 = Lundi, 6 = Dimanche. */
+  const getDateOfDayInWeek = (isoDate: string, dayIndex: number): string => {
+    const d = new Date(isoDate + 'T12:00:00')
+    const day = d.getDay() // 0 = Dim, 1 = Lun, ..., 6 = Sam
+    const mondayOffset = day === 0 ? -6 : 1 - day
+    const monday = new Date(d)
+    monday.setDate(d.getDate() + mondayOffset)
+    const target = new Date(monday)
+    target.setDate(monday.getDate() + dayIndex)
+    return target.toISOString().split('T')[0]
+  }
 
   // Charger les restaurants pour les filtres (l'API renvoie _count.sales)
   const { data: restaurantsData } = useRestaurants(1, 100)
@@ -118,11 +147,12 @@ export default function ForecastsPage() {
   const generateForecasts = useGenerateForecasts()
   const deleteForecast = useDeleteForecast()
 
-  // Calculer les statistiques (sur toutes les prévisions)
-  const totalForecasted = forecasts.reduce((sum, f) => sum + f.forecastedQuantity, 0)
-  const avgConfidence = forecasts.length > 0
-    ? forecasts.reduce((sum, f) => sum + (f.confidence || 0), 0) / forecasts.length
-    : 0
+  // Calculer les statistiques sur les prévisions affichées (cohérent avec le filtre « Masquer insuffisantes »)
+  const totalForecasted = displayedForecasts.reduce((sum, f) => sum + f.forecastedQuantity, 0)
+  const avgConfidence =
+    displayedForecasts.length > 0
+      ? displayedForecasts.reduce((sum, f) => sum + (f.confidence || 0), 0) / displayedForecasts.length
+      : 0
   const hasActiveFilters = selectedRestaurant !== 'all' || startDate || endDate || hideInsufficientData
   const emptyListTitle =
     forecasts.length === 0
@@ -158,9 +188,13 @@ export default function ForecastsPage() {
       })
     } else {
       if (!forecastDate) return
+      const dateToUse =
+        selectedMethod === 'seasonality'
+          ? getDateOfDayInWeek(forecastDate, seasonalityDayOfWeek)
+          : forecastDate
       generateForecasts.mutate({
         restaurantId: selectedRestaurant,
-        forecastDate,
+        forecastDate: dateToUse,
         method: selectedMethod,
       })
     }
@@ -276,7 +310,7 @@ export default function ForecastsPage() {
             </CardDescription>
             <div className="mt-3 p-3 rounded-xl bg-teal-100/50 dark:bg-teal-900/20 border border-teal-200/80 dark:border-teal-900/30">
               <p className="text-xs text-teal-800 dark:text-teal-300">
-                Les prévisions se basent sur l’historique des ventes des jours précédant la date sélectionnée. En plage, une prévision est générée pour chaque jour.
+                Les prévisions se basent sur l’historique des ventes des jours précédant la date sélectionnée. En plage, une prévision est générée pour chaque jour ; le jour de la semaine utilisé est celui de chaque date (pas de choix de jour).
               </p>
             </div>
             {selectedRestaurantHasNoSales && (
@@ -323,7 +357,7 @@ export default function ForecastsPage() {
               </div>
 
               {generationMode === 'single' ? (
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-4">
                   <div className="space-y-2">
                     <Label htmlFor="forecast-date">Date de prévision *</Label>
                     <Input
@@ -337,16 +371,38 @@ export default function ForecastsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="forecast-method">Méthode</Label>
-                    <Select value={selectedMethod} onValueChange={setSelectedMethod}>
-                      <SelectTrigger id="forecast-method" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Méthode de prévision">
+                    <Label htmlFor="forecast-day">Jour de la semaine</Label>
+                    <Select
+                      value={String(seasonalityDayOfWeek)}
+                      onValueChange={(v) => {
+                        const dayIndex = Number(v)
+                        setSeasonalityDayOfWeek(dayIndex)
+                        setForecastDate(getDateOfDayInWeek(forecastDate, dayIndex))
+                      }}
+                    >
+                      <SelectTrigger id="forecast-day" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Jour pour la prévision">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="moving_average">Moyenne sur 7 jours</SelectItem>
-                        <SelectItem value="seasonality">Par jour de la semaine</SelectItem>
+                        <SelectItem value="0">Lundi</SelectItem>
+                        <SelectItem value="1">Mardi</SelectItem>
+                        <SelectItem value="2">Mercredi</SelectItem>
+                        <SelectItem value="3">Jeudi</SelectItem>
+                        <SelectItem value="4">Vendredi</SelectItem>
+                        <SelectItem value="5">Samedi</SelectItem>
+                        <SelectItem value="6">Dimanche</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="forecast-method-readonly">Méthode</Label>
+                    <div
+                      id="forecast-method-readonly"
+                      className="flex h-10 w-full items-center rounded-md border border-border bg-muted/50 px-3 py-2 text-sm dark:bg-gray-900"
+                      aria-label="Méthode fixe pour une date"
+                    >
+                      <span>Moyenne par jour de la semaine</span>
+                    </div>
                   </div>
                   <div className="space-y-2 flex items-end">
                     <Button
@@ -395,16 +451,14 @@ export default function ForecastsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="forecast-method-range">Méthode</Label>
-                    <Select value={selectedMethod} onValueChange={setSelectedMethod}>
-                      <SelectTrigger id="forecast-method-range" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Méthode de prévision">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="moving_average">Moyenne sur 7 jours</SelectItem>
-                        <SelectItem value="seasonality">Par jour de la semaine</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="forecast-method-range-readonly">Méthode</Label>
+                    <div
+                      id="forecast-method-range-readonly"
+                      className="flex h-10 w-full items-center rounded-md border border-border bg-muted/50 px-3 py-2 text-sm dark:bg-gray-900"
+                      aria-label="Méthode fixe pour plage de dates"
+                    >
+                      <span>Moyenne 7 jours (tous les jours)</span>
+                    </div>
                   </div>
                   <div className="space-y-2 flex items-end">
                     <Button
@@ -439,8 +493,8 @@ export default function ForecastsPage() {
               <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{forecasts.length}</div>
-              <p className="text-xs text-muted-foreground mt-2">Prévisions enregistrées</p>
+              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{displayedForecasts.length}</div>
+              <p className="text-xs text-muted-foreground mt-2">Prévisions affichées</p>
             </CardContent>
           </Card>
           <Card className="rounded-xl border shadow-sm bg-card">
@@ -627,7 +681,7 @@ export default function ForecastsPage() {
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Méthode: {forecast.method === 'moving_average' ? 'Moyenne sur 7 jours' : 'Par jour de la semaine'} • Confiance: {forecast.confidence ? `${(forecast.confidence * 100).toFixed(0)}%` : 'N/A'}
+                            Méthode: {forecast.method === 'moving_average' ? 'Moyenne 7 jours (tous les jours)' : 'Moyenne par jour de la semaine'} • Confiance: {forecast.confidence ? `${(forecast.confidence * 100).toFixed(0)}%` : 'N/A'}
                           </p>
                         </div>
                       </div>
