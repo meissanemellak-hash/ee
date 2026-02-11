@@ -363,18 +363,20 @@ export async function generatePerformanceReport(
       )
       const salesCount = sales.reduce((sum, sale) => sum + sale.quantity, 0)
 
-      // Top produit
-      const productStats = new Map<string, { name: string; quantity: number }>()
+      // Top produit (par revenu, comme dans le rapport de ventes)
+      const productStats = new Map<string, { name: string; quantity: number; revenue: number }>()
       for (const sale of sales) {
-        const existing = productStats.get(sale.productId) || { name: sale.product.name, quantity: 0 }
+        const rev = sale.quantity * sale.product.unitPrice
+        const existing = productStats.get(sale.productId) || { name: sale.product.name, quantity: 0, revenue: 0 }
         productStats.set(sale.productId, {
           name: sale.product.name,
           quantity: existing.quantity + sale.quantity,
+          revenue: existing.revenue + rev,
         })
       }
 
       const topProduct = Array.from(productStats.entries())
-        .sort((a, b) => b[1].quantity - a[1].quantity)[0]
+        .sort((a, b) => b[1].revenue - a[1].revenue)[0]
 
       return {
         restaurantId: restaurant.id,

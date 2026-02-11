@@ -200,9 +200,11 @@ export function useGenerateClassicRecommendations() {
       const result = await response.json()
       return result as { success: boolean; recommendations: unknown[] }
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
-      const count = result.recommendations?.length ?? 0
+      const rawCount = result.recommendations?.length ?? 0
+      // Pour le staffing, une seule recommandation (un tableau avec plusieurs créneaux) est affichée
+      const count = variables?.type === 'STAFFING' && rawCount > 0 ? 1 : rawCount
       if (count === 0) {
         toast({
           title: 'Aucune recommandation générée',
@@ -211,7 +213,7 @@ export function useGenerateClassicRecommendations() {
       } else {
         toast({
           title: 'Recommandations générées',
-          description: `${count} recommandation(s) créée(s).`,
+          description: `${count} recommandation${count > 1 ? 's' : ''} créée${count > 1 ? 's' : ''}.`,
         })
       }
     },
@@ -231,7 +233,7 @@ export function useGenerateAllRecommendations() {
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: async (params?: { shrinkPct?: number; days?: number; type?: 'ORDER' | 'STAFFING' }) => {
+    mutationFn: async (params?: { shrinkPct?: number; days?: number; type?: 'ORDER' | 'STAFFING'; forecastDate?: string }) => {
       if (!organization?.id) throw new Error('No organization selected')
       const body: Record<string, unknown> = {
         clerkOrgId: organization.id,
@@ -239,6 +241,7 @@ export function useGenerateAllRecommendations() {
         days: params?.days ?? 7,
       }
       if (params?.type) body.type = params.type
+      if (params?.forecastDate) body.forecastDate = params.forecastDate
       const response = await fetch('/api/recommendations/generate-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -310,13 +313,13 @@ export function useUpdateRecommendationStatus() {
 
       return response.json()
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data: { type?: string } | undefined, variables) => {
       queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
       
       toast({
         title: 'Recommandation mise à jour',
         description: variables.status === 'accepted' 
-          ? 'Recommandation acceptée. L’inventaire a été mis à jour avec les quantités commandées.'
+          ? (data?.type === 'STAFFING' ? "Recommandation d'effectifs acceptée." : "Recommandation acceptée. L'inventaire a été mis à jour avec les quantités commandées.")
           : 'Statut changé en rejeté',
       })
     },

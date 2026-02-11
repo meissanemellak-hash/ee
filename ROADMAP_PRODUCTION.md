@@ -375,3 +375,18 @@
 ---
 
 **Note** : Cette roadmap est ambitieuse mais réaliste. Priorisez selon vos ressources et votre timeline. L'important est d'avoir un MVP minimal vendable rapidement, puis d'itérer avec les feedbacks clients.
+
+---
+
+## 📌 Rappel : Évolutions pour plus tard (post-production)
+
+### Alertes Sur-effectif / Sous-effectif (Option C)
+**Contexte** : Les types d’alertes « Sur-effectif » et « Sous-effectif » existent dans l’UI mais ne peuvent pas être calculés tant qu’on ne collecte pas l’**effectif prévu** par le restaurateur (combien de personnes il met par créneau/jour).
+
+**Évolution à prévoir** :
+1. **Donnée à stocker** : effectif prévu par restaurant, date et créneau horaire (ex. table « effectifs prévus » ou équivalent).
+2. **Saisie** : soit lors de l’acceptation d’une recommandation d’effectifs (enregistrer les effectifs recommandés comme prévus), soit via une page/écran « Planning effectifs » pour consulter/modifier l’effectif prévu par date.
+3. **Alertes** : comparer effectif prévu vs effectif recommandé (par créneau) ; si prévu > recommandé → Sur-effectif ; si prévu < recommandé → Sous-effectif. Déclencher la comparaison à l’enregistrement du plan et/ou via un job (ex. quotidien).
+4. **UI** : réactiver ou garder visibles les types « Sur-effectif » et « Sous-effectif » dans les filtres/listes d’alertes une fois la logique en place.
+
+**Priorité** : non bloquant pour la landing actuelle (recommandations d’effectifs suffisent pour « anticiper les besoins en personnel »). À planifier comme évolution produit quand tu voudras renforcer la valeur « effectifs » et la cohérence des alertes.

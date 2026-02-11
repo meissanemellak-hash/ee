@@ -24,8 +24,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const { clerkOrgId, shrinkPct = 0.1, days = 7, type } = body
+    const { clerkOrgId, shrinkPct = 0.1, days = 7, type, forecastDate } = body
     const isStaffing = type === 'STAFFING'
+    const staffingTargetDate = forecastDate ? new Date(forecastDate) : new Date()
     const orgIdToUse = authOrgId || clerkOrgId
 
     let organization: any = null
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (isStaffing) {
       for (const restaurant of restaurants) {
         try {
-          const result = await generateStaffingRecommendations(restaurant.id, new Date())
+          const result = await generateStaffingRecommendations(restaurant.id, staffingTargetDate)
           if (result.length > 0) {
             byRestaurant.push({
               restaurantId: restaurant.id,

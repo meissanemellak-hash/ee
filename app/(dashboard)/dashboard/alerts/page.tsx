@@ -57,8 +57,6 @@ const severityLabels = {
 const typeLabels: Record<string, string> = {
   OVERSTOCK: 'Surstock',
   SHORTAGE: 'Rupture de stock',
-  OVERSTAFFING: 'Sur-effectif',
-  UNDERSTAFFING: 'Sous-effectif',
   OTHER: 'Autre',
 }
 
@@ -148,6 +146,7 @@ export default function AlertsPage() {
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((alert) => {
+      if (alert.type === 'OVERSTAFFING' || alert.type === 'UNDERSTAFFING') return false
       if (selectedRestaurant !== 'all' && alert.restaurantId !== selectedRestaurant) return false
       if (selectedType !== 'all' && alert.type !== selectedType) return false
       if (selectedSeverity !== 'all' && alert.severity !== selectedSeverity) return false
@@ -460,9 +459,6 @@ export default function AlertsPage() {
                     <SelectItem value="all">Tous les types</SelectItem>
                     <SelectItem value="OVERSTOCK">Surstock</SelectItem>
                     <SelectItem value="SHORTAGE">Rupture de stock</SelectItem>
-                    <SelectItem value="OVERSTAFFING">Sur-effectif</SelectItem>
-                    <SelectItem value="UNDERSTAFFING">Sous-effectif</SelectItem>
-                    <SelectItem value="OTHER">Autre</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -418,7 +418,7 @@ export default function ReportsPage() {
                     {report.type !== 'INVENTORY' && 'period' in report
                       ? `Période: ${report.period.start} - ${report.period.end}`
                       : report.type === 'INVENTORY'
-                      ? `Généré le: ${new Date(report.generatedAt).toLocaleDateString('fr-FR')}`
+                      ? `Généré le ${new Date(report.generatedAt).toLocaleDateString('fr-FR')} — les stocks correspondent à cet instant (une différence avec l'inventaire actuel est normale si des ventes ou mises à jour ont eu lieu depuis)`
                       : ''}
                   </CardDescription>
                 </div>
@@ -588,6 +588,9 @@ export default function ReportsPage() {
 
             {report.type === 'INVENTORY' && (
               <div className="space-y-6">
+                <p className="text-sm text-muted-foreground">
+                  Les stocks affichés sont ceux au moment de la génération du rapport. Pour voir l&apos;inventaire en temps réel, consultez la fiche du restaurant (Restaurants → nom du restaurant).
+                </p>
                 {report.restaurants.map((restaurant) => (
                   <div key={restaurant.restaurantId}>
                     <h3 className="text-lg font-semibold mb-4">{restaurant.restaurantName}</h3>
@@ -732,7 +735,7 @@ export default function ReportsPage() {
                       <tbody>
                         {report.recommendations.map((rec) => (
                           <tr key={rec.id} className="border-b border-border last:border-0 hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors">
-                            <td className="px-4 py-3">{rec.type}</td>
+                            <td className="px-4 py-3">{typeLabels[rec.type] ?? rec.type}</td>
                             <td className="px-4 py-3 font-medium">{rec.restaurantName}</td>
                             <td className="px-4 py-3 text-center">
                               <span

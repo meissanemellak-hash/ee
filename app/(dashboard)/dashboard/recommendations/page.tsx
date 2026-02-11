@@ -7,6 +7,7 @@ import { useActiveRestaurant } from '@/hooks/use-active-restaurant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Loader2, Lightbulb, TrendingUp, Package, CheckCircle2, XCircle, RefreshCw, Filter, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -16,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { formatCurrency, formatDateTime } from '@/lib/utils'
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useRecommendations, useRecommendationsLastGenerated, useGenerateBOMRecommendations, useGenerateClassicRecommendations, useGenerateAllRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
@@ -54,6 +55,11 @@ export default function RecommendationsPage() {
   const [besoinExplanationRecId, setBesoinExplanationRecId] = useState<string | null>(null)
   const [showStaffingExplanation, setShowStaffingExplanation] = useState(false)
   const [generationType, setGenerationType] = useState<'bom' | 'staffing'>('bom')
+  const [staffingDate, setStaffingDate] = useState<string>(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    return d.toISOString().slice(0, 10)
+  })
   const scrollPositionRef = useRef<number | null>(null)
 
   // Charger les restaurants pour les filtres (déclaré avant les useEffect qui l'utilisent)
@@ -140,6 +146,7 @@ export default function RecommendationsPage() {
       generateClassicRecommendations.mutate({
         restaurantId,
         type: 'STAFFING',
+        forecastDate: staffingDate,
       })
     } else {
       generateRecommendations.mutate({
@@ -151,18 +158,7 @@ export default function RecommendationsPage() {
   }
 
   const handleUpdateStatus = (id: string, status: string) => {
-    updateStatus.mutate(
-      { id, status },
-      {
-        onSuccess: () => {
-          if (status === 'accepted') {
-            setTimeout(() => {
-              router.push('/dashboard')
-            }, 1000)
-          }
-        },
-      }
-    )
+    updateStatus.mutate({ id, status })
   }
 
   if (!isLoaded) {
@@ -469,6 +465,19 @@ export default function RecommendationsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              {generationType === 'staffing' && (
+                <div className="min-w-[180px] space-y-2">
+                  <Label htmlFor="rec-gen-date">Pour le</Label>
+                  <Input
+                    id="rec-gen-date"
+                    type="date"
+                    value={staffingDate}
+                    onChange={(e) => setStaffingDate(e.target.value)}
+                    className="bg-muted/50 dark:bg-gray-900 border-border"
+                    aria-label="Date pour laquelle générer les effectifs"
+                  />
+                </div>
+              )}
               <div className="flex-1 min-w-[200px] space-y-2">
                 <Label htmlFor="rec-gen-restaurant">Restaurant</Label>
                 <Select
@@ -505,7 +514,7 @@ export default function RecommendationsPage() {
                 )}
               </Button>
               <Button
-                onClick={() => generateAllRecommendations.mutate(generationType === 'staffing' ? { type: 'STAFFING' } : {})}
+                onClick={() => generateAllRecommendations.mutate(generationType === 'staffing' ? { type: 'STAFFING', forecastDate: staffingDate } : {})}
                 disabled={generateAllRecommendations.isPending || (generationType === 'bom' ? generateRecommendations.isPending : generateClassicRecommendations.isPending) || restaurants.length === 0}
                 variant="outline"
                 className="shrink-0 border-teal-600 text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-900/20"
@@ -795,6 +804,11 @@ export default function RecommendationsPage() {
                   {recommendation.type === 'STAFFING' && (
                     <div className="space-y-3">
                       <h4 className="text-sm font-semibold text-foreground">Effectifs recommandés par créneau</h4>
+                      {Array.isArray(details) && details.length > 0 && (details as { date?: string }[])[0]?.date ? (
+                        <p className="text-xs text-muted-foreground">
+                          Pour le {formatDate((details as { date?: string }[])[0].date)}
+                        </p>
+                      ) : null}
                       {Array.isArray(details) ? (
                         <div className="rounded-xl border border-border overflow-hidden">
                           <table className="w-full text-sm">
@@ -820,6 +834,41 @@ export default function RecommendationsPage() {
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">Données de staffing: {JSON.stringify(details, null, 2)}</p>
+                      )}
+                      {canAccept && (
+                        <div className="flex flex-wrap gap-2 pt-4 border-t border-border">
+                          {recommendation.status === 'pending' && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdateStatus(recommendation.id, 'accepted')}
+                                className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Accepter
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleUpdateStatus(recommendation.id, 'dismissed')}
+                                className="shadow-sm"
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Rejeter
+                              </Button>
+                            </>
+                          )}
+                          {recommendation.status === 'accepted' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUpdateStatus(recommendation.id, 'pending')}
+                              className="shadow-sm"
+                            >
+                              Remettre en attente
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
