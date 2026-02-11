@@ -34,6 +34,7 @@ import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { ForecastListSkeleton } from '@/components/ui/skeletons/forecast-list-skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface Forecast {
   id: string
@@ -526,7 +527,7 @@ export default function ForecastsPage() {
               <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{displayedForecasts.length}</div>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{displayedForecasts.length}</div>}
               <p className="text-xs text-muted-foreground mt-2">Prévisions affichées</p>
             </CardContent>
           </Card>
@@ -536,7 +537,7 @@ export default function ForecastsPage() {
               <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{totalForecasted.toFixed(0)}</div>
+              {isLoading ? <Skeleton className="h-9 w-20 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{totalForecasted.toFixed(0)}</div>}
               <p className="text-xs text-muted-foreground mt-2">Unités prévues</p>
             </CardContent>
           </Card>
@@ -558,10 +559,10 @@ export default function ForecastsPage() {
             <CardContent>
               {showConfidenceHelp && (
                 <p className="text-xs text-muted-foreground mb-2 p-2 rounded-md bg-muted/60 border border-border">
-                  Le pourcentage repose sur l&apos;historique des ventes : plus il y a de jours avec des ventes (avant la date prévue), plus la confiance est élevée (jusqu&apos;à 85 %). Un petit bonus (+5 %) est ajouté lorsque les ventes sont régulières. Chaque prévision a son propre niveau ; ici s&apos;affiche la moyenne.
+                  Le pourcentage repose sur l&apos;historique des ventes : plus il y a de jours avec des ventes (avant la date prévue), plus la confiance est élevée (entre 60 % et 95 %). Un petit bonus (+5 %) est ajouté lorsque les ventes sont régulières. Chaque prévision a son propre niveau ; ici s&apos;affiche la moyenne.
                 </p>
               )}
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{(avgConfidence * 100).toFixed(0)}%</div>
+              {isLoading ? <Skeleton className="h-9 w-14 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{Math.max(avgConfidence * 100, 60).toFixed(0)}%</div>}
               <p className="text-xs text-muted-foreground mt-2">Niveau de confiance</p>
             </CardContent>
           </Card>
@@ -714,7 +715,7 @@ export default function ForecastsPage() {
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Méthode: {forecast.method === 'moving_average' ? 'Moyenne 7 jours (tous les jours)' : 'Moyenne par jour de la semaine'} • Confiance: {forecast.confidence ? `${(forecast.confidence * 100).toFixed(0)}%` : 'N/A'}
+                            Méthode: {forecast.method === 'moving_average' ? 'Moyenne 7 jours (tous les jours)' : 'Moyenne par jour de la semaine'} • Confiance: {forecast.confidence != null ? `${Math.max(forecast.confidence * 100, 60).toFixed(0)}%` : 'N/A'}
                           </p>
                         </div>
                       </div>

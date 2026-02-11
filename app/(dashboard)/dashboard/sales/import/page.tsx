@@ -34,9 +34,9 @@ interface CSVRow {
   [key: string]: string | undefined
 }
 
-/** Contenu du modèle CSV pour l'import des ventes (UTF-8 avec BOM pour Excel, colonnes en français) */
+/** Contenu du modèle CSV pour l'import des ventes (UTF-8 avec BOM pour Excel, date JJ/MM/AAAA) */
 const SALES_CSV_TEMPLATE =
-  '\uFEFFrestaurant,produit,quantite,montant,date,heure\nMon Restaurant,Croissant,10,15.00,2025-01-20,8\nMon Restaurant,Café noir,25,37.50,2025-01-20,9'
+  '\uFEFFrestaurant,produit,quantite,montant,date,heure\nMon Restaurant,Croissant,10,15.00,20/01/2025,8\nMon Restaurant,Café noir,25,37.50,20/01/2025,9'
 
 export default function ImportSalesPage() {
   const router = useRouter()
@@ -446,8 +446,8 @@ export default function ImportSalesPage() {
                   <li><strong>restaurant</strong> : Nom du restaurant (informatif ; le restaurant sélectionné ci-dessus est utilisé pour toutes les lignes)</li>
                   <li><strong>produit</strong> : Nom du produit (doit correspondre à un produit existant)</li>
                   <li><strong>quantite</strong> : Quantité vendue (nombre entier)</li>
-                  <li><strong>montant</strong> : Montant total de la vente (nombre, décimal avec point)</li>
-                  <li><strong>date</strong> : Date de la vente (format AAAA-MM-JJ)</li>
+                  <li><strong>montant</strong> : Montant total de la vente <strong>pour la quantité indiquée sur cette ligne</strong> (ex. 10 croissants à 1,50 € → 15,00). Nombre décimal avec point.</li>
+                  <li><strong>date</strong> : Date de la vente (format JJ/MM/AAAA — jour/mois/année)</li>
                   <li><strong>heure</strong> : Heure de la vente (0-23)</li>
                 </ul>
               </div>
@@ -458,8 +458,8 @@ export default function ImportSalesPage() {
                 <p className="text-xs font-semibold mb-2 text-teal-800 dark:text-teal-300">Exemple :</p>
                 <pre className="text-xs bg-muted/50 dark:bg-gray-800/50 p-3 rounded-lg border border-border overflow-x-auto" aria-hidden>
 {`restaurant,produit,quantite,montant,date,heure
-Restaurant Paris Centre,Burger Classique,5,62.50,2024-01-15,12
-Restaurant Paris Centre,Burger Classique,3,37.50,2024-01-15,13`}
+Restaurant Paris Centre,Burger Classique,5,62.50,15/01/2024,12
+Restaurant Paris Centre,Burger Classique,3,37.50,15/01/2024,13`}
                 </pre>
               </div>
             </div>

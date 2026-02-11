@@ -23,6 +23,7 @@ import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
 import { AlertListSkeleton } from '@/components/ui/skeletons/alert-list-skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface Alert {
   id: string
@@ -369,7 +370,7 @@ export default function AlertsPage() {
               <AlertTriangle className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{stats.total}</div>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{stats.total}</div>}
               <p className="text-xs text-muted-foreground mt-2">Alertes</p>
             </CardContent>
           </Card>
@@ -379,7 +380,7 @@ export default function AlertsPage() {
               <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-red-700 dark:text-red-400">{stats.critical}</div>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-red-700 dark:text-red-400">{stats.critical}</div>}
               <p className="text-xs text-muted-foreground mt-2">Non résolues</p>
             </CardContent>
           </Card>
@@ -389,7 +390,7 @@ export default function AlertsPage() {
               <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">{stats.high}</div>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">{stats.high}</div>}
               <p className="text-xs text-muted-foreground mt-2">Non résolues</p>
             </CardContent>
           </Card>
@@ -399,7 +400,7 @@ export default function AlertsPage() {
               <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{stats.medium}</div>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{stats.medium}</div>}
               <p className="text-xs text-muted-foreground mt-2">Non résolues</p>
             </CardContent>
           </Card>
@@ -409,7 +410,7 @@ export default function AlertsPage() {
               <CheckCircle2 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{stats.resolved}</div>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{stats.resolved}</div>}
               <p className="text-xs text-muted-foreground mt-2">Cette période</p>
             </CardContent>
           </Card>

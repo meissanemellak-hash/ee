@@ -83,8 +83,12 @@ export default function SalesPage() {
   const limit = 20
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>(() => urlRestaurant || 'all')
   const [selectedProduct, setSelectedProduct] = useState<string>('all')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState(() => {
+    const start = new Date()
+    start.setDate(start.getDate() - 12 * 7)
+    return start.toISOString().slice(0, 10)
+  })
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null)
 
@@ -132,14 +136,15 @@ export default function SalesPage() {
   const canDelete = permissions.canDeleteSale(currentRole)
   const canImportSales = permissions.canImportSales(currentRole)
 
-  // Chiffre d'affaires : total sur toutes les ventes (filtres appliqués) si l'API le fournit, sinon somme de la page courante
   const totalRevenueFromApi = data?.totalRevenue
   const totalRevenuePage = sales.reduce(
     (sum, sale) => sum + sale.quantity * (sale.product?.unitPrice ?? sale.amount / sale.quantity),
     0
   )
   const totalRevenue = typeof totalRevenueFromApi === 'number' ? totalRevenueFromApi : totalRevenuePage
-  const totalQuantity = sales.reduce((sum, sale) => sum + sale.quantity, 0)
+  const totalQuantityFromApi = data?.totalQuantity
+  const totalQuantityPage = sales.reduce((sum, sale) => sum + sale.quantity, 0)
+  const totalQuantity = typeof totalQuantityFromApi === 'number' ? totalQuantityFromApi : totalQuantityPage
 
   const handleDelete = async () => {
     if (!saleToDelete) return
@@ -296,8 +301,8 @@ export default function SalesPage() {
               <ShoppingCart className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{sales.length}</div>
-              <p className="text-xs text-muted-foreground mt-2">Transactions (cette page)</p>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{data?.total ?? 0}</div>}
+              <p className="text-xs text-muted-foreground mt-2">Transactions (filtres appliqués)</p>
             </CardContent>
           </Card>
           <Card className="rounded-xl border shadow-sm bg-card">
@@ -306,20 +311,18 @@ export default function SalesPage() {
               <Euro className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(totalRevenue)}</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {typeof totalRevenueFromApi === 'number' ? 'Chiffre d\'affaires (filtres appliqués)' : 'Revenus (page affichée)'}
-              </p>
+              {isLoading ? <Skeleton className="h-9 w-24 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{formatCurrency(totalRevenue)}</div>}
+              <p className="text-xs text-muted-foreground mt-2">Chiffre d&apos;affaires (filtres appliqués)</p>
             </CardContent>
           </Card>
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Quantité totale</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Quantité totale vendue</CardTitle>
               <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{totalQuantity}</div>
-              <p className="text-xs text-muted-foreground mt-2">Unités vendues (cette page)</p>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{totalQuantity}</div>}
+              <p className="text-xs text-muted-foreground mt-2">Quantité vendue (filtres appliqués)</p>
             </CardContent>
           </Card>
         </div>

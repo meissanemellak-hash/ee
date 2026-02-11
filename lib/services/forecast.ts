@@ -34,7 +34,8 @@ function computeConfidence(daysWithSales: number, dailyQuantities: number[]): nu
     const cv = mean > 0 ? std / mean : 1
     if (cv < 0.3) confidence = Math.min(0.95, confidence + 0.05)
   }
-  return Math.round(confidence * 100) / 100
+  const floored = Math.max(confidence, 0.6)
+  return Math.round(floored * 100) / 100
 }
 
 /**

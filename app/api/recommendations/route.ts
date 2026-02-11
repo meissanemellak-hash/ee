@@ -89,8 +89,15 @@ export async function GET(request: NextRequest) {
 
     const recommendations = await prisma.recommendation.findMany({
       where,
-      include: {
-        restaurant: true,
+      select: {
+        id: true,
+        restaurantId: true,
+        type: true,
+        data: true,
+        priority: true,
+        status: true,
+        createdAt: true,
+        restaurant: { select: { id: true, name: true } },
       },
       orderBy: {
         createdAt: 'desc',

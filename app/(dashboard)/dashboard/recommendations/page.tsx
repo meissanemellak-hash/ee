@@ -23,6 +23,7 @@ import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
 import { RecommendationListSkeleton } from '@/components/ui/skeletons/recommendation-list-skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface Recommendation {
   id: string
@@ -280,9 +281,11 @@ export default function RecommendationsPage() {
               <Lightbulb className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
-                {safeRecommendations.filter((r) => r.status === 'pending').length}
-              </div>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : (
+                <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
+                  {safeRecommendations.filter((r) => r.status === 'pending').length}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground mt-2">Nécessitent une action</p>
             </CardContent>
           </Card>
@@ -294,9 +297,11 @@ export default function RecommendationsPage() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
-                {formatCurrency(calculateTotalOrderCost())}
-              </div>
+              {isLoading ? <Skeleton className="h-9 w-24 mb-2" /> : (
+                <div className="text-3xl font-bold">
+                  {formatCurrency(calculateTotalOrderCost())}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground mt-2">Total des commandes recommandées</p>
             </CardContent>
           </Card>
@@ -321,9 +326,11 @@ export default function RecommendationsPage() {
                   Valeur estimée des ruptures de stock et du gaspillage évités en commandant à point. Indicateur de bénéfice indirect, pas un gain en caisse.
                 </p>
               )}
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
-                {formatCurrency(calculateTotalSavings())}
-              </div>
+              {isLoading ? <Skeleton className="h-9 w-24 mb-2" /> : (
+                <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
+                  {formatCurrency(calculateTotalSavings())}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground mt-2">Ruptures / gaspillage évités (indicateur)</p>
             </CardContent>
           </Card>
@@ -335,7 +342,7 @@ export default function RecommendationsPage() {
               <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{safeRecommendations.length}</div>
+              {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{safeRecommendations.length}</div>}
               <p className="text-xs text-muted-foreground mt-2">Toutes périodes confondues</p>
             </CardContent>
           </Card>

@@ -90,6 +90,7 @@ export function useRecommendations(filters?: RecommendationsFilters) {
     ...recommendationsQueryOptions(organization?.id, filters),
     enabled: !!organization?.id,
     placeholderData: (previousData) => previousData,
+    staleTime: 20_000,
   })
 }
 

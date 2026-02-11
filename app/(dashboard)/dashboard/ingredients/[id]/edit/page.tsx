@@ -41,14 +41,15 @@ export default function EditIngredientPage() {
     supplierName: '',
   })
 
+  // Synchroniser le formulaire dès que l'ingrédient est chargé (conserve l'unité dans le Select)
   useEffect(() => {
     if (ingredient) {
       setFormData({
         name: ingredient.name || '',
-        unit: ingredient.unit || '',
-        costPerUnit: ingredient.costPerUnit.toString(),
-        packSize: ingredient.packSize?.toString() || '',
-        supplierName: ingredient.supplierName || '',
+        unit: ingredient.unit ?? '',
+        costPerUnit: String(ingredient.costPerUnit ?? ''),
+        packSize: ingredient.packSize != null ? String(ingredient.packSize) : '',
+        supplierName: ingredient.supplierName ?? '',
       })
     }
   }, [ingredient])
@@ -252,16 +253,23 @@ export default function EditIngredientPage() {
 
             <div className="space-y-2">
               <Label htmlFor="unit">Unité *</Label>
-              <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
+              <Select
+                key={formData.unit || 'unit-empty'}
+                value={formData.unit}
+                onValueChange={(value) => setFormData({ ...formData, unit: value })}
+              >
                 <SelectTrigger disabled={updateIngredient.isPending}>
                   <SelectValue placeholder="Sélectionner une unité" />
                 </SelectTrigger>
                 <SelectContent>
-                  {UNITS.map((unit) => (
-                    <SelectItem key={unit} value={unit}>
-                      {unit}
-                    </SelectItem>
-                  ))}
+                  {(() => {
+                    const options = formData.unit && !UNITS.includes(formData.unit) ? [formData.unit, ...UNITS] : UNITS
+                    return options.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {unit}
+                      </SelectItem>
+                    ))
+                  })()}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">

@@ -82,6 +82,7 @@ export function useForecasts(filters?: ForecastsFilters) {
     ...forecastsQueryOptions(organization?.id, filters),
     enabled: !!organization?.id,
     placeholderData: (previousData) => previousData,
+    staleTime: 20_000,
   })
 }
 
@@ -113,8 +114,9 @@ export function useGenerateForecasts() {
 
       return response.json() as Promise<{ forecasts: Forecast[] }>
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['forecasts', organization?.id] })
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['forecasts', organization?.id] })
+      await queryClient.refetchQueries({ queryKey: ['forecasts', organization?.id] })
       const count = data.forecasts?.length ?? 0
       toast({
         title: 'Prévisions générées',

@@ -54,6 +54,7 @@ export function useAlerts(filters?: AlertsFilters) {
     ...alertsQueryOptions(organization?.id, filters),
     enabled: !!organization?.id,
     placeholderData: (previousData) => previousData,
+    staleTime: 20_000,
   })
 }
 

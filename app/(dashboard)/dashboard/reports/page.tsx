@@ -23,6 +23,7 @@ import { useGenerateReport } from '@/lib/react-query/hooks/use-reports'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const severityLabels: Record<string, string> = {
   low: 'Faible',
@@ -390,6 +391,22 @@ export default function ReportsPage() {
           )}
         </CardContent>
       </Card>
+
+        {generateReport.isPending && !report && (
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-10 w-10 animate-spin text-teal-600 dark:text-teal-400" />
+                <p className="text-sm text-muted-foreground">Génération du rapport en cours...</p>
+                <div className="w-full max-w-md space-y-3">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {report && (
           <Card className="rounded-xl border shadow-sm bg-card">

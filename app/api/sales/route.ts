@@ -117,7 +117,34 @@ export async function GET(request: NextRequest) {
       const limit = parseInt(limitParam || '50')
       const skip = (page - 1) * limit
 
-      const [sales, total, salesForRevenue] = await Promise.all([
+      const baseParams: (string | Date | null)[] = [organization.id, restaurantId || null, productId || null, startDate ? new Date(startDate) : null, endDate ? new Date(endDate) : null]
+      const revenueQuery = prisma.$queryRawUnsafe<[{ total: string }]>(
+        `SELECT COALESCE(SUM(s.quantity * p.unit_price), 0)::text as total
+         FROM sales s
+         INNER JOIN products p ON s.product_id = p.id
+         INNER JOIN restaurants r ON s.restaurant_id = r.id
+         WHERE r.organization_id = $1
+         AND ($2::text IS NULL OR $2 = '' OR s.restaurant_id = $2)
+         AND ($3::text IS NULL OR $3 = '' OR s.product_id = $3)
+         AND ($4::timestamptz IS NULL OR s.sale_date >= $4)
+         AND ($5::timestamptz IS NULL OR s.sale_date <= $5)`,
+        ...baseParams
+      )
+      const quantityQuery = prisma.$queryRawUnsafe<[{ total: string }]>(
+        `SELECT COALESCE(SUM(s.quantity), 0)::text as total
+         FROM sales s
+         INNER JOIN restaurants r ON s.restaurant_id = r.id
+         WHERE r.organization_id = $1
+         AND ($2::text IS NULL OR $2 = '' OR s.restaurant_id = $2)
+         AND ($3::text IS NULL OR $3 = '' OR s.product_id = $3)
+         AND ($4::timestamptz IS NULL OR s.sale_date >= $4)
+         AND ($5::timestamptz IS NULL OR s.sale_date <= $5)`,
+        ...baseParams
+      )
+
+      const [[revenueRow], [quantityRow], sales, total] = await Promise.all([
+        revenueQuery,
+        quantityQuery,
         prisma.sale.findMany({
           where,
           skip,
@@ -151,22 +178,16 @@ export async function GET(request: NextRequest) {
           },
         }),
         prisma.sale.count({ where }),
-        prisma.sale.findMany({
-          where,
-          select: { quantity: true, product: { select: { unitPrice: true } } },
-          take: 100000,
-        }),
       ])
 
-      const totalRevenue = salesForRevenue.reduce(
-        (sum, s) => sum + s.quantity * (s.product?.unitPrice ?? 0),
-        0
-      )
+      const totalRevenue = Number(revenueRow?.total ?? 0)
+      const totalQuantity = Number(quantityRow?.total ?? 0)
 
       return NextResponse.json({
         sales,
         total,
         totalRevenue: Math.round(totalRevenue * 100) / 100,
+        totalQuantity,
         page,
         limit,
         totalPages: Math.ceil(total / limit),

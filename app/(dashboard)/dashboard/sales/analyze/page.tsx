@@ -265,7 +265,7 @@ export default function SalesAnalyzePage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{analysis.totalSales}</div>
-              <p className="text-xs text-muted-foreground mt-2">Unités vendues</p>
+              <p className="text-xs text-muted-foreground mt-2">Total des ventes</p>
             </CardContent>
           </Card>
           <Card className="rounded-xl border shadow-sm bg-card">

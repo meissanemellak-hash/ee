@@ -55,7 +55,7 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
           <div>
             <CardTitle className="text-lg font-semibold">Évolution des ventes</CardTitle>
             <CardDescription className="mt-1">
-              Revenus (€) et nombre de ventes {PERIOD_LABELS[period]}
+              Revenus (€) et quantité totale vendue {PERIOD_LABELS[period]}
             </CardDescription>
           </div>
           {onPeriodChange && (
@@ -112,7 +112,7 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
                 </p>
               </div>
               <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-1">Total ventes</p>
+                <p className="text-xs text-muted-foreground mb-1">Quantité totale vendue</p>
                 <p className="text-lg font-semibold text-teal-700 dark:text-teal-400">
                   {totalSales.toLocaleString()}
                 </p>
@@ -167,13 +167,13 @@ export function SalesChart({ data, period = 'weekly', onPeriodChange }: SalesCha
                       if (name === 'revenue') {
                         return [formatCurrency(value), 'Revenus']
                       }
-                      return [value.toLocaleString(), 'Nombre de ventes']
+                      return [value.toLocaleString(), 'Quantité totale vendue']
                     }}
                     labelStyle={{ fontWeight: 600, marginBottom: '4px' }}
                   />
                   <Legend
                     wrapperStyle={{ paddingTop: '8px' }}
-                    formatter={(value) => (value === 'revenue' ? 'Revenus (€)' : 'Nombre de ventes')}
+                    formatter={(value) => (value === 'revenue' ? 'Revenus (€)' : 'Quantité totale vendue')}
                   />
                   <Line
                     yAxisId="revenue"

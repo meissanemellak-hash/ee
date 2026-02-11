@@ -8,6 +8,19 @@ import Papa from 'papaparse'
 import { csvSaleRowSchema } from '@/lib/validations/sales'
 import { logger } from '@/lib/logger'
 
+/** Parse une date au format JJ/MM/AAAA (ou JJ-MM-AAAA) ou AAAA-MM-JJ (ISO). */
+function parseSaleDate(dateStr: string): Date | null {
+  const trimmed = dateStr.trim()
+  const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+  if (dmyMatch) {
+    const [, day, month, year] = dmyMatch
+    const d = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10))
+    return isNaN(d.getTime()) ? null : d
+  }
+  const iso = new Date(trimmed)
+  return isNaN(iso.getTime()) ? null : iso
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = auth()
@@ -107,10 +120,10 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Parser la date
-        const saleDate = new Date(validated.date)
-        if (isNaN(saleDate.getTime())) {
-          errors.push(`Ligne ${i + 2}: Date invalide "${validated.date}"`)
+        // Parser la date (JJ/MM/AAAA comme sur le site, ou AAAA-MM-JJ)
+        const saleDate = parseSaleDate(validated.date)
+        if (!saleDate) {
+          errors.push(`Ligne ${i + 2}: Date invalide "${validated.date}" (attendu : JJ/MM/AAAA ou AAAA-MM-JJ)`)
           continue
         }
 
