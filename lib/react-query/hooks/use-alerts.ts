@@ -168,9 +168,14 @@ export function useUpdateAlertStatus() {
 
       return response.json() as Promise<Alert>
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['alerts', organization?.id] })
-      
+    onSuccess: (updatedAlert, variables) => {
+      queryClient.setQueriesData(
+        { queryKey: ['alerts', organization?.id] },
+        (old: Alert[] | undefined) => {
+          if (!Array.isArray(old)) return old
+          return old.map((a) => (a.id === updatedAlert.id ? updatedAlert : a))
+        }
+      )
       toast({
         title: 'Alerte mise à jour',
         description: variables.resolved ? 'Alerte marquée comme résolue' : 'Alerte réactivée',

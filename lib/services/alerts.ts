@@ -1,6 +1,7 @@
 import { prisma } from '../db/prisma'
 import { logger } from '../logger'
 import type { AlertType, AlertSeverity } from '@/types'
+import { computeStaffingRecommendations } from './recommender'
 
 interface AlertInput {
   restaurantId: string
@@ -205,6 +206,101 @@ export async function checkForecastAlerts(restaurantId: string) {
   }
 }
 
+const SLOT_LABELS = ['08:00-12:00', '12:00-14:00', '14:00-18:00', '18:00-22:00'] as const
+
+/**
+ * Récupère l'effectif recommandé par créneau : calcul depuis les ventes, ou en secours la dernière recommandation STAFFING en base.
+ */
+async function getRecommendedStaffBySlot(
+  restaurantId: string,
+  planDate: Date
+): Promise<Map<string, number>> {
+  let recommended: { timeSlot: string; recommendedStaff: number }[] = []
+  try {
+    recommended = await computeStaffingRecommendations(restaurantId, planDate)
+  } catch (e) {
+    logger.error('[checkStaffingAlerts] computeStaffingRecommendations:', e)
+  }
+
+  const recommendedBySlot = new Map(recommended.map((r) => [r.timeSlot, r.recommendedStaff]))
+
+  // Si des créneaux manquent ou aucun calcul (pas de ventes 30j), utiliser la dernière recommandation STAFFING en base
+  const missingSlots = SLOT_LABELS.filter((slot) => !recommendedBySlot.has(slot))
+  if (missingSlots.length > 0) {
+    const lastStaffing = await prisma.recommendation.findFirst({
+      where: { restaurantId, type: 'STAFFING' },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (lastStaffing?.data && Array.isArray(lastStaffing.data)) {
+      const data = lastStaffing.data as Array<{ timeSlot?: string; recommendedStaff?: number }>
+      for (const item of data) {
+        const slot = item.timeSlot
+        const count = item.recommendedStaff
+        if (slot && typeof count === 'number' && recommendedBySlot.get(slot) === undefined) {
+          recommendedBySlot.set(slot, count)
+        }
+      }
+    }
+  }
+
+  return recommendedBySlot
+}
+
+/**
+ * Compare effectif prévu vs recommandé et crée les alertes Sur-effectif / Sous-effectif (option C).
+ * Dates construites en UTC (7 prochains jours). Requête par plage pour garantir la correspondance avec les lignes en base.
+ */
+export async function checkStaffingAlerts(restaurantId: string) {
+  const dates: Date[] = []
+  const now = new Date()
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + i, 0, 0, 0, 0))
+    dates.push(d)
+  }
+
+  for (const planDate of dates) {
+    const dateStr = planDate.toISOString().slice(0, 10)
+    const planDayStart = new Date(dateStr + 'T00:00:00.000Z')
+    const planDayEnd = new Date(planDayStart.getTime() + 24 * 60 * 60 * 1000)
+    const plannedRows = await prisma.plannedStaffing.findMany({
+      where: {
+        restaurantId,
+        planDate: { gte: planDayStart, lt: planDayEnd },
+      },
+    })
+    if (plannedRows.length === 0) continue
+
+    const recommendedBySlot = await getRecommendedStaffBySlot(restaurantId, planDate)
+    const plannedBySlot = new Map(plannedRows.map((r) => [r.slotLabel, r.plannedCount]))
+
+    for (const slot of SLOT_LABELS) {
+      const planned = plannedBySlot.get(slot)
+      if (planned === undefined) continue
+      const rec = recommendedBySlot.get(slot)
+      if (rec === undefined) continue
+
+      const dateLabel = planDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      const severity: AlertSeverity = Math.abs(planned - rec) >= 2 ? 'high' : 'medium'
+
+      if (planned > rec) {
+        await createAlert({
+          restaurantId,
+          type: 'OVERSTAFFING',
+          severity,
+          message: `Sur-effectif pour le créneau ${slot} le ${dateLabel}: ${planned} prévu vs ${rec} recommandé.`,
+        })
+      } else if (planned < rec) {
+        await createAlert({
+          restaurantId,
+          type: 'UNDERSTAFFING',
+          severity,
+          message: `Sous-effectif pour le créneau ${slot} le ${dateLabel}: ${planned} prévu vs ${rec} recommandé.`,
+        })
+      }
+    }
+  }
+}
+
 /**
  * Exécute toutes les vérifications d'alertes pour un restaurant.
  * On supprime d'abord les alertes non résolues du restaurant, puis on en recrée
@@ -218,6 +314,7 @@ export async function runAllAlerts(restaurantId: string) {
   })
   await checkInventoryAlerts(restaurantId)
   await checkForecastAlerts(restaurantId)
+  await checkStaffingAlerts(restaurantId)
   logger.log(`[runAllAlerts] Fin de la vérification des alertes pour le restaurant ${restaurantId}`)
 }
 

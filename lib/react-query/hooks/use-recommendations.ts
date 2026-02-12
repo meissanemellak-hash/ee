@@ -313,13 +313,25 @@ export function useUpdateRecommendationStatus() {
 
       return response.json()
     },
-    onSuccess: (data: { type?: string } | undefined, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
-      
+    onSuccess: (updatedRecommendation: Recommendation | undefined, variables) => {
+      if (updatedRecommendation) {
+        queryClient.setQueriesData(
+          { queryKey: ['recommendations', organization?.id] },
+          (old: Recommendation[] | undefined) => {
+            if (!Array.isArray(old)) return old
+            return old.map((r) => (r.id === updatedRecommendation.id ? updatedRecommendation : r))
+          }
+        )
+      }
+      if (variables.status === 'accepted' && updatedRecommendation?.type === 'STAFFING') {
+        queryClient.invalidateQueries({ queryKey: ['planned-staffing', organization?.id] })
+        queryClient.invalidateQueries({ queryKey: ['alerts', organization?.id] })
+        queryClient.invalidateQueries({ queryKey: ['alerts-current-state', organization?.id] })
+      }
       toast({
         title: 'Recommandation mise à jour',
-        description: variables.status === 'accepted' 
-          ? (data?.type === 'STAFFING' ? "Recommandation d'effectifs acceptée." : "Recommandation acceptée. L'inventaire a été mis à jour avec les quantités commandées.")
+        description: variables.status === 'accepted'
+          ? (updatedRecommendation?.type === 'STAFFING' ? "Recommandation d'effectifs acceptée. L'effectif prévu a été mis à jour." : "Recommandation acceptée. L'inventaire a été mis à jour avec les quantités commandées.")
           : 'Statut changé en rejeté',
       })
     },

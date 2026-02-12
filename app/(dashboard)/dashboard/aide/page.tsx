@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { HelpCircle, LayoutDashboard, Store, Package, Beaker, BarChart3, TrendingUp, Lightbulb, Bell, FileText, Settings, BookOpen, ChevronRight } from 'lucide-react'
+import { HelpCircle, LayoutDashboard, Store, Package, Beaker, BarChart3, TrendingUp, Lightbulb, Bell, FileText, Settings, BookOpen, ChevronRight, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const sections = [
@@ -15,6 +15,7 @@ const sections = [
   { id: 'ventes', label: 'Ventes & Analyse', icon: BarChart3 },
   { id: 'previsions', label: 'Prévisions', icon: TrendingUp },
   { id: 'recommandations', label: 'Recommandations', icon: Lightbulb },
+  { id: 'effectifs', label: 'Effectifs', icon: Users },
   { id: 'alertes', label: 'Alertes', icon: Bell },
   { id: 'rapports', label: 'Rapports', icon: FileText },
   { id: 'parametres', label: 'Paramètres', icon: Settings },
@@ -193,6 +194,23 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
           <p>Pour une recommandation de <strong className="text-teal-700 dark:text-teal-400 font-bold">commande</strong>, l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">accepter</strong> enregistre la réception : les quantités recommandées sont ajoutées à l&apos;inventaire du restaurant et les alertes sont recalculées. Vous n&apos;avez plus à saisir la réception à la main. Pour les autres types ou si vous ne souhaitez pas appliquer, vous pouvez <strong className="text-teal-700 dark:text-teal-400 font-bold">rejeter</strong>. Les recommandations acceptées ou rejetées restent visibles dans l&apos;historique.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Générer des recommandations</h3>
           <p>Vous pouvez générer des recommandations pour <strong className="text-teal-700 dark:text-teal-400 font-bold">un restaurant</strong> (sélectionnez-le puis « Générer (1 restaurant) ») ou pour <strong className="text-teal-700 dark:text-teal-400 font-bold">tous les restaurants</strong> en un clic (« Générer pour tous les restaurants »). La génération s&apos;appuie sur les prévisions de ventes et les recettes (BOM) ; les nouvelles suggestions apparaissent avec le statut « En attente ». Les recommandations sont aussi <strong className="text-teal-700 dark:text-teal-400 font-bold">générées automatiquement</strong> chaque jour.</p>
+        </>
+      ),
+    },
+    effectifs: {
+      title: 'Effectifs',
+      description: 'Effectif prévu et alertes sur/sous-effectif',
+      body: (
+        <>
+          <p>
+            La page <strong className="text-teal-700 dark:text-teal-400 font-bold">Effectifs</strong> (menu) permet de saisir l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">effectif prévu</strong> par restaurant, par date et par créneau horaire. En comparant ces valeurs à l&apos;effectif recommandé (Recommandations → Effectifs), l&apos;application génère des alertes <strong className="text-teal-700 dark:text-teal-400 font-bold">Sur-effectif</strong> ou <strong className="text-teal-700 dark:text-teal-400 font-bold">Sous-effectif</strong> sur la page Alertes.
+          </p>
+          <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Où saisir l&apos;effectif prévu ?</h3>
+          <p>Menu <strong className="text-teal-700 dark:text-teal-400 font-bold">Effectifs</strong> → choisissez un restaurant et une date → renseignez le nombre de personnes prévues pour chaque créneau (08:00-12:00, 12:00-14:00, 14:00-18:00, 18:00-22:00) → cliquez sur « Enregistrer l&apos;effectif prévu ». Les alertes sont recalculées automatiquement après l&apos;enregistrement.</p>
+          <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Lien avec les alertes</h3>
+          <p>Si l&apos;effectif prévu est <strong className="text-teal-700 dark:text-teal-400 font-bold">supérieur</strong> à l&apos;effectif recommandé pour un créneau, une alerte <strong className="text-teal-700 dark:text-teal-400 font-bold">Sur-effectif</strong> est créée. S&apos;il est <strong className="text-teal-700 dark:text-teal-400 font-bold">inférieur</strong>, une alerte <strong className="text-teal-700 dark:text-teal-400 font-bold">Sous-effectif</strong> est créée. Ces alertes apparaissent sur la page Alertes (filtres par type : Sur-effectif / Sous-effectif).</p>
+          <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Conseil</h3>
+          <p>Générez d&apos;abord une <strong className="text-teal-700 dark:text-teal-400 font-bold">recommandation d&apos;effectifs</strong> (page Recommandations, type « Effectifs », choisir la date) pour obtenir l&apos;effectif recommandé par créneau. Vous pouvez ensuite saisir l&apos;effectif prévu sur la page Effectifs : les écarts généreront les alertes Sur-effectif ou Sous-effectif.</p>
         </>
       ),
     },

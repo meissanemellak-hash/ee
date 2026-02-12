@@ -57,6 +57,8 @@ const severityLabels = {
 const typeLabels: Record<string, string> = {
   OVERSTOCK: 'Surstock',
   SHORTAGE: 'Rupture de stock',
+  OVERSTAFFING: 'Sur-effectif',
+  UNDERSTAFFING: 'Sous-effectif',
   OTHER: 'Autre',
 }
 
@@ -146,7 +148,6 @@ export default function AlertsPage() {
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((alert) => {
-      if (alert.type === 'OVERSTAFFING' || alert.type === 'UNDERSTAFFING') return false
       if (selectedRestaurant !== 'all' && alert.restaurantId !== selectedRestaurant) return false
       if (selectedType !== 'all' && alert.type !== selectedType) return false
       if (selectedSeverity !== 'all' && alert.severity !== selectedSeverity) return false
@@ -439,6 +440,8 @@ export default function AlertsPage() {
                     <SelectItem value="all">Tous les types</SelectItem>
                     <SelectItem value="OVERSTOCK">Surstock</SelectItem>
                     <SelectItem value="SHORTAGE">Rupture de stock</SelectItem>
+                    <SelectItem value="OVERSTAFFING">Sur-effectif</SelectItem>
+                    <SelectItem value="UNDERSTAFFING">Sous-effectif</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -588,7 +591,7 @@ export default function AlertsPage() {
                         className="shadow-sm"
                         aria-label="Réactiver cette alerte"
                       >
-                        {updateAlertStatus.isPending ? (
+                        {updateAlertStatus.isPending && updateAlertStatus.variables?.id === alert.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
@@ -605,7 +608,7 @@ export default function AlertsPage() {
                         className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                         aria-label={`Résoudre l’alerte : ${alert.message.slice(0, 50)}${alert.message.length > 50 ? '…' : ''}`}
                       >
-                        {updateAlertStatus.isPending ? (
+                        {updateAlertStatus.isPending && updateAlertStatus.variables?.id === alert.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>

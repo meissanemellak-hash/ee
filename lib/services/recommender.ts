@@ -122,60 +122,44 @@ export async function generateOrderRecommendations(
   return recommendations
 }
 
+const TIME_SLOTS = [
+  { start: 8, end: 12, label: '08:00-12:00' },
+  { start: 12, end: 14, label: '12:00-14:00' },
+  { start: 14, end: 18, label: '14:00-18:00' },
+  { start: 18, end: 22, label: '18:00-22:00' },
+] as const
+
 /**
- * Génère des recommandations de staffing
- * basées sur les prévisions de ventes par tranche horaire
+ * Calcule l'effectif recommandé par créneau (sans sauvegarder).
+ * Utilisé pour les alertes Sur/Sous-effectif et pour la génération des recommandations.
  */
-export async function generateStaffingRecommendations(
+export async function computeStaffingRecommendations(
   restaurantId: string,
   targetDate: Date = new Date()
 ): Promise<StaffingRecommendation[]> {
   const recommendations: StaffingRecommendation[] = []
 
-  // Analyser les ventes historiques par tranche horaire
   const endDate = new Date()
   const startDate = new Date()
-  startDate.setDate(startDate.getDate() - 30) // 30 derniers jours
+  startDate.setDate(startDate.getDate() - 30)
 
   const sales = await prisma.sale.findMany({
     where: {
       restaurantId,
-      saleDate: {
-        gte: startDate,
-        lte: endDate,
-      },
+      saleDate: { gte: startDate, lte: endDate },
     },
-    select: {
-      quantity: true,
-      saleHour: true,
-      amount: true,
-    },
+    select: { quantity: true, saleHour: true, amount: true },
   })
 
-  // Grouper par tranche horaire (ex: 12-14h, 18-20h)
-  const timeSlots = [
-    { start: 8, end: 12, label: '08:00-12:00' },
-    { start: 12, end: 14, label: '12:00-14:00' },
-    { start: 14, end: 18, label: '14:00-18:00' },
-    { start: 18, end: 22, label: '18:00-22:00' },
-  ]
-
-  for (const slot of timeSlots) {
+  for (const slot of TIME_SLOTS) {
     const slotSales = sales.filter(
-      s => s.saleHour >= slot.start && s.saleHour < slot.end
+      (s) => s.saleHour >= slot.start && s.saleHour < slot.end
     )
-
     if (slotSales.length === 0) continue
 
     const avgSales = slotSales.reduce((sum, s) => sum + s.quantity, 0) / slotSales.length
-    const avgRevenue = slotSales.reduce((sum, s) => sum + s.amount, 0) / slotSales.length
-
-    // Règle simple: 1 personne pour 15 ventes/heure
-    // Ajuster selon la durée de la tranche
     const hoursInSlot = slot.end - slot.start
     const recommendedStaff = Math.ceil((avgSales / hoursInSlot) / 15)
-
-    // Minimum 2 personnes
     const finalRecommendedStaff = Math.max(2, recommendedStaff)
 
     recommendations.push({
@@ -187,7 +171,19 @@ export async function generateStaffingRecommendations(
     })
   }
 
-  // Sauvegarder les recommandations
+  return recommendations
+}
+
+/**
+ * Génère et sauvegarde des recommandations de staffing
+ * basées sur les prévisions de ventes par tranche horaire
+ */
+export async function generateStaffingRecommendations(
+  restaurantId: string,
+  targetDate: Date = new Date()
+): Promise<StaffingRecommendation[]> {
+  const recommendations = await computeStaffingRecommendations(restaurantId, targetDate)
+
   if (recommendations.length > 0) {
     await prisma.recommendation.create({
       data: {

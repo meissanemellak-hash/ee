@@ -16,6 +16,7 @@ model Organization {
   name                   String
   clerkOrgId             String    @unique @map("clerk_org_id")
   shrinkPct              Float     @default(0.1) @map("shrink_pct") // Pourcentage de shrink par défaut (10%)
+  isDemo                 Boolean?  @default(false) @map("is_demo") // Organisation de démo (conservé pour éviter perte de données en db push)
   onboardingCompletedAt  DateTime? @map("onboarding_completed_at") // Date de fin du parcours d'onboarding
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
@@ -38,15 +39,33 @@ model Restaurant {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  sales           Sale[]
-  inventory       Inventory[]
-  forecasts       Forecast[]
-  recommendations Recommendation[]
-  alerts          Alert[]
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sales             Sale[]
+  inventory         Inventory[]
+  forecasts         Forecast[]
+  recommendations   Recommendation[]
+  alerts            Alert[]
+  plannedStaffing   PlannedStaffing[]
 
   @@index([organizationId])
   @@map("restaurants")
+}
+
+// Effectif prévu par restaurant, date et créneau (option C effectif)
+model PlannedStaffing {
+  id           String   @id @default(cuid())
+  restaurantId String   @map("restaurant_id")
+  planDate     DateTime @map("plan_date") // Jour concerné (heure à 00:00:00)
+  slotLabel    String   @map("slot_label") // ex. "08:00-12:00", "12:00-14:00"
+  plannedCount Int      @map("planned_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, planDate, slotLabel])
+  @@index([restaurantId, planDate])
+  @@map("planned_staffing")
 }
 
 // Produit (produit vendu)

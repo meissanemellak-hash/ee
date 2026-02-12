@@ -8,6 +8,41 @@ import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
+const STAFFING_SLOTS = ['08:00-12:00', '12:00-14:00', '14:00-18:00', '18:00-22:00'] as const
+
+/**
+ * Parse le message d'une alerte Sur-effectif / Sous-effectif pour en extraire créneau, date et effectif recommandé.
+ * Retourne null si le format ne correspond pas.
+ */
+function parseStaffingAlertMessage(
+  message: string,
+  restaurantId: string
+): { restaurantId: string; slotLabel: string; planDate: Date; recommendedCount: number } | null {
+  const slotMatch = message.match(/créneau (\d{2}:\d{2}-\d{2}:\d{2})/)
+  const recMatch = message.match(/vs (\d+) recommandé/)
+  if (!slotMatch || !recMatch) return null
+  const slotLabel = slotMatch[1]
+  const recommendedCount = parseInt(recMatch[1], 10)
+  if (!STAFFING_SLOTS.includes(slotLabel as any) || isNaN(recommendedCount)) return null
+
+  // Date : DD/MM/YYYY ou YYYY-MM-DD (ancien format)
+  const dateMatchFr = message.match(/le (\d{2}\/\d{2}\/\d{4})/)
+  const dateMatchIso = message.match(/le (\d{4}-\d{2}-\d{2})/)
+  let planDate: Date
+  if (dateMatchFr) {
+    const [d, m, y] = dateMatchFr[1].split('/')
+    planDate = new Date(Date.UTC(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10)))
+  } else if (dateMatchIso) {
+    const [y, m, d] = dateMatchIso[1].split('-')
+    planDate = new Date(Date.UTC(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10)))
+  } else {
+    return null
+  }
+  if (isNaN(planDate.getTime())) return null
+
+  return { restaurantId, slotLabel, planDate, recommendedCount }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { userId, orgId: authOrgId } = auth()
@@ -340,6 +375,34 @@ export async function PATCH(request: NextRequest) {
         { error: 'Alert not found or does not belong to your organization' },
         { status: 404 }
       )
+    }
+
+    // Résolution d'une alerte effectif : appliquer automatiquement l'effectif recommandé
+    if (resolved && (alert.type === 'OVERSTAFFING' || alert.type === 'UNDERSTAFFING')) {
+      const parsed = parseStaffingAlertMessage(alert.message, alert.restaurantId)
+      if (parsed) {
+        try {
+          await prisma.plannedStaffing.upsert({
+            where: {
+              restaurantId_planDate_slotLabel: {
+                restaurantId: parsed.restaurantId,
+                planDate: parsed.planDate,
+                slotLabel: parsed.slotLabel,
+              },
+            },
+            create: {
+              restaurantId: parsed.restaurantId,
+              planDate: parsed.planDate,
+              slotLabel: parsed.slotLabel,
+              plannedCount: parsed.recommendedCount,
+            },
+            update: { plannedCount: parsed.recommendedCount },
+          })
+          logger.log(`[PATCH /api/alerts] Effectif prévu mis à jour: ${parsed.slotLabel} le ${parsed.planDate.toISOString().slice(0, 10)} = ${parsed.recommendedCount}`)
+        } catch (err) {
+          logger.error('[PATCH /api/alerts] Erreur mise à jour effectif prévu:', err)
+        }
+      }
     }
 
     const updated = await prisma.alert.update({

@@ -770,18 +770,28 @@ export default function RecommendationsPage() {
                             <Button
                               size="sm"
                               onClick={() => handleUpdateStatus(recommendation.id, 'accepted')}
+                              disabled={updateStatus.isPending}
                               className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                             >
-                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                              )}
                               Accepter
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleUpdateStatus(recommendation.id, 'dismissed')}
+                              disabled={updateStatus.isPending}
                               className="shadow-sm"
                             >
-                              <XCircle className="h-4 w-4 mr-2" />
+                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4 mr-2" />
+                              )}
                               Rejeter
                             </Button>
                           </>
@@ -791,8 +801,12 @@ export default function RecommendationsPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleUpdateStatus(recommendation.id, 'pending')}
+                            disabled={updateStatus.isPending}
                             className="shadow-sm"
                           >
+                            {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : null}
                             Remettre en attente
                           </Button>
                         )}
@@ -842,18 +856,28 @@ export default function RecommendationsPage() {
                               <Button
                                 size="sm"
                                 onClick={() => handleUpdateStatus(recommendation.id, 'accepted')}
+                                disabled={updateStatus.isPending}
                                 className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                               >
-                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                )}
                                 Accepter
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleUpdateStatus(recommendation.id, 'dismissed')}
+                                disabled={updateStatus.isPending}
                                 className="shadow-sm"
                               >
-                                <XCircle className="h-4 w-4 mr-2" />
+                                {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                )}
                                 Rejeter
                               </Button>
                             </>
@@ -863,8 +887,12 @@ export default function RecommendationsPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleUpdateStatus(recommendation.id, 'pending')}
+                              disabled={updateStatus.isPending}
                               className="shadow-sm"
                             >
+                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : null}
                               Remettre en attente
                             </Button>
                           )}

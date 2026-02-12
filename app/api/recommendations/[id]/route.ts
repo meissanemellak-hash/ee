@@ -176,6 +176,44 @@ export async function PATCH(
       } catch (alertError) {
         logger.error('[PATCH /api/recommendations/[id]] runAllAlerts:', alertError)
       }
+    } else if (status === 'accepted' && recommendation.type === 'STAFFING') {
+      const raw = recommendation.data as unknown
+      const data = Array.isArray(raw)
+        ? raw
+        : (raw && typeof raw === 'object' && 'slots' in raw && Array.isArray((raw as { slots?: unknown }).slots))
+          ? (raw as { slots: Array<{ date?: string; timeSlot: string; recommendedStaff: number }> }).slots
+          : null
+      const restaurantId = recommendation.restaurantId
+      if (data && data.length > 0 && restaurantId) {
+        const first = data[0] as { date?: string; timeSlot?: string; recommendedStaff?: number }
+        const dateStr = (first.date && /^\d{4}-\d{2}-\d{2}$/.test(String(first.date)))
+          ? String(first.date)
+          : new Date().toISOString().slice(0, 10)
+        const planDate = new Date(dateStr + 'T00:00:00.000Z')
+        const SLOT_LABELS = ['08:00-12:00', '12:00-14:00', '14:00-18:00', '18:00-22:00'] as const
+        for (const item of data as Array<{ timeSlot?: string; recommendedStaff?: number }>) {
+          const slot = item.timeSlot
+          if (!slot || !SLOT_LABELS.includes(slot as any)) continue
+          const count = Math.max(0, Math.floor(Number(item.recommendedStaff)) || 0)
+          await prisma.plannedStaffing.upsert({
+            where: {
+              restaurantId_planDate_slotLabel: { restaurantId, planDate, slotLabel: slot },
+            },
+            create: { restaurantId, planDate, slotLabel: slot, plannedCount: count },
+            update: { plannedCount: count },
+          })
+        }
+        logger.log('[PATCH /api/recommendations/[id]] Effectif prévu enregistré pour', dateStr, restaurantId)
+      }
+      await prisma.recommendation.update({
+        where: { id: params.id },
+        data: { status },
+      })
+      try {
+        await runAllAlerts(restaurantId)
+      } catch (alertError) {
+        logger.error('[PATCH /api/recommendations/[id]] runAllAlerts:', alertError)
+      }
     } else {
       await prisma.recommendation.update({
         where: { id: params.id },
