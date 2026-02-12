@@ -176,24 +176,38 @@ export async function computeStaffingRecommendations(
 
 /**
  * Génère et sauvegarde des recommandations de staffing
- * basées sur les prévisions de ventes par tranche horaire
+ * basées sur les prévisions de ventes par tranche horaire.
+ * Ne crée pas de doublon : si une recommandation existe déjà pour ce restaurant et cette date, on ne crée pas une nouvelle.
  */
 export async function generateStaffingRecommendations(
   restaurantId: string,
   targetDate: Date = new Date()
 ): Promise<StaffingRecommendation[]> {
   const recommendations = await computeStaffingRecommendations(restaurantId, targetDate)
+  if (recommendations.length === 0) return []
 
-  if (recommendations.length > 0) {
-    await prisma.recommendation.create({
-      data: {
-        restaurantId,
-        type: 'STAFFING',
-        data: recommendations as any,
-        priority: 'medium',
-      },
-    })
-  }
+  const targetDateStr = recommendations[0].date
+  const existing = await prisma.recommendation.findMany({
+    where: { restaurantId, type: 'STAFFING', status: { not: 'dismissed' } },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    select: { data: true },
+  })
+  const alreadyExists = existing.some((r) => {
+    const d = r.data as unknown
+    const arr = Array.isArray(d) ? d : null
+    const first = arr?.[0] as { date?: string } | undefined
+    return first?.date === targetDateStr
+  })
+  if (alreadyExists) return []
 
+  await prisma.recommendation.create({
+    data: {
+      restaurantId,
+      type: 'STAFFING',
+      data: recommendations as any,
+      priority: 'medium',
+    },
+  })
   return recommendations
 }

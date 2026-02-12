@@ -147,13 +147,14 @@ export default function EffectifsPage() {
               <p className="text-sm text-muted-foreground">
                 Sélectionnez un restaurant pour afficher et modifier l&apos;effectif prévu.
               </p>
-            ) : isLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground py-8">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Chargement…</span>
-              </div>
             ) : (
               <>
+                {isLoading && (
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    <span>Chargement des effectifs…</span>
+                  </div>
+                )}
                 <div className="space-y-4">
                   <Label className="text-base">Effectif par créneau</Label>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -173,6 +174,7 @@ export default function EffectifsPage() {
                           }
                           className="w-20 text-center"
                           aria-label={`Effectif prévu ${slot.slotLabel}`}
+                          disabled={isLoading}
                         />
                       </div>
                     ))}
@@ -180,7 +182,7 @@ export default function EffectifsPage() {
                 </div>
                 <Button
                   onClick={handleSave}
-                  disabled={updateMutation.isPending}
+                  disabled={updateMutation.isPending || isLoading}
                   className="bg-teal-600 hover:bg-teal-700 text-white border-0"
                 >
                   {updateMutation.isPending ? (

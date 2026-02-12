@@ -430,7 +430,7 @@ export default function RecommendationsPage() {
               Générer de nouvelles recommandations
             </CardTitle>
             <CardDescription className="mt-1">
-              Générez des recommandations (commandes ou effectifs) pour un restaurant ou pour tous les restaurants
+              Générez des recommandations (commandes ou effectifs) pour un restaurant ou pour tous les restaurants. Vérifiez le statut de chaque recommandation pour voir si elle a déjà été acceptée ou rejetée.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -773,7 +773,7 @@ export default function RecommendationsPage() {
                               disabled={updateStatus.isPending}
                               className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                             >
-                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id && updateStatus.variables?.status === 'accepted' ? (
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                               ) : (
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -787,7 +787,7 @@ export default function RecommendationsPage() {
                               disabled={updateStatus.isPending}
                               className="shadow-sm"
                             >
-                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id && updateStatus.variables?.status === 'dismissed' ? (
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                               ) : (
                                 <XCircle className="h-4 w-4 mr-2" />
@@ -804,7 +804,21 @@ export default function RecommendationsPage() {
                             disabled={updateStatus.isPending}
                             className="shadow-sm"
                           >
-                            {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                            {updateStatus.isPending && updateStatus.variables?.id === recommendation.id && updateStatus.variables?.status === 'pending' ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : null}
+                            Remettre en attente
+                          </Button>
+                        )}
+                        {recommendation.status === 'dismissed' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleUpdateStatus(recommendation.id, 'pending')}
+                            disabled={updateStatus.isPending}
+                            className="shadow-sm"
+                          >
+                            {updateStatus.isPending && updateStatus.variables?.id === recommendation.id && updateStatus.variables?.status === 'pending' ? (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : null}
                             Remettre en attente
@@ -859,7 +873,7 @@ export default function RecommendationsPage() {
                                 disabled={updateStatus.isPending}
                                 className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                               >
-                                {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                                {updateStatus.isPending && updateStatus.variables?.id === recommendation.id && updateStatus.variables?.status === 'accepted' ? (
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 ) : (
                                   <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -873,7 +887,7 @@ export default function RecommendationsPage() {
                                 disabled={updateStatus.isPending}
                                 className="shadow-sm"
                               >
-                                {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                                {updateStatus.isPending && updateStatus.variables?.id === recommendation.id && updateStatus.variables?.status === 'dismissed' ? (
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 ) : (
                                   <XCircle className="h-4 w-4 mr-2" />
@@ -890,7 +904,21 @@ export default function RecommendationsPage() {
                               disabled={updateStatus.isPending}
                               className="shadow-sm"
                             >
-                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id ? (
+                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id && updateStatus.variables?.status === 'pending' ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : null}
+                              Remettre en attente
+                            </Button>
+                          )}
+                          {recommendation.status === 'dismissed' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUpdateStatus(recommendation.id, 'pending')}
+                              disabled={updateStatus.isPending}
+                              className="shadow-sm"
+                            >
+                              {updateStatus.isPending && updateStatus.variables?.id === recommendation.id && updateStatus.variables?.status === 'pending' ? (
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                               ) : null}
                               Remettre en attente

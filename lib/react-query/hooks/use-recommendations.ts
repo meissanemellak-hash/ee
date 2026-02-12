@@ -147,8 +147,10 @@ export function useGenerateBOMRecommendations() {
       queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
       queryClient.invalidateQueries({ queryKey: ['recommendations-last-generated', organization?.id] })
       
-      const recommendationsCount = Array.isArray(result.recommendations) ? result.recommendations.length : 0
-      
+      // BOM : une seule recommandation (carte) est créée en base, même si elle contient plusieurs ingrédients
+      const hasRecommendations = Array.isArray(result.recommendations) && result.recommendations.length > 0
+      const recommendationsCount = hasRecommendations ? 1 : 0
+
       if (recommendationsCount === 0) {
         const reason = result.details?.reason || 'Aucune recommandation générée. Vérifiez que vous avez des produits avec des recettes et des ventes historiques.'
         toast({
@@ -208,12 +210,11 @@ export function useGenerateClassicRecommendations() {
       if (count === 0) {
         toast({
           title: 'Aucune recommandation générée',
-          description: 'Pas assez de données (ventes par créneau horaire pour l’effectif, ou stocks suffisants pour les commandes).',
         })
       } else {
         toast({
           title: 'Recommandations générées',
-          description: `${count} recommandation${count > 1 ? 's' : ''} créée${count > 1 ? 's' : ''}.`,
+          description: `${count} recommandation${count > 1 ? 's' : ''} ${variables?.type === 'STAFFING' ? 'd\'effectifs' : 'de commande'} créée${count > 1 ? 's' : ''}.`,
         })
       }
     },
@@ -258,19 +259,21 @@ export function useGenerateAllRecommendations() {
         errors?: string[]
       }>
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
       queryClient.invalidateQueries({ queryKey: ['recommendations-last-generated', organization?.id] })
       const total = result.generated
+      const isStaffing = variables?.type === 'STAFFING'
       if (total === 0 && (!result.byRestaurant || result.byRestaurant.length === 0)) {
         toast({
           title: 'Aucune recommandation générée',
-          description: result.message || 'Aucun restaurant ou stocks suffisants.',
+          description: result.message || (isStaffing ? 'Aucun restaurant ou pas assez de ventes par créneau.' : 'Aucun restaurant ou stocks suffisants.'),
         })
       } else {
+        const label = isStaffing ? 'd\'effectifs' : 'de commande'
         toast({
           title: 'Génération terminée',
-          description: `${total} recommandation${total !== 1 ? 's' : ''} créée${total !== 1 ? 's' : ''} pour ${result.byRestaurant?.length ?? 0} restaurant(s).`,
+          description: `${total} recommandation${total !== 1 ? 's' : ''} ${label} créée${total !== 1 ? 's' : ''} pour ${result.byRestaurant?.length ?? 0} restaurant(s).`,
         })
       }
       if (result.errors?.length) {
@@ -322,8 +325,32 @@ export function useUpdateRecommendationStatus() {
             return old.map((r) => (r.id === updatedRecommendation.id ? updatedRecommendation : r))
           }
         )
+        // Remise en attente : la recommandation n'était pas dans le cache "pending", on invalide pour qu'elle apparaisse
+        if (variables.status === 'pending') {
+          queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
+        }
       }
       if (variables.status === 'accepted' && updatedRecommendation?.type === 'STAFFING') {
+        const raw = updatedRecommendation.data as unknown
+        const data = Array.isArray(raw) ? raw : null
+        const restaurantId = updatedRecommendation.restaurantId
+        if (organization?.id && restaurantId && data && data.length > 0) {
+          const first = data[0] as { date?: string; timeSlot?: string; recommendedStaff?: number }
+          const dateStr =
+            first.date && /^\d{4}-\d{2}-\d{2}$/.test(String(first.date))
+              ? String(first.date)
+              : new Date().toISOString().slice(0, 10)
+          const slots = data.map((item: { timeSlot?: string; recommendedStaff?: number }) => ({
+            slotLabel: item.timeSlot ?? '',
+            plannedCount: Math.max(0, Math.floor(Number(item.recommendedStaff)) || 0),
+          })).filter((s: { slotLabel: string }) => s.slotLabel)
+          if (slots.length > 0) {
+            queryClient.setQueryData(
+              ['planned-staffing', organization.id, restaurantId, dateStr],
+              { restaurantId, date: dateStr, slots }
+            )
+          }
+        }
         queryClient.invalidateQueries({ queryKey: ['planned-staffing', organization?.id] })
         queryClient.invalidateQueries({ queryKey: ['alerts', organization?.id] })
         queryClient.invalidateQueries({ queryKey: ['alerts-current-state', organization?.id] })
@@ -332,7 +359,9 @@ export function useUpdateRecommendationStatus() {
         title: 'Recommandation mise à jour',
         description: variables.status === 'accepted'
           ? (updatedRecommendation?.type === 'STAFFING' ? "Recommandation d'effectifs acceptée. L'effectif prévu a été mis à jour." : "Recommandation acceptée. L'inventaire a été mis à jour avec les quantités commandées.")
-          : 'Statut changé en rejeté',
+          : variables.status === 'pending'
+            ? 'Recommandation remise en attente.'
+            : 'Statut changé en rejeté',
       })
     },
     onError: (error: Error) => {
