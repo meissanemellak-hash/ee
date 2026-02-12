@@ -271,43 +271,23 @@ export default function AlertsPage() {
               Actualiser
             </Button>
             {selectedRestaurant !== 'all' && (
-              <>
-                <Button
-                  onClick={() => handleGenerateAlerts(false)}
-                  disabled={generateAlerts.isPending || isLoading}
-                  className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
-                >
-                  {generateAlerts.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Génération...
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Générer les alertes
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleGenerateAlerts(true)}
-                  disabled={generateAlerts.isPending || isLoading}
-                  className="shadow-sm"
-                >
-                  {generateAlerts.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Génération...
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Alertes de test
-                    </>
-                  )}
-                </Button>
-              </>
+              <Button
+                onClick={() => handleGenerateAlerts(false)}
+                disabled={generateAlerts.isPending || isLoading}
+                className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+              >
+                {generateAlerts.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Générer les alertes
+                  </>
+                )}
+              </Button>
             )}
           </div>
         </header>

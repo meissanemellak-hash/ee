@@ -92,10 +92,10 @@ export function useGenerateAlerts() {
       queryClient.invalidateQueries({ queryKey: ['alerts-current-state', organization?.id] })
 
       toast({
-        title: variables.createTest ? 'Alertes de test créées' : 'Alertes générées',
+        title: variables.createTest ? 'Alertes de test créées' : 'Alertes mises à jour',
         description: data.message || (variables.createTest 
           ? '3 alertes de test ont été créées avec succès.'
-          : 'Les alertes ont été vérifiées et générées avec succès.'),
+          : 'Les alertes ont été recalculées à partir de l’inventaire actuel.'),
       })
     },
     onError: (error: Error) => {

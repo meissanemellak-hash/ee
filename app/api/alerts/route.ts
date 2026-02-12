@@ -240,8 +240,8 @@ export async function POST(request: NextRequest) {
       success: true,
       alertsCreated: alertsCount,
       message: alertsCount > 0 
-        ? `${alertsCount} alerte(s) active(s) trouvée(s)`
-        : 'Aucune alerte générée. Vérifiez que vous avez configuré un inventaire avec des seuils min/max, ou utilisez "Générer des alertes de test" pour tester le système.'
+        ? `Liste mise à jour : ${alertsCount} alerte(s) active(s) pour ce restaurant.`
+        : 'Aucune alerte active. Les stocks sont dans les seuils ou l’inventaire n’a pas encore de seuils min/max configurés.'
     })
   } catch (error) {
     logger.error('[POST /api/alerts] Erreur complète:', error)

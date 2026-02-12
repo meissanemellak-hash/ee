@@ -292,8 +292,7 @@ export default function SettingsPage() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ce pourcentage est utilisé pour calculer le gaspillage estimé dans les prévisions.
-              Valeur entre 0 (0%) et 1 (100%).
+              Ce pourcentage est utilisé pour calculer le gaspillage estimé dans les prévisions et les quantités à commander. Valeur entre 0 (0%) et 1 (100%). Pour l&apos;estimer : suivez votre gaspillage réel ou partez d&apos;une fourchette courante (5–15 %), puis affinez.
             </p>
           </div>
 

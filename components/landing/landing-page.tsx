@@ -11,80 +11,15 @@ import {
   Target,
   CheckCircle2,
   Quote,
-  Play,
   LayoutDashboard,
   BellRing,
   Shield,
   LifeBuoy,
   Lock,
   Server,
+  Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-/** URL brute depuis .env (embed YouTube/Vimeo ou YouTube watch). */
-const RAW_DEMO_VIDEO_URL = process.env.NEXT_PUBLIC_LANDING_DEMO_VIDEO_URL?.trim() || ''
-
-/** Retourne une URL d'embed valide (accepte youtube.com/watch?v= ou youtu.be/ en entrée). */
-function getDemoVideoEmbedUrl(raw: string): string {
-  if (!raw) return ''
-  try {
-    const url = new URL(raw)
-    // YouTube watch → embed
-    if (url.hostname === 'www.youtube.com' && url.pathname === '/watch' && url.searchParams.get('v')) {
-      return `https://www.youtube.com/embed/${url.searchParams.get('v')}`
-    }
-    if (url.hostname === 'youtube.com' && url.pathname === '/watch' && url.searchParams.get('v')) {
-      return `https://www.youtube.com/embed/${url.searchParams.get('v')}`
-    }
-    if (url.hostname === 'youtu.be') {
-      const id = url.pathname.slice(1).split('/')[0]
-      return id ? `https://www.youtube.com/embed/${id}` : ''
-    }
-    // Déjà embed YouTube / Vimeo ou autre
-    return raw
-  } catch {
-    return raw
-  }
-}
-
-const DEMO_VIDEO_URL = getDemoVideoEmbedUrl(RAW_DEMO_VIDEO_URL)
-
-function DemoVideoBlock() {
-  if (DEMO_VIDEO_URL) {
-    return (
-      <div className="mt-10 flex justify-center" aria-labelledby="demo-video-label">
-        <h2 id="demo-video-label" className="sr-only">
-          Vidéo de démonstration
-        </h2>
-        <div className="relative w-full max-w-2xl aspect-video rounded-xl border border-border bg-muted/30 overflow-hidden shadow-lg">
-          <iframe
-            src={DEMO_VIDEO_URL}
-            title="Vidéo de démonstration IA Restaurant Manager"
-            className="absolute inset-0 w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
-        </div>
-      </div>
-    )
-  }
-  return (
-    <div className="mt-10 flex justify-center">
-      <div
-        className="relative w-full max-w-2xl aspect-video rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center group"
-        role="presentation"
-      >
-        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400">
-            <Play className="h-8 w-8 ml-1" fill="currentColor" aria-hidden />
-          </div>
-          <span className="text-sm font-medium">Vidéo de démonstration</span>
-          <span className="text-xs">Disponible sur demande</span>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export function LandingPage() {
   return (
@@ -199,12 +134,13 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Mini vignettes : Dashboard, Restaurants, Alertes */}
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Mini vignettes : Dashboard, Restaurants, Alertes, Effectif */}
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { icon: LayoutDashboard, label: 'Tableau de bord', desc: 'Vue groupe et KPIs' },
                 { icon: Store, label: 'Restaurants', desc: 'Liste et détail par restaurant' },
                 { icon: BellRing, label: 'Alertes & rapports', desc: 'Suivi et recommandations' },
+                { icon: Users, label: 'Effectif', desc: 'Effectif prévu et alertes' },
               ].map((item) => (
                 <div
                   key={item.label}
@@ -220,9 +156,50 @@ export function LandingPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
 
-            {/* Vidéo de démonstration : iframe si URL configurée, sinon placeholder */}
-            <DemoVideoBlock />
+        {/* Effectif prévu et alertes */}
+        <section id="effectif" className="py-16 lg:py-20 border-t border-border/60 bg-background/50" aria-labelledby="effectif-titre">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <h2 id="effectif-titre" className="text-2xl font-bold text-center text-foreground sm:text-3xl">
+              Anticipez vos besoins en personnel
+            </h2>
+            <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
+              En plus des stocks et des ventes, planifiez l&apos;effectif par restaurant et par créneau, et soyez alerté en cas de sur-effectif ou de sous-effectif pour ajuster à temps.
+            </p>
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  icon: Users,
+                  title: 'Effectif prévu',
+                  text: 'Définissez l\'effectif prévu par restaurant et par créneau. Une vue claire pour anticiper les besoins en personnel et aligner les plannings sur l\'activité.',
+                },
+                {
+                  icon: Bell,
+                  title: 'Alertes sur/sous-effectif',
+                  text: 'Recevez des alertes lorsque l\'effectif prévu s\'écarte des besoins réels : évitez la surcharge des équipes ou le sous-effectif au moment du service.',
+                },
+                {
+                  icon: Target,
+                  title: 'Recommandations',
+                  text: 'Des suggestions pour ajuster vos plannings en fonction des prévisions de ventes et des écarts détectés. Moins de stress, un service mieux assuré.',
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-xl border border-border bg-card p-6 shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900/30">
+                      <item.icon className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    </div>
+                    <h3 className="font-semibold text-foreground">{item.title}</h3>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">{item.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -230,7 +207,7 @@ export function LandingPage() {
         <section className="py-16 lg:py-20 border-t border-border/60 bg-background/50">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <h2 className="text-2xl font-bold text-center text-foreground sm:text-3xl">
-              Ils pilotent déjà avec IA Restaurant Manager
+              Ils nous font déjà confiance
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
               Bénéfices : centralisez vos restaurants, réduisez le gaspillage et les ruptures de stock, dégagez des économies concrètes et gagnez du temps sur le suivi opérationnel.

@@ -123,7 +123,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
             Les ingrédients sont les matières premières utilisées dans les recettes produits. Ils sont partagés au niveau de l&apos;organisation ; les stocks sont gérés par restaurant dans l&apos;inventaire.
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Créer un ingrédient</h3>
-          <p>« Ajouter un ingrédient » → nom, unité (kg, L, pièce, etc.), coût par unité. Optionnel : taille de pack, nom du fournisseur. L&apos;unité doit être cohérente avec son utilisation dans les recettes (ex. farine en kg).</p>
+          <p>« Ajouter un ingrédient » → nom, unité (kg, L, pièce, g, etc.), coût par unité. Optionnel : taille de pack, nom du fournisseur. Choisissez l&apos;unité comme dans vos recettes : si vos recettes indiquent la farine en grammes, mettez « gramme » (g) pour l&apos;ingrédient ; si elles utilisent des kg, mettez kg. Si vous commandez en kilos chez le fournisseur mais travaillez en grammes dans les recettes, gardez « gramme » dans l&apos;app : à la réception, saisissez le stock en grammes (ex. 25 kg = 25 000 g) et le coût par gramme (prix au kg ÷ 1000).</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Où sont utilisés les ingrédients ?</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
             <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Recettes produits</strong> : chaque produit peut associer des ingrédients et des quantités (BOM).</li>
@@ -170,7 +170,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Générer une prévision</h3>
           <p>Sur la page Prévisions, renseignez les filtres (période, restaurant si besoin) puis cliquez sur « Générer ». Les résultats s&apos;affichent sous le formulaire : prévisions de ventes et, selon le cas, impact sur la consommation d&apos;ingrédients.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Shrink (gaspillage)</h3>
-          <p>Le pourcentage de shrink par défaut est réglé dans Paramètres → Organisation (valeur entre 0 et 1, ex. 0,1 = 10 %). Il est utilisé pour estimer le gaspillage dans les calculs de prévision. Vous pouvez l&apos;ajuster selon votre activité.</p>
+          <p>Le pourcentage de shrink par défaut est réglé dans Paramètres → Organisation (valeur entre 0 et 1, ex. 0,1 = 10 %). Il est utilisé pour estimer le gaspillage dans les calculs de prévision et les quantités à commander (marge de sécurité). <strong className="text-teal-700 dark:text-teal-400">Comment choisir un % cohérent ?</strong> Vous pouvez suivre votre gaspillage réel sur quelques semaines (produits jetés, périmés, pertes en préparation), vous appuyer sur des fourchettes courantes en restauration (souvent 5 à 15 %), ou partir de 10 % puis ajuster selon les retours terrain.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Bon à savoir</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
             <li>Plus vous avez d&apos;historique de ventes, plus les prévisions peuvent être pertinentes.</li>
@@ -205,13 +205,13 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
             Les alertes vous informent lorsque le stock d&apos;un ingrédient dans un restaurant est sous le seuil minimum (risque de rupture) ou au-dessus du seuil maximum (surstock). Elles permettent d&apos;agir rapidement sur les commandes et la production.
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">D&apos;où viennent les alertes ?</h3>
-          <p>Les seuils min et max sont définis dans l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">inventaire</strong> de chaque restaurant (page Restaurants → Voir détails → Inventaire). Les alertes sont <strong className="text-teal-700 dark:text-teal-400 font-bold">générées automatiquement</strong> dès que les stocks changent : après une modification d&apos;inventaire (saisie manuelle ou import), et après chaque vente enregistrée, modifiée, supprimée ou importée (car les ventes déduisent les stocks selon les recettes). Vous pouvez aussi lancer manuellement la génération depuis la page Alertes (sélectionnez un restaurant puis le bouton dédié) pour actualiser la liste.</p>
+          <p>Les seuils min et max sont définis dans l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">inventaire</strong> de chaque restaurant (page Restaurants → Voir détails → Inventaire). Les alertes sont <strong className="text-teal-700 dark:text-teal-400 font-bold">générées automatiquement</strong> dès que les stocks changent : après une modification d&apos;inventaire (saisie manuelle ou import), et après chaque vente enregistrée, modifiée, supprimée ou importée (car les ventes déduisent les stocks selon les recettes). Vous pouvez aussi lancer manuellement la génération depuis la page Alertes (sélectionnez un restaurant puis le bouton « Générer les alertes ») pour recalculer les alertes à partir des stocks actuels. Le bouton « Actualiser » rafraîchit la liste sans relancer la génération.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Où les voir ?</h3>
           <p>Les alertes apparaissent sur le <strong className="text-teal-700 dark:text-teal-400 font-bold">tableau de bord</strong> (section « Alertes critiques ») et sur la page <strong className="text-teal-700 dark:text-teal-400 font-bold">Alertes</strong> (menu Dashboard → Alertes), où vous pouvez filtrer par restaurant, type, sévérité et consulter ou marquer comme résolues. Chaque fiche restaurant affiche aussi le nombre d&apos;alertes actives.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Sur la page Alertes</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
             <li>Consultez la liste des alertes actives (rupture, surstock). Filtrez par restaurant si besoin.</li>
-            <li>Générez les alertes pour un restaurant (bouton dédié) si vous souhaitez forcer un recalcul selon les stocks et seuils actuels.</li>
+            <li>Générez les alertes pour un restaurant (bouton « Générer les alertes ») si vous souhaitez forcer un recalcul selon les stocks et seuils actuels. « Actualiser » rafraîchit uniquement la liste.</li>
             <li>Après avoir traité le problème (commande, ajustement), marquez l&apos;alerte comme <strong className="text-teal-700 dark:text-teal-400 font-bold">résolue</strong>.</li>
             <li>Vous pouvez afficher les alertes résolues pour l&apos;historique.</li>
           </ul>
@@ -238,7 +238,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
           </ul>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Générer et exporter</h3>
           <p>Sélectionnez le type de rapport, la période (date de début, date de fin) et éventuellement un restaurant. Cliquez sur « Générer le rapport ». Le résultat s&apos;affiche à l&apos;écran ; vous pouvez ensuite l&apos;exporter en CSV via le bouton d&apos;export pour l&apos;archivage ou un traitement externe.</p>
-          <p className="mt-2">L&apos;accès à la génération de rapports dépend de votre rôle (droits « Rapports »).</p>
+          <p className="mt-2">Seuls les rôles <strong className="text-teal-700 dark:text-teal-400 font-bold">Admin</strong> et <strong className="text-teal-700 dark:text-teal-400 font-bold">Manager</strong> peuvent générer des rapports (droits « Rapports »). Le rôle Employé peut consulter le tableau de bord mais pas générer ni exporter les rapports.</p>
         </>
       ),
     },
@@ -253,7 +253,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Organisation</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
             <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Nom de l&apos;organisation</strong> : modifiable par le créateur ou un administrateur. Ce nom est utilisé dans toute l&apos;application.</li>
-            <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Pourcentage de shrink (gaspillage) par défaut</strong> : valeur entre 0 et 1 (ex. 0,1 = 10 %) utilisée dans les prévisions. Modifiable par les utilisateurs ayant les droits sur les paramètres.</li>
+            <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Pourcentage de shrink (gaspillage) par défaut</strong> : valeur entre 0 et 1 (ex. 0,1 = 10 %) utilisée dans les prévisions et les recommandations de commande. Pour l&apos;estimer : suivez votre gaspillage réel ou partez d&apos;une fourchette courante (5–15 %) puis affinez. Voir la section Prévisions dans le centre d&apos;aide pour plus de détail.</li>
           </ul>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Membres</h3>
           <p>Les administrateurs peuvent inviter des membres et attribuer les rôles (admin, manager, employé). Chaque rôle dispose de permissions précises (création, modification, suppression, rapports, etc.). Consultez la section Membres pour gérer les invitations et les rôles.</p>
