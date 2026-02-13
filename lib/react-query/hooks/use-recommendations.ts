@@ -35,6 +35,8 @@ export interface RecommendationDetails {
     packSize: number | null
     numberOfPacks: number | null
     supplierName: string | null
+    /** 'forecast' = besoin issu des prévisions ; 'threshold' = basé sur le seuil min (pas de prévision ou rupture) */
+    recommendationSource?: 'forecast' | 'threshold'
   }>
   assumptions: {
     shrinkPct: number
@@ -141,17 +143,27 @@ export function useGenerateBOMRecommendations() {
         recommendations: Recommendation[]
         estimatedSavings?: number
         details?: { reason?: string }
+        recommendationCreated?: boolean
       }>
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
       queryClient.invalidateQueries({ queryKey: ['recommendations-last-generated', organization?.id] })
-      
+      void queryClient.refetchQueries({ queryKey: ['recommendations', organization?.id] })
+      void queryClient.refetchQueries({ queryKey: ['recommendations-last-generated', organization?.id] })
+
       // BOM : une seule recommandation (carte) est créée en base, même si elle contient plusieurs ingrédients
       const hasRecommendations = Array.isArray(result.recommendations) && result.recommendations.length > 0
       const recommendationsCount = hasRecommendations ? 1 : 0
+      const created = result.recommendationCreated === true
 
-      if (recommendationsCount === 0) {
+      if (!created && hasRecommendations) {
+        toast({
+          title: 'Aucune nouvelle recommandation',
+          description: 'Une recommandation pour cette période a déjà été rejetée. Aucune nouvelle n’a été créée.',
+          variant: 'default',
+        })
+      } else if (!created || recommendationsCount === 0) {
         const reason = result.details?.reason || 'Aucune recommandation générée. Vérifiez que vous avez des produits avec des recettes et des ventes historiques.'
         toast({
           title: 'Aucune recommandation générée',
@@ -204,10 +216,18 @@ export function useGenerateClassicRecommendations() {
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
+      void queryClient.refetchQueries({ queryKey: ['recommendations', organization?.id] })
       const rawCount = result.recommendations?.length ?? 0
       // Pour le staffing, une seule recommandation (un tableau avec plusieurs créneaux) est affichée
       const count = variables?.type === 'STAFFING' && rawCount > 0 ? 1 : rawCount
-      if (count === 0) {
+      const alreadyDismissed = (result as { alreadyDismissedForPeriod?: boolean }).alreadyDismissedForPeriod === true
+      if (alreadyDismissed) {
+        toast({
+          title: 'Aucune nouvelle recommandation',
+          description: 'Une recommandation pour cette période a déjà été rejetée. Aucune nouvelle n’a été créée.',
+          variant: 'default',
+        })
+      } else if (count === 0) {
         toast({
           title: 'Aucune recommandation générée',
         })
@@ -262,6 +282,8 @@ export function useGenerateAllRecommendations() {
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['recommendations', organization?.id] })
       queryClient.invalidateQueries({ queryKey: ['recommendations-last-generated', organization?.id] })
+      void queryClient.refetchQueries({ queryKey: ['recommendations', organization?.id] })
+      void queryClient.refetchQueries({ queryKey: ['recommendations-last-generated', organization?.id] })
       const total = result.generated
       const isStaffing = variables?.type === 'STAFFING'
       if (total === 0 && (!result.byRestaurant || result.byRestaurant.length === 0)) {

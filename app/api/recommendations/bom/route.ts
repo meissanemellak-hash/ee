@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { restaurantId, shrinkPct, days } = restBody
+    const { restaurantId, days } = restBody
 
     if (!restaurantId) {
       return NextResponse.json(
@@ -95,9 +95,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Utiliser le % de gaspillage de l’organisation (paramètres) si le body n’en envoie pas
+    // Toujours utiliser le % enregistré en paramètres pour que toute modification impacte les commandes
+    const shrinkPct =
+      typeof organization.shrinkPct === 'number' && organization.shrinkPct >= 0 && organization.shrinkPct <= 1
+        ? organization.shrinkPct
+        : 0.1
+
     const result = await generateBOMOrderRecommendations(
       restaurantId,
-      shrinkPct || 0.1,
+      shrinkPct,
       days || 7
     )
 
@@ -109,10 +116,29 @@ export async function POST(request: NextRequest) {
     })
 
     // Sauvegarder la recommandation : soit des commandes à passer, soit une recommandation "surstocks" (ne pas commander)
-    const details = result.details as { overstockIngredients?: Array<unknown>; reason?: string; [k: string]: unknown }
+    const details = result.details as { overstockIngredients?: Array<unknown>; reason?: string; period?: { start: string; end: string }; [k: string]: unknown }
     const hasOverstock = (details?.overstockIngredients?.length ?? 0) > 0
+    const periodStart = details?.period?.start
+    const periodEnd = details?.period?.end
 
-    if (result.recommendations.length > 0) {
+    // Ne pas recréer une recommandation en attente si une recommandation pour la même période a déjà été rejetée
+    const dismissedForRestaurant = await prisma.recommendation.findMany({
+      where: { restaurantId, type: 'ORDER', status: 'dismissed' },
+      select: { data: true },
+    })
+    const alreadyDismissedSamePeriod =
+      !!periodStart &&
+      !!periodEnd &&
+      dismissedForRestaurant.some((r) => {
+        const d = r.data as { period?: { start?: string; end?: string } } | null
+        return d?.period?.start === periodStart && d?.period?.end === periodEnd
+      })
+    if (alreadyDismissedSamePeriod) {
+      logger.log('[POST /api/recommendations/bom] Recommandation pour cette période déjà rejetée, pas de nouvelle création.')
+    }
+
+    let recommendationCreated = false
+    if (result.recommendations.length > 0 && !alreadyDismissedSamePeriod) {
       const dataToSave = {
         ...result.details,
         estimatedSavings: result.estimatedSavings,
@@ -127,7 +153,8 @@ export async function POST(request: NextRequest) {
           status: 'pending',
         },
       })
-    } else if (hasOverstock) {
+      recommendationCreated = true
+    } else if (hasOverstock && !alreadyDismissedSamePeriod) {
       // Créer une recommandation "surstock" pour lier alertes et recommandations : ne pas commander ces ingrédients
       const dataToSave = {
         ...result.details,
@@ -143,12 +170,13 @@ export async function POST(request: NextRequest) {
           status: 'pending',
         },
       })
-    } else {
+      recommendationCreated = true
+    } else if (!result.recommendations.length && !hasOverstock) {
       const reason = details?.reason || 'Aucune recommandation générée. Vérifiez que vous avez des produits avec des recettes et des ventes historiques.'
       logger.log('[POST /api/recommendations/bom] Aucune recommandation générée. Raison:', reason)
     }
 
-    return NextResponse.json(result)
+    return NextResponse.json({ ...result, recommendationCreated })
   } catch (error) {
     logger.error('Error generating BOM recommendations:', error)
     return NextResponse.json(

@@ -84,6 +84,7 @@ export default function SettingsPage() {
   const currentRole = roleData ?? 'staff'
   const canViewSettings = permissions.canViewSettings(currentRole)
   const canEditSettings = permissions.canEditSettings(currentRole)
+  const canViewBilling = permissions.canViewBilling(currentRole)
   const canEditName = canEditSettings && (membership?.role === 'org:admin' || membership?.role === 'org:creator' || (organization as { createdBy?: string } | null)?.createdBy === user?.id)
 
   // Ne pas afficher "accès refusé" tant que le rôle n'est pas chargé (évite le flash admin→refusé au rechargement)
@@ -273,12 +274,12 @@ export default function SettingsPage() {
 
           <div className="space-y-2">
             <Label htmlFor="shrink-pct">
-              Pourcentage de shrink (gaspillage) par défaut
+              Pourcentage de gaspillage par défaut
             </Label>
             <div className="flex items-center gap-2">
               <Input
                 id="shrink-pct"
-                aria-label="Pourcentage de shrink (gaspillage) par défaut"
+                aria-label="Pourcentage de gaspillage par défaut (pertes, casse, etc.)"
                 type="number"
                 step="0.01"
                 min="0"
@@ -292,7 +293,7 @@ export default function SettingsPage() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ce pourcentage est utilisé pour calculer le gaspillage estimé dans les prévisions et les quantités à commander. Valeur entre 0 (0%) et 1 (100%). Pour l&apos;estimer : suivez votre gaspillage réel ou partez d&apos;une fourchette courante (5–15 %), puis affinez.
+              Anticipe les pertes (gaspillage, casse). Concrètement : avec 10 %, les quantités à commander (dans les recommandations) sont augmentées de 10 % par rapport au besoin calculé. Saisissez entre 0 et 1 (ex. 0,1 = 10 %). Pour l&apos;estimer : observez vos pertes réelles ou partez de 5–15 %, puis affinez.
             </p>
           </div>
 
@@ -458,28 +459,30 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Section Facturation */}
-      <Card className="rounded-xl border shadow-sm bg-card">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center" aria-hidden="true">
-              <CreditCard className="h-4 w-4 text-white" />
+      {/* Section Facturation (admin uniquement) */}
+      {canViewBilling && (
+        <Card className="rounded-xl border shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center" aria-hidden="true">
+                <CreditCard className="h-4 w-4 text-white" />
+              </div>
+              <CardTitle className="text-lg font-semibold">Facturation</CardTitle>
             </div>
-            <CardTitle className="text-lg font-semibold">Facturation</CardTitle>
-          </div>
-          <CardDescription className="mt-1">
-            Gérez votre abonnement, votre moyen de paiement et consultez vos factures.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild variant="outline" className="bg-gray-50 dark:bg-gray-800 border-border hover:bg-gray-100 dark:hover:bg-gray-700">
-            <Link href="/dashboard/settings/billing">
-              Voir la facturation et l&apos;abonnement
-              <ArrowRight className="h-4 w-4 ml-2" aria-hidden="true" />
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+            <CardDescription className="mt-1">
+              Gérez votre abonnement, votre moyen de paiement et consultez vos factures.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="bg-gray-50 dark:bg-gray-800 border-border hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Link href="/dashboard/settings/billing">
+                Voir la facturation et l&apos;abonnement
+                <ArrowRight className="h-4 w-4 ml-2" aria-hidden="true" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Section Admin - Lien de paiement (super-admin uniquement) */}
       {isSuperAdmin && (
@@ -506,40 +509,42 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* Section Danger Zone */}
+      {/* Section Danger Zone (admin uniquement) */}
+      {canEditSettings && (
         <Card className="rounded-xl border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
-              <Shield className="h-4 w-4 text-white" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-red-800 dark:text-red-400">Zone de danger</CardTitle>
-          </div>
-          <CardDescription className="mt-1 text-red-700 dark:text-red-300">
-            Actions irréversibles sur votre organisation
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1 flex-1">
-                <h4 className="font-semibold text-red-800 dark:text-red-400">Supprimer l&apos;organisation</h4>
-                <p className="text-sm text-red-700 dark:text-red-300">
-                  Cette action est irréversible. Toutes les données de l&apos;organisation seront définitivement supprimées.
-                </p>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-white" />
               </div>
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteDialog(true)}
-                className="shadow-sm flex-shrink-0"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Supprimer
-              </Button>
+              <CardTitle className="text-lg font-semibold text-red-800 dark:text-red-400">Zone de danger</CardTitle>
             </div>
-          </div>
-        </CardContent>
+            <CardDescription className="mt-1 text-red-700 dark:text-red-300">
+              Actions irréversibles sur votre organisation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1 flex-1">
+                  <h4 className="font-semibold text-red-800 dark:text-red-400">Supprimer l&apos;organisation</h4>
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    Cette action est irréversible. Toutes les données de l&apos;organisation seront définitivement supprimées.
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="shadow-sm flex-shrink-0"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer
+                </Button>
+              </div>
+            </div>
+          </CardContent>
         </Card>
+      )}
       </div>
 
       {/* Dialog de confirmation de suppression */}

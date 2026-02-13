@@ -194,19 +194,23 @@ export async function POST(request: NextRequest) {
 
     const date = forecastDate ? new Date(forecastDate) : new Date()
 
-    let recommendations
     if (type === 'ORDER') {
-      recommendations = await generateOrderRecommendations(restaurantId, date)
-    } else if (type === 'STAFFING') {
-      recommendations = await generateStaffingRecommendations(restaurantId, date)
-    } else {
-      return NextResponse.json(
-        { error: 'Invalid type. Must be ORDER or STAFFING' },
-        { status: 400 }
-      )
+      const recommendations = await generateOrderRecommendations(restaurantId, date)
+      return NextResponse.json({ success: true, recommendations })
     }
-
-    return NextResponse.json({ success: true, recommendations })
+    if (type === 'STAFFING') {
+      const result = await generateStaffingRecommendations(restaurantId, date)
+      return NextResponse.json({
+        success: true,
+        recommendations: result.recommendations,
+        recommendationCreated: result.recommendationCreated,
+        alreadyDismissedForPeriod: result.alreadyDismissedForPeriod,
+      })
+    }
+    return NextResponse.json(
+      { error: 'Invalid type. Must be ORDER or STAFFING' },
+      { status: 400 }
+    )
   } catch (error) {
     logger.error('Error generating recommendations:', error)
     return NextResponse.json(

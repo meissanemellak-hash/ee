@@ -32,6 +32,8 @@ interface RecommendationDetails {
     packSize: number | null
     numberOfPacks: number | null
     supplierName: string | null
+    /** 'forecast' = besoin issu des prévisions ; 'threshold' = basé sur le seuil min (pas de prévision ou rupture) */
+    recommendationSource?: 'forecast' | 'threshold'
   }>
   assumptions: {
     shrinkPct: number
@@ -272,6 +274,7 @@ export async function generateBOMOrderRecommendations(
         packSize,
         numberOfPacks,
         supplierName: inv.ingredient.supplierName,
+        recommendationSource: 'threshold',
       })
     }
 
@@ -404,6 +407,9 @@ export async function generateBOMOrderRecommendations(
         ingredient = foundIngredient
       }
 
+      const fromForecast = need.neededQuantity > 0
+      const displayNeed = fromForecast ? need.neededQuantity : (minThreshold > 0 ? minThreshold : 0)
+
       recommendations.push({
         ingredientId: ingredient.id,
         ingredientName: ingredient.name,
@@ -411,18 +417,21 @@ export async function generateBOMOrderRecommendations(
         recommendedQuantity: quantityToOrder,
         unit: ingredient.unit,
         estimatedCost: quantityToOrder * ingredient.costPerUnit,
-        reason: `Basé sur les prévisions de ventes pour les ${days} prochains jours (shrink: ${(shrinkPct * 100).toFixed(1)}%)`,
+        reason: fromForecast
+          ? `Basé sur les prévisions de ventes pour les ${days} prochains jours (gaspillage: ${(shrinkPct * 100).toFixed(1)}%)`
+          : `Rupture de stock : en dessous du seuil minimum (${minThreshold} ${ingredient.unit}). Réapprovisionnement recommandé.`,
       })
 
       detailsIngredients.push({
         ingredientId: ingredient.id,
         ingredientName: ingredient.name,
-        neededQuantity: need.neededQuantity,
+        neededQuantity: displayNeed,
         currentStock,
         quantityToOrder,
         packSize: need.packSize,
         numberOfPacks,
         supplierName: need.supplierName,
+        recommendationSource: fromForecast ? 'forecast' : 'threshold',
       })
     } else {
       // Compter les ingrédients avec stock suffisant
@@ -471,6 +480,7 @@ export async function generateBOMOrderRecommendations(
       packSize,
       numberOfPacks,
       supplierName: inv.ingredient.supplierName,
+      recommendationSource: 'threshold',
     })
   }
 

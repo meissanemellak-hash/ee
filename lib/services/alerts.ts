@@ -22,6 +22,24 @@ export async function createAlert(input: AlertInput) {
   })
 }
 
+/** Message d’alerte rupture de stock selon la sévérité (critique / élevée / moyenne). */
+function buildShortageMessage(
+  severity: 'critical' | 'high' | 'medium',
+  ingredientName: string,
+  currentStock: number,
+  unit: string,
+  minThreshold: number
+): string {
+  const base = `${ingredientName}: ${currentStock} ${unit} (seuil min: ${minThreshold})`
+  if (severity === 'critical') {
+    return `Rupture de stock critique — ${base}. Réapprovisionnement urgent.`
+  }
+  if (severity === 'high') {
+    return `Rupture de stock pour ${base}. Réapprovisionnement recommandé.`
+  }
+  return `Rupture de stock imminente pour ${base}. À surveiller.`
+}
+
 /**
  * État actuel des alertes dérivé de l'inventaire (sans écrire en base).
  * Utilisé pour afficher "État actuel" sur la page Alertes et éviter les faux négatifs.
@@ -59,10 +77,11 @@ export async function getCurrentAlertsStateFromInventory(restaurantId: string): 
     if (inv.currentStock < inv.minThreshold) {
       const percentage = (inv.currentStock / inv.minThreshold) * 100
       const severity = percentage < 20 ? 'critical' : percentage < 50 ? 'high' : 'medium'
+      const msg = buildShortageMessage(severity, inv.ingredient.name, inv.currentStock, inv.ingredient.unit, inv.minThreshold)
       items.push({
         type: 'SHORTAGE',
         ingredientName: inv.ingredient.name,
-        message: `Rupture imminente pour ${inv.ingredient.name}: ${inv.currentStock} ${inv.ingredient.unit} (seuil min: ${inv.minThreshold})`,
+        message: msg,
         severity,
       })
     }
@@ -109,12 +128,12 @@ export async function checkInventoryAlerts(restaurantId: string) {
       const percentage = (inv.currentStock / inv.minThreshold) * 100
       const severity: AlertSeverity =
         percentage < 20 ? 'critical' : percentage < 50 ? 'high' : 'medium'
-
+      const message = buildShortageMessage(severity, inv.ingredient.name, inv.currentStock, inv.ingredient.unit, inv.minThreshold)
       await createAlert({
         restaurantId,
         type: 'SHORTAGE',
         severity,
-        message: `Rupture de stock imminente pour ${inv.ingredient.name}: ${inv.currentStock} ${inv.ingredient.unit} (seuil min: ${inv.minThreshold})`,
+        message,
       })
     }
   }
@@ -199,7 +218,7 @@ export async function checkForecastAlerts(restaurantId: string) {
           restaurantId,
           type: 'SHORTAGE',
           severity,
-          message: `Risque de rupture pour ${productIngredient.ingredient.name} ${whenLabel} (le ${forecast.forecastDate.toLocaleDateString('fr-FR')}). Stock actuel: ${inv.currentStock} ${productIngredient.ingredient.unit}, besoin estimé: ${neededQuantity.toFixed(2)}`,
+          message: `Risque de rupture de stock pour ${productIngredient.ingredient.name} ${whenLabel} (le ${forecast.forecastDate.toLocaleDateString('fr-FR')}). Stock actuel: ${inv.currentStock} ${productIngredient.ingredient.unit}, besoin estimé: ${neededQuantity.toFixed(2)}`,
         })
       }
     }

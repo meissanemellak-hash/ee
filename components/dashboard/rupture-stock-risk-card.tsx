@@ -2,42 +2,47 @@
 
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Package, HelpCircle } from 'lucide-react'
+import { AlertTriangle, HelpCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
-const WASTE_EXPLANATION =
-  'Ce montant vient des produits en surstock (stock au-dessus du seuil max) : on multiplie le surplus par le coût unitaire de chaque ingrédient. Si ce calcul n\'est pas possible, on utilise une estimation forfaitaire (800 € par alerte de surstock).'
+const RUPTURE_EXPLICATION =
+  "Ce montant estime l'impact financier des alertes de rupture de stock (niveau élevé et critique). Il est calculé à partir du coût des quantités manquantes et d'une marge estimée perdue. Plus le nombre d'alertes et le coût des ingrédients concernés sont élevés, plus le montant est élevé."
 
-export function DashboardWasteCard({ estimatedWaste }: { estimatedWaste: number }) {
+interface RuptureStockRiskCardProps {
+  criticalAlertsRisk: number
+  criticalAlertsCount: number
+}
+
+export function RuptureStockRiskCard({ criticalAlertsRisk, criticalAlertsCount }: RuptureStockRiskCardProps) {
   const [showExplanation, setShowExplanation] = useState(false)
 
   return (
     <Card className="rounded-xl border shadow-sm bg-card">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-          Gaspillage estimé
+          Risque de rupture de stock (7 jours)
           <button
             type="button"
             onClick={() => setShowExplanation((v) => !v)}
             className="inline-flex text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded focus:outline-none"
-            aria-label="Afficher l'explication du gaspillage estimé"
+            aria-label="Afficher l'explication du risque de rupture de stock"
           >
             <HelpCircle className="h-3.5 w-3.5" />
           </button>
         </CardTitle>
-        <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" aria-hidden="true" />
+        <AlertTriangle className="h-4 w-4 text-orange-600" aria-hidden="true" />
       </CardHeader>
       <CardContent>
         {showExplanation && (
           <p className="text-xs text-muted-foreground mb-2 p-2 rounded-md bg-muted/60 border border-border">
-            {WASTE_EXPLANATION}
+            {RUPTURE_EXPLICATION}
           </p>
         )}
-        <div className="text-3xl font-bold">
-          {formatCurrency(estimatedWaste)}
+        <div className="text-3xl font-bold text-orange-600">
+          {formatCurrency(criticalAlertsRisk)}
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Produits frais surstockés ce mois-ci
+          {criticalAlertsCount} restaurant{criticalAlertsCount !== 1 ? 's' : ''} concerné{criticalAlertsCount !== 1 ? 's' : ''}
         </p>
       </CardContent>
     </Card>

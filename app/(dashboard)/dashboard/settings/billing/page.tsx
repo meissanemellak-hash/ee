@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { auth, clerkClient, currentUser } from '@clerk/nextjs/server'
 import { getCurrentOrganization } from '@/lib/auth'
+import { getCurrentUserRole } from '@/lib/auth-role'
+import { can } from '@/lib/roles'
 import { prisma } from '@/lib/db/prisma'
 import { logger } from '@/lib/logger'
 import { syncStripeSubscriptionToOrg, refreshSubscriptionFromStripe } from '@/lib/sync-stripe-subscription'
@@ -84,6 +86,14 @@ export default async function BillingPage() {
         </div>
       </main>
     )
+  }
+
+  const clerkOrgId = organization.clerkOrgId
+  if (clerkOrgId) {
+    const role = await getCurrentUserRole(userId, clerkOrgId)
+    if (!can(role, 'billing:view')) {
+      redirect('/dashboard/settings')
+    }
   }
 
   let subscription = await prisma.subscription.findUnique({

@@ -166,7 +166,14 @@ export default function SalesPage() {
       hour: s.saleHour,
     }))
     const filename = `ventes_${new Date().toISOString().slice(0, 10)}.csv`
-    exportToCsv(csvData, filename)
+    exportToCsv(csvData, filename, [
+      { key: 'restaurant', header: 'Restaurant' },
+      { key: 'product', header: 'Produit' },
+      { key: 'quantity', header: 'Quantité' },
+      { key: 'amount', header: 'Montant' },
+      { key: 'date', header: 'Date' },
+      { key: 'hour', header: 'Heure' },
+    ])
   }
 
   if (!isLoaded) {
@@ -254,9 +261,15 @@ export default function SalesPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
+            <Button variant="outline" className="shadow-sm" asChild aria-label="Voir l'analyse">
+              <Link href="/dashboard/sales/analyze">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Voir l&apos;analyse
+              </Link>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="shadow-sm" aria-label="Import, export et analyse">
+                <Button variant="outline" className="shadow-sm" aria-label="Import et export">
                   <Download className="h-4 w-4 mr-2" />
                   Import / export
                   <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
@@ -275,12 +288,6 @@ export default function SalesPage() {
                     </Link>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/sales/analyze">
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Voir l&apos;analyse
-                  </Link>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             {canCreate && (
@@ -318,7 +325,7 @@ export default function SalesPage() {
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Quantité totale vendue</CardTitle>
-              <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <ShoppingCart className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{totalQuantity}</div>}

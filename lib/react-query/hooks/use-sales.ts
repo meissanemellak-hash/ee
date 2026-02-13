@@ -217,6 +217,9 @@ export function useCreateSale() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales', organization?.id] })
+      queryClient.invalidateQueries({ queryKey: ['restaurants'] })
+      queryClient.invalidateQueries({ queryKey: ['restaurant'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
       toast({
         title: 'Vente créée',
         description: 'La vente a été créée avec succès.',
@@ -257,6 +260,9 @@ export function useUpdateSale() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sales', organization?.id] })
       queryClient.invalidateQueries({ queryKey: ['sale', variables.id, organization?.id] })
+      queryClient.invalidateQueries({ queryKey: ['restaurants'] })
+      queryClient.invalidateQueries({ queryKey: ['restaurant'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
       toast({
         title: 'Vente modifiée',
         description: 'La vente a été modifiée avec succès.',
@@ -327,6 +333,9 @@ export function useDeleteSale() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['sales', organization?.id] })
+      queryClient.invalidateQueries({ queryKey: ['restaurants'] })
+      queryClient.invalidateQueries({ queryKey: ['restaurant'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
     },
   })
 }
@@ -368,6 +377,9 @@ export function useImportSales() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['sales', organization?.id] })
+      queryClient.invalidateQueries({ queryKey: ['restaurants'] })
+      queryClient.invalidateQueries({ queryKey: ['restaurant'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
       const { title, errorDetail } = getImportToastTitleAndErrorDetail(data.errors)
       const description = errorDetail
         ? `${data.imported} vente${data.imported > 1 ? 's' : ''} importée${data.imported > 1 ? 's' : ''}, ${data.errors!.length} erreur${data.errors!.length > 1 ? 's' : ''} : ${errorDetail}`

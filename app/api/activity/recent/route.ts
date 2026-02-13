@@ -5,6 +5,19 @@ import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
+const alertTypeLabels: Record<string, string> = {
+  OVERSTOCK: 'Surstock',
+  SHORTAGE: 'Rupture de stock',
+  OVERSTAFFING: 'Sur-effectif',
+  UNDERSTAFFING: 'Sous-effectif',
+  OTHER: 'Autre',
+}
+
+/** Normalise « rupture(s) » → « rupture(s) de stock » pour cohérence partout. */
+function formatAlertMessage(msg: string): string {
+  return msg.replace(/\b(ruptures?)\b(?!\s+de\s+stock)/gi, (_, word) => `${word} de stock`)
+}
+
 /**
  * GET /api/activity/recent
  * Récupère l'activité récente de l'organisation
@@ -238,32 +251,34 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Ajouter les alertes créées
+    // Ajouter les alertes créées (avec sévérité pour les couleurs du dashboard)
     recentAlerts.forEach((alert) => {
       if (alert.restaurant) {
         activities.push({
           id: `alert-${alert.id}`,
           type: 'alert_created',
-          title: `Alerte : ${alert.type}`,
-          description: alert.message,
+          title: `Alerte : ${alertTypeLabels[alert.type] ?? alert.type}`,
+          description: formatAlertMessage(alert.message),
           restaurantName: alert.restaurant.name,
           date: alert.createdAt,
           icon: '⚠️',
+          severity: alert.severity ?? 'medium',
         })
       }
     })
 
-    // Ajouter les alertes résolues
+    // Ajouter les alertes résolues (avec sévérité pour les couleurs du dashboard)
     recentResolvedAlerts.forEach((alert) => {
       if (alert.restaurant) {
         activities.push({
           id: `alert-resolved-${alert.id}`,
           type: 'alert_resolved',
-          title: `Alerte résolue : ${alert.type}`,
-          description: alert.message,
+          title: `Alerte résolue : ${alertTypeLabels[alert.type] ?? alert.type}`,
+          description: formatAlertMessage(alert.message),
           restaurantName: alert.restaurant.name,
           date: alert.resolvedAt || alert.updatedAt,
           icon: '✓',
+          severity: alert.severity ?? 'medium',
         })
       }
     })

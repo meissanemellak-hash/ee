@@ -185,6 +185,16 @@ export default function IngredientDetailPage() {
                   <span className="text-sm font-medium">{ingredient.packSize} {ingredient.unit}</span>
                 </div>
               )}
+              {ingredient.packSize != null && ingredient.packSize > 0 && (
+                <div className="p-4 rounded-xl bg-teal-50/80 dark:bg-teal-900/20 border border-teal-100/80 dark:border-teal-900/30">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Coût total de la commande</span>
+                    <span className="text-xl font-bold text-teal-700 dark:text-teal-400">
+                      {formatCurrency(ingredient.costPerUnit * ingredient.packSize)}
+                    </span>
+                  </div>
+                </div>
+              )}
               {ingredient.supplierName && (
                 <div className="flex justify-between items-center py-2 border-b border-border/80">
                   <span className="text-sm text-muted-foreground">Fournisseur</span>

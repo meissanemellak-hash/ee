@@ -25,7 +25,7 @@ export function GaspillageEstimeCard({ estimatedWaste }: { estimatedWaste: numbe
             <HelpCircle className="h-3.5 w-3.5" />
           </button>
         </CardTitle>
-        <Package className="h-4 w-4 text-amber-600" aria-hidden="true" />
+        <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" aria-hidden="true" />
       </CardHeader>
       <CardContent>
         {showExplanation && (

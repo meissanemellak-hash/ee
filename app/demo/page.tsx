@@ -129,7 +129,7 @@ export default function DemoPage() {
             <textarea
               id="priorites"
               rows={3}
-              placeholder="Ex. réduire le gaspillage, anticiper les ruptures, centraliser les données, avoir une vue groupe en temps réel..."
+              placeholder="Ex. réduire le gaspillage, anticiper les ruptures de stock, centraliser les données, avoir une vue groupe en temps réel..."
               value={priorites}
               onChange={(e) => setPriorites(e.target.value)}
               className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"

@@ -111,17 +111,21 @@ export default function ForecastsPage() {
     setSeasonalityDayOfWeek(monBased)
   }, [forecastDate, generationMode])
 
-  // Plage limitée à 7 jours : ramener la date de fin si elle dépasse après changement de date de début
+  // Plage limitée à 31 jours : ramener la date de fin si elle dépasse (start + 30) ou (aujourd'hui + 31)
   useEffect(() => {
     if (!startDateRange || !endDateRange) return
     const start = new Date(startDateRange + 'T12:00:00')
-    const maxEnd = new Date(start)
-    maxEnd.setDate(maxEnd.getDate() + 6)
-    const maxEndIso = maxEnd.toISOString().split('T')[0]
-    if (endDateRange > maxEndIso) {
-      setEndDateRange(maxEndIso)
+    const maxEndFromStart = new Date(start)
+    maxEndFromStart.setDate(maxEndFromStart.getDate() + 30)
+    const maxEndFromStartIso = maxEndFromStart.toISOString().split('T')[0]
+    const d = new Date()
+    d.setDate(d.getDate() + 31)
+    const maxSingleIso = d.toISOString().split('T')[0]
+    const cap = maxEndFromStartIso > maxSingleIso ? maxSingleIso : maxEndFromStartIso
+    if (endDateRange > cap) {
+      setEndDateRange(cap)
     }
-  }, [startDateRange])
+  }, [startDateRange, endDateRange])
 
   /** Retourne la date (ISO string) du jour choisi dans la semaine de la date donnée. dayIndex 0 = Lundi, 6 = Dimanche. */
   const getDateOfDayInWeek = (isoDate: string, dayIndex: number): string => {
@@ -174,16 +178,25 @@ export default function ForecastsPage() {
       : ''
   const isPastDateSingle = !!forecastDate && dateToUseSingle < todayIso
   const isPastDateRange = !!startDateRange && startDateRange < todayIso
-  // Plage limitée à 7 jours : date de fin au plus start + 6
+  // Date unique : au plus 31 jours dans le futur (cohérent avec le titre)
+  const maxSingleDateIso = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 31)
+    return d.toISOString().split('T')[0]
+  })()
+  const isSingleDateOver31Days = generationMode === 'single' && !!dateToUseSingle && dateToUseSingle > maxSingleDateIso
+  // Plage limitée à 31 jours : date de fin au plus start + 30, et au plus aujourd'hui + 31
   const maxEndDateRange =
     startDateRange
       ? (() => {
           const d = new Date(startDateRange + 'T12:00:00')
-          d.setDate(d.getDate() + 6)
+          d.setDate(d.getDate() + 30)
           return d.toISOString().split('T')[0]
         })()
       : ''
-  const isRangeOver7Days =
+  const maxEndDateRangeCapped =
+    maxEndDateRange && maxEndDateRange > maxSingleDateIso ? maxSingleDateIso : maxEndDateRange || undefined
+  const isRangeOver31Days =
     !!startDateRange &&
     !!endDateRange &&
     new Date(endDateRange) > new Date(maxEndDateRange)
@@ -343,7 +356,7 @@ export default function ForecastsPage() {
             </CardDescription>
             <div className="mt-3 p-3 rounded-xl bg-teal-100/50 dark:bg-teal-900/20 border border-teal-200/80 dark:border-teal-900/30">
               <p className="text-xs text-teal-800 dark:text-teal-300">
-                Les prévisions se basent sur l’historique des ventes des jours précédant la date sélectionnée. En plage, une prévision est générée pour chaque jour ; le jour de la semaine utilisé est celui de chaque date (pas de choix de jour).
+                Les prévisions se basent sur l’historique des ventes des jours précédant la date sélectionnée. En mode une date, vous choisissez un jour de la semaine pour générer une prévision. En plage, des prévisions sont générées pour chaque jour (une par produit et par jour).
               </p>
             </div>
             {selectedRestaurantHasNoSales && (
@@ -360,13 +373,14 @@ export default function ForecastsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="forecast-restaurant">Restaurant *</Label>
                   <Select
-                    value={selectedRestaurant === 'all' ? '' : selectedRestaurant}
+                    value={selectedRestaurant}
                     onValueChange={(value) => setSelectedRestaurant(value || 'all')}
                   >
                     <SelectTrigger id="forecast-restaurant" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Sélectionner un restaurant">
                       <SelectValue placeholder="Sélectionner un restaurant" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">Tous les restaurants</SelectItem>
                       {restaurants.map((restaurant) => (
                         <SelectItem key={restaurant.id} value={restaurant.id}>
                           {restaurant.name}
@@ -397,10 +411,14 @@ export default function ForecastsPage() {
                       id="forecast-date"
                       type="date"
                       value={forecastDate}
-                      onChange={(e) => setForecastDate(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setForecastDate(v > maxSingleDateIso ? maxSingleDateIso : v)
+                      }}
                       min={todayIso}
+                      max={maxSingleDateIso}
                       className="bg-muted/50 dark:bg-gray-900 border-border"
-                      aria-label="Date de prévision"
+                      aria-label="Date de prévision (max. 31 jours)"
                     />
                   </div>
                   <div className="space-y-2">
@@ -410,7 +428,8 @@ export default function ForecastsPage() {
                       onValueChange={(v) => {
                         const dayIndex = Number(v)
                         setSeasonalityDayOfWeek(dayIndex)
-                        setForecastDate(getDateOfDayInWeek(forecastDate, dayIndex))
+                        const nextDate = getDateOfDayInWeek(forecastDate, dayIndex)
+                        setForecastDate(nextDate > maxSingleDateIso ? maxSingleDateIso : nextDate)
                       }}
                     >
                       <SelectTrigger id="forecast-day" className="bg-muted/50 dark:bg-gray-900 border-border" aria-label="Jour pour la prévision">
@@ -434,13 +453,13 @@ export default function ForecastsPage() {
                       className="flex h-10 w-full items-center rounded-md border border-border bg-muted/50 px-3 py-2 text-sm dark:bg-gray-900"
                       aria-label="Méthode fixe pour une date"
                     >
-                      <span>Moyenne par jour de la semaine</span>
+                      <span>Prévisions pour un jour précis</span>
                     </div>
                   </div>
                   <div className="space-y-2 flex items-end">
                     <Button
                       onClick={handleGenerate}
-                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !forecastDate || selectedRestaurantHasNoSales || isPastDateSingle}
+                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !forecastDate || selectedRestaurantHasNoSales || isPastDateSingle || isSingleDateOver31Days}
                       className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                     >
                       {generateForecasts.isPending ? (
@@ -465,10 +484,14 @@ export default function ForecastsPage() {
                       id="forecast-start-range"
                       type="date"
                       value={startDateRange}
-                      onChange={(e) => setStartDateRange(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setStartDateRange(v > maxSingleDateIso ? maxSingleDateIso : v)
+                      }}
                       min={todayIso}
+                      max={maxSingleDateIso}
                       className="bg-muted/50 dark:bg-gray-900 border-border"
-                      aria-label="Date de début de la plage"
+                      aria-label="Date de début de la plage (max. 31 jours)"
                     />
                   </div>
                   <div className="space-y-2">
@@ -477,11 +500,15 @@ export default function ForecastsPage() {
                       id="forecast-end-range"
                       type="date"
                       value={endDateRange}
-                      onChange={(e) => setEndDateRange(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        const maxCap = maxEndDateRangeCapped || maxSingleDateIso
+                        setEndDateRange(v > maxCap ? maxCap : v)
+                      }}
                       min={startDateRange || todayIso}
-                      max={maxEndDateRange || undefined}
+                      max={maxEndDateRangeCapped}
                       className="bg-muted/50 dark:bg-gray-900 border-border"
-                      aria-label="Date de fin de la plage (max. 7 jours)"
+                      aria-label="Date de fin de la plage (max. 31 jours)"
                     />
                   </div>
                   <div className="space-y-2">
@@ -491,13 +518,13 @@ export default function ForecastsPage() {
                       className="flex h-10 w-full items-center rounded-md border border-border bg-muted/50 px-3 py-2 text-sm dark:bg-gray-900"
                       aria-label="Méthode fixe pour plage de dates"
                     >
-                      <span>Moyenne 7 jours (tous les jours)</span>
+                      <span>Prévisions 7 jours (tous les jours)</span>
                     </div>
                   </div>
                   <div className="space-y-2 flex items-end">
                     <Button
                       onClick={handleGenerate}
-                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !startDateRange || !endDateRange || new Date(startDateRange) > new Date(endDateRange) || selectedRestaurantHasNoSales || isPastDateRange || isRangeOver7Days}
+                      disabled={generateForecasts.isPending || !selectedRestaurant || selectedRestaurant === 'all' || !startDateRange || !endDateRange || new Date(startDateRange) > new Date(endDateRange) || selectedRestaurantHasNoSales || isPastDateRange || isRangeOver31Days}
                       className="w-full shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
                     >
                       {generateForecasts.isPending ? (
@@ -595,7 +622,7 @@ export default function ForecastsPage() {
                       setActiveRestaurantId(v === 'all' ? null : v)
                     }}
                   >
-                    <SelectTrigger id="list-forecast-restaurant" className="w-[160px] h-9 text-sm bg-muted/50 dark:bg-gray-800 border-border" aria-label="Filtrer par restaurant">
+                    <SelectTrigger id="list-forecast-restaurant" className="w-[160px] h-9 text-sm bg-muted/50 dark:bg-gray-800 border-border [&>span]:text-foreground [&>span]:flex-1 [&>span]:min-w-0 [&>span]:text-left" aria-label="Filtrer par restaurant">
                       <SelectValue placeholder="Tous" />
                     </SelectTrigger>
                     <SelectContent>
@@ -715,7 +742,7 @@ export default function ForecastsPage() {
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Méthode: {forecast.method === 'moving_average' ? 'Moyenne 7 jours (tous les jours)' : 'Moyenne par jour de la semaine'} • Confiance: {forecast.confidence != null ? `${Math.max(forecast.confidence * 100, 60).toFixed(0)}%` : 'N/A'}
+                            Méthode: {forecast.method === 'moving_average' ? 'Prévisions 7 jours (tous les jours)' : 'Prévisions pour un jour précis'} • Confiance: {forecast.confidence != null ? `${Math.max(forecast.confidence * 100, 60).toFixed(0)}%` : 'N/A'}
                           </p>
                         </div>
                       </div>

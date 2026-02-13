@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { exportToCsv } from '@/lib/utils'
-import { Store, Plus, Edit, Trash2, TrendingUp, Bell, MapPin, Upload, Download, ChevronDown } from 'lucide-react'
+import { Store, Plus, Edit, Trash2, ShoppingCart, AlertTriangle, MapPin, Upload, Download, ChevronDown } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,7 +80,11 @@ export default function RestaurantsPage() {
       fuseau: r.timezone,
     }))
     const filename = `restaurants_${new Date().toISOString().slice(0, 10)}.csv`
-    exportToCsv(csvData, filename)
+    exportToCsv(csvData, filename, [
+      { key: 'nom', header: 'Nom' },
+      { key: 'adresse', header: 'Adresse' },
+      { key: 'fuseau', header: 'Fuseau horaire' },
+    ])
   }
 
   if (!isLoaded) {
@@ -313,7 +317,7 @@ export default function RestaurantsPage() {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="p-3.5 rounded-xl bg-teal-50/80 dark:bg-teal-900/20 border border-teal-100/80 dark:border-teal-900/30">
                     <div className="flex items-center gap-2 mb-1">
-                      <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                      <ShoppingCart className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                       <span className="text-xs text-muted-foreground">Ventes</span>
                     </div>
                     <div className="text-xl font-bold text-teal-700 dark:text-teal-400">
@@ -326,7 +330,7 @@ export default function RestaurantsPage() {
                       : 'bg-muted/50 dark:bg-gray-800/50 border-border/80 dark:border-gray-800'
                   }`}>
                     <div className="flex items-center gap-2 mb-1">
-                      <Bell className={`h-4 w-4 ${
+                      <AlertTriangle className={`h-4 w-4 ${
                         (restaurant._count?.alerts || 0) > 0
                           ? 'text-orange-600 dark:text-orange-400'
                           : 'text-gray-500 dark:text-gray-400'

@@ -62,20 +62,36 @@ export async function GET(request: NextRequest) {
           )
 
           if (result.recommendations.length > 0) {
-            const dataToSave = {
-              ...result.details,
-              estimatedSavings: result.estimatedSavings,
-            }
-            await prisma.recommendation.create({
-              data: {
-                restaurantId: restaurant.id,
-                type: 'ORDER',
-                data: dataToSave as any,
-                priority: 'medium',
-                status: 'pending',
-              },
+            const details = result.details as { period?: { start: string; end: string } }
+            const periodStart = details?.period?.start
+            const periodEnd = details?.period?.end
+            const dismissedForRestaurant = await prisma.recommendation.findMany({
+              where: { restaurantId: restaurant.id, type: 'ORDER', status: 'dismissed' },
+              select: { data: true },
             })
-            orgCreated += result.recommendations.length
+            const alreadyDismissedSamePeriod =
+              !!periodStart &&
+              !!periodEnd &&
+              dismissedForRestaurant.some((r) => {
+                const d = r.data as { period?: { start?: string; end?: string } } | null
+                return d?.period?.start === periodStart && d?.period?.end === periodEnd
+              })
+            if (!alreadyDismissedSamePeriod) {
+              const dataToSave = {
+                ...result.details,
+                estimatedSavings: result.estimatedSavings,
+              }
+              await prisma.recommendation.create({
+                data: {
+                  restaurantId: restaurant.id,
+                  type: 'ORDER',
+                  data: dataToSave as any,
+                  priority: 'medium',
+                  status: 'pending',
+                },
+              })
+              orgCreated += result.recommendations.length
+            }
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Erreur inconnue'

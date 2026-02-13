@@ -174,19 +174,44 @@ export async function computeStaffingRecommendations(
   return recommendations
 }
 
+export interface GenerateStaffingResult {
+  recommendations: StaffingRecommendation[]
+  recommendationCreated: boolean
+  alreadyDismissedForPeriod?: boolean
+}
+
 /**
  * Génère et sauvegarde des recommandations de staffing
  * basées sur les prévisions de ventes par tranche horaire.
  * Ne crée pas de doublon : si une recommandation existe déjà pour ce restaurant et cette date, on ne crée pas une nouvelle.
+ * Si une recommandation pour cette date a déjà été rejetée, aucune nouvelle n'est créée.
  */
 export async function generateStaffingRecommendations(
   restaurantId: string,
   targetDate: Date = new Date()
-): Promise<StaffingRecommendation[]> {
+): Promise<GenerateStaffingResult> {
   const recommendations = await computeStaffingRecommendations(restaurantId, targetDate)
-  if (recommendations.length === 0) return []
+  if (recommendations.length === 0) {
+    return { recommendations: [], recommendationCreated: false }
+  }
 
   const targetDateStr = recommendations[0].date
+
+  // Ne pas recréer si une recommandation pour cette date a déjà été rejetée
+  const dismissedForRestaurant = await prisma.recommendation.findMany({
+    where: { restaurantId, type: 'STAFFING', status: 'dismissed' },
+    select: { data: true },
+  })
+  const alreadyDismissedSameDate = dismissedForRestaurant.some((r) => {
+    const d = r.data as unknown
+    const arr = Array.isArray(d) ? d : null
+    const first = arr?.[0] as { date?: string } | undefined
+    return first?.date === targetDateStr
+  })
+  if (alreadyDismissedSameDate) {
+    return { recommendations: [], recommendationCreated: false, alreadyDismissedForPeriod: true }
+  }
+
   const existing = await prisma.recommendation.findMany({
     where: { restaurantId, type: 'STAFFING', status: { not: 'dismissed' } },
     orderBy: { createdAt: 'desc' },
@@ -199,7 +224,9 @@ export async function generateStaffingRecommendations(
     const first = arr?.[0] as { date?: string } | undefined
     return first?.date === targetDateStr
   })
-  if (alreadyExists) return []
+  if (alreadyExists) {
+    return { recommendations: [], recommendationCreated: false }
+  }
 
   await prisma.recommendation.create({
     data: {
@@ -209,5 +236,5 @@ export async function generateStaffingRecommendations(
       priority: 'medium',
     },
   })
-  return recommendations
+  return { recommendations, recommendationCreated: true }
 }

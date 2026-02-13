@@ -62,6 +62,11 @@ const typeLabels: Record<string, string> = {
   OTHER: 'Autre',
 }
 
+/** Affiche le message d’alerte en normalisant « rupture » → « rupture de stock » pour cohérence. */
+function formatAlertMessage(message: string): string {
+  return message.replace(/\b(ruptures?)\b(?!\s+de\s+stock)/gi, (_, word) => `${word} de stock`)
+}
+
 export default function AlertsPage() {
   const { organization, isLoaded } = useOrganization()
   const searchParams = useSearchParams()
@@ -256,7 +261,7 @@ export default function AlertsPage() {
             )}
             {selectedRestaurant === 'all' && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                Sélectionnez un restaurant pour voir l&apos;état actuel (ruptures / surstocks) en temps réel.
+                Sélectionnez un restaurant pour voir l&apos;état actuel (ruptures de stock / surstocks) en temps réel.
               </p>
             )}
           </div>
@@ -301,7 +306,7 @@ export default function AlertsPage() {
                 État actuel (d&apos;après l&apos;inventaire)
               </CardTitle>
               <CardDescription className="mt-1">
-                Reflète l&apos;inventaire en temps réel. Les alertes sont synchronisées automatiquement à l&apos;ouverture de la page. La liste des alertes ci-dessous peut aussi contenir des «&nbsp;risque de rupture&nbsp;» basées sur les prévisions (ex. demain). Le total d&apos;alertes peut être supérieur au nombre de ruptures affichées dans l&apos;état actuel.
+                Reflète l&apos;inventaire en temps réel. Les alertes sont synchronisées automatiquement à l&apos;ouverture de la page. La liste des alertes ci-dessous peut aussi contenir des «&nbsp;risque de rupture de stock&nbsp;» basées sur les prévisions (ex. demain). Le total d&apos;alertes peut être supérieur au nombre de ruptures de stock affichées dans l&apos;état actuel.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -314,7 +319,7 @@ export default function AlertsPage() {
                 <>
                   <div className="flex flex-wrap gap-4">
                     <span className="text-sm">
-                      <strong className="text-red-700 dark:text-red-400">{currentState.shortages}</strong> rupture{currentState.shortages !== 1 ? 's' : ''} imminente{currentState.shortages !== 1 ? 's' : ''}
+                      <strong className="text-red-700 dark:text-red-400">{currentState.shortages}</strong> rupture{currentState.shortages !== 1 ? 's' : ''} de stock imminente{currentState.shortages !== 1 ? 's' : ''}
                     </span>
                     <span className="text-sm">
                       <strong className="text-amber-700 dark:text-amber-400">{currentState.overstocks}</strong> surstock{currentState.overstocks !== 1 ? 's' : ''}
@@ -322,7 +327,7 @@ export default function AlertsPage() {
                   </div>
                   {currentState.shortages === 0 && currentState.overstocks === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      Aucune rupture ni surstock détecté selon les seuils actuels.
+                      Aucune rupture de stock ni surstock détecté selon les seuils actuels.
                     </p>
                   )}
                 </>
@@ -334,7 +339,7 @@ export default function AlertsPage() {
         <Card className="rounded-xl border shadow-sm bg-card border-muted">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <Lightbulb className="h-4 w-4 text-teal-600 dark:text-teal-400" />
               Comment agir
             </CardTitle>
             <CardDescription className="mt-1">
@@ -496,7 +501,7 @@ export default function AlertsPage() {
                   ? 'Aucune alerte résolue trouvée avec ces filtres.'
                   : statusFilter === 'active'
                     ? (selectedRestaurant !== 'all' && currentState && (currentState.shortages > 0 || currentState.overstocks > 0))
-                      ? 'Des ruptures ou surstocks sont détectés dans l\'inventaire. La synchronisation des alertes est automatique ; la liste se met à jour en quelques secondes.'
+                      ? 'Des ruptures de stock ou surstocks sont détectés dans l\'inventaire. La synchronisation des alertes est automatique ; la liste se met à jour en quelques secondes.'
                       : 'Aucune alerte active. Tout va bien !'
                     : 'Aucune alerte trouvée avec ces filtres.'}
               </p>
@@ -579,7 +584,7 @@ export default function AlertsPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex justify-between items-start gap-4">
-                  <p className="flex-1 text-sm">{alert.message}</p>
+                  <p className="flex-1 text-sm">{formatAlertMessage(alert.message)}</p>
                   {canResolve && (
                     <div className="ml-4 flex-shrink-0">
                       {alert.resolved ? (
@@ -606,7 +611,7 @@ export default function AlertsPage() {
                         onClick={() => handleResolve(alert.id, true)}
                         disabled={updateAlertStatus.isPending}
                         className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
-                        aria-label={`Résoudre l’alerte : ${alert.message.slice(0, 50)}${alert.message.length > 50 ? '…' : ''}`}
+                        aria-label={`Résoudre l’alerte : ${formatAlertMessage(alert.message).slice(0, 50)}${alert.message.length > 50 ? '…' : ''}`}
                       >
                         {updateAlertStatus.isPending && updateAlertStatus.variables?.id === alert.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />

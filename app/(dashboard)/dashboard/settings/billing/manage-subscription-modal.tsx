@@ -143,9 +143,6 @@ export function ManageSubscriptionModal({
               <p className="text-sm text-muted-foreground">Aucune facture pour le moment.</p>
             ) : (
               <>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Le contenu des factures (nom, adresse) est défini par Stripe. Pour le modifier ou le masquer, utilisez le tableau de bord Stripe : Paramètres &gt; Factures &gt; Personnalisation.
-                </p>
                 <div className="border rounded-md overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>

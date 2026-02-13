@@ -170,25 +170,78 @@ export async function calculateExecutiveDashboardMetrics(
     take: 3,
   })
 
-  // 5. Calculer l'impact financier des alertes critiques
-  const criticalAlertsRisk = criticalAlerts.reduce((sum, alert) => {
-    // Estimation basée sur le type d'alerte
-    let estimatedImpact = 0
-    
+  // Inventaire des restaurants des alertes critiques (pour calcul d'impact basé sur les données)
+  const alertRestaurantIds = [...new Set(criticalAlerts.map((a) => a.restaurantId))]
+  const inventoryForAlerts =
+    alertRestaurantIds.length > 0
+      ? await prisma.inventory.findMany({
+          where: { restaurantId: { in: alertRestaurantIds } },
+          include: { ingredient: true },
+        })
+      : []
+  const inventoryByRestaurant = new Map<string, typeof inventoryForAlerts>()
+  for (const inv of inventoryForAlerts) {
+    const list = inventoryByRestaurant.get(inv.restaurantId) ?? []
+    list.push(inv)
+    inventoryByRestaurant.set(inv.restaurantId, list)
+  }
+
+  const quantityToCostUnit = (qty: number, unit: string | null | undefined): number => {
+    const u = (unit ?? '').toLowerCase().trim()
+    if (u === 'g' || u === 'gramme' || u === 'grammes') return qty / 1000
+    if (u === 'ml' || u === 'millilitre' || u === 'millilitres') return qty / 1000
+    return qty
+  }
+
+  const computeAlertImpact = (
+    alert: (typeof criticalAlerts)[0],
+    invList: Array<{ currentStock: number; minThreshold: number; maxThreshold: number | null; ingredient: { name: string; unit: string | null; costPerUnit: number } }>
+  ): number => {
     if (alert.type === 'SHORTAGE') {
-      // Rupture de stock : impact sur les ventes perdues
-      estimatedImpact = 2000 // Estimation conservatrice
-    } else if (alert.type === 'OVERSTOCK') {
-      // Surstock : risque de gaspillage
-      estimatedImpact = 1500
-    } else if (alert.type === 'OVERSTAFFING') {
-      // Sur-effectif : coût du personnel
-      estimatedImpact = 1000
-    } else {
-      estimatedImpact = 500
+      const nameMatch = alert.message.match(/pour\s+([^:(]+?)(?=\s*(?:\(|:|\d|demain|aujourd'hui|dans\s+\d|le\s+\d)|$)/i)
+      const ingredientName = nameMatch?.[1]?.trim()?.toLowerCase()
+      const inv = ingredientName
+        ? invList.find((i) => i.ingredient.name.toLowerCase().trim() === ingredientName)
+        : null
+      if (inv) {
+        let shortfall: number
+        const besoinMatch = alert.message.match(/besoin\s+estimé:\s*([\d.,]+)/i)
+        const stockMatch = alert.message.match(/Stock\s+actuel:\s*([\d.,]+)/i)
+        if (besoinMatch && stockMatch) {
+          const besoin = parseFloat(besoinMatch[1].replace(',', '.'))
+          const stock = parseFloat(stockMatch[1].replace(',', '.'))
+          shortfall = Math.max(0, besoin - stock)
+        } else {
+          shortfall = Math.max(0, inv.minThreshold - inv.currentStock)
+        }
+        const costPerUnit = inv.ingredient?.costPerUnit ?? 0
+        const impact = quantityToCostUnit(shortfall, inv.ingredient?.unit) * costPerUnit * 1.3 // marge perdue
+        return Math.round(Math.min(Math.max(impact, 50), 10000))
+      }
+      return 2000
     }
-    
-    return sum + estimatedImpact
+    if (alert.type === 'OVERSTOCK') {
+      const nameMatch = alert.message.match(/pour\s+([^:(]+?)(?=\s*[:(\d])/i)
+      const ingredientName = nameMatch?.[1]?.trim()?.toLowerCase()
+      const inv = ingredientName
+        ? invList.find((i) => i.ingredient.name.toLowerCase().trim() === ingredientName)
+        : null
+      if (inv && inv.maxThreshold != null && inv.currentStock > inv.maxThreshold) {
+        const surplus = inv.currentStock - inv.maxThreshold
+        const costPerUnit = inv.ingredient?.costPerUnit ?? 0
+        const impact = quantityToCostUnit(surplus, inv.ingredient?.unit) * costPerUnit
+        return Math.round(Math.min(Math.max(impact, 50), 8000))
+      }
+      return 1500
+    }
+    if (alert.type === 'OVERSTAFFING') return 1000
+    return 500
+  }
+
+  // 5. Calculer l'impact financier des alertes critiques (données réelles si possible, sinon forfait)
+  const criticalAlertsRisk = criticalAlerts.reduce((sum, alert) => {
+    const invList = inventoryByRestaurant.get(alert.restaurantId) ?? []
+    return sum + computeAlertImpact(alert, invList)
   }, 0)
 
   // 6. Récupérer les top recommandations actionnables (pending, triées par priorité)
@@ -273,7 +326,7 @@ export async function calculateExecutiveDashboardMetrics(
         const ingredientCount = data.ingredients.length
         message = `Commander ${ingredientCount} ingrédient${ingredientCount > 1 ? 's' : ''} → évite ~${Math.round(estimatedSavings)}€ de ventes perdues`
       } else {
-        message = `Commande recommandée → évite ~${Math.round(estimatedSavings)}€ de ruptures`
+        message = `Commande recommandée → évite ~${Math.round(estimatedSavings)}€ de ruptures de stock`
       }
     } else if (rec.type === 'STAFFING') {
       message = `Ajustement staffing → effectif recommandé par créneau`
@@ -291,20 +344,10 @@ export async function calculateExecutiveDashboardMetrics(
     }
   })
 
-  // Formater les alertes critiques
+  // Formater les alertes critiques (impact calculé depuis inventaire/coûts ou forfait)
   const formattedAlerts = criticalAlerts.map((alert) => {
-    let estimatedImpact = 0
-    
-    if (alert.type === 'SHORTAGE') {
-      estimatedImpact = 2000
-    } else if (alert.type === 'OVERSTOCK') {
-      estimatedImpact = 1500
-    } else if (alert.type === 'OVERSTAFFING') {
-      estimatedImpact = 1000
-    } else {
-      estimatedImpact = 500
-    }
-
+    const invList = inventoryByRestaurant.get(alert.restaurantId) ?? []
+    const estimatedImpact = computeAlertImpact(alert, invList)
     return {
       id: alert.id,
       type: alert.type,

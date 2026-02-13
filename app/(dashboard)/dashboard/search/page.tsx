@@ -45,7 +45,7 @@ const SEARCHABLE_SECTIONS: { test: (q: string) => boolean; label: string; descri
   { test: (q) => /^ventes?$/i.test(q.trim()), label: 'Ventes & Analyse', description: 'Voir les ventes et l\'analyse', href: '/dashboard/sales', icon: BarChart3 },
   { test: (q) => /^pr[eé]visions?$/i.test(q.trim()), label: 'Prévisions', description: 'Prévisions de demande et commandes', href: '/dashboard/forecasts', icon: TrendingUp },
   { test: (q) => /^recommandations?$/i.test(q.trim()), label: 'Recommandations', description: 'Recommandations d\'achat et d\'effectifs', href: '/dashboard/recommendations', icon: Lightbulb },
-  { test: (q) => /^alertes?$/i.test(q.trim()), label: 'Alertes', description: 'Alertes rupture et seuils', href: '/dashboard/alerts', icon: Bell },
+  { test: (q) => /^alertes?$/i.test(q.trim()), label: 'Alertes', description: 'Alertes rupture de stock et seuils', href: '/dashboard/alerts', icon: Bell },
   { test: (q) => /^rapports?$/i.test(q.trim()), label: 'Rapports', description: 'Générer et exporter des rapports', href: '/dashboard/reports', icon: FileText },
   { test: (q) => /^param[eè]tres?$/i.test(q.trim()), label: 'Paramètres', description: 'Organisation, facturation, préférences', href: '/dashboard/settings', icon: Settings },
 ]

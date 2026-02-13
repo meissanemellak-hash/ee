@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
-import { Edit, TrendingUp, Bell, Package, Warehouse, Store, MapPin } from 'lucide-react'
+import { Edit, TrendingUp, AlertTriangle, Package, Warehouse, Store, MapPin, Euro, ShoppingCart } from 'lucide-react'
 import { DeleteRestaurantButton } from '@/components/restaurants/delete-restaurant-button'
 import { useToast } from '@/hooks/use-toast'
 import { translateApiError } from '@/lib/translate-api-error'
@@ -215,7 +215,7 @@ export default function RestaurantDetailPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Ventes totales
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+            <ShoppingCart className="h-4 w-4 text-teal-600 dark:text-teal-400" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{restaurant._count?.sales || 0}</div>
@@ -230,7 +230,7 @@ export default function RestaurantDetailPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Chiffre d&apos;affaires (7j)
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" aria-hidden="true" />
+            <Euro className="h-4 w-4 text-teal-600 dark:text-teal-400" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">
@@ -252,7 +252,7 @@ export default function RestaurantDetailPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Alertes actives
             </CardTitle>
-            <Bell className={`h-4 w-4 ${
+            <AlertTriangle className={`h-4 w-4 ${
               (restaurant._count?.alerts || 0) > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'
             }`} />
           </CardHeader>

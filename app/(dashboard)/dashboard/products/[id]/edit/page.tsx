@@ -39,6 +39,7 @@ import { useIngredients } from '@/lib/react-query/hooks/use-ingredients'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { formatRecipeQuantity } from '@/lib/utils'
+import { getCompatibleUnits } from '@/lib/units'
 
 export default function EditProductPage() {
   const router = useRouter()
@@ -55,7 +56,7 @@ export default function EditProductPage() {
   const removeIngredient = useRemoveProductIngredient()
 
   const [formData, setFormData] = useState({ name: '', category: '', unitPrice: '' })
-  const [newIngredient, setNewIngredient] = useState({ ingredientId: '', quantityNeeded: '' })
+  const [newIngredient, setNewIngredient] = useState({ ingredientId: '', quantityNeeded: '', unit: '' })
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [ingredientToDelete, setIngredientToDelete] = useState<ProductIngredientItem | null>(null)
   const hasRedirected = useRef(false)
@@ -106,8 +107,13 @@ export default function EditProductPage() {
       return
     }
     addIngredient.mutate(
-      { productId: id, ingredientId: newIngredient.ingredientId, quantityNeeded: quantity },
-      { onSuccess: () => setNewIngredient({ ingredientId: '', quantityNeeded: '' }) }
+      {
+        productId: id,
+        ingredientId: newIngredient.ingredientId,
+        quantityNeeded: quantity,
+        unit: newIngredient.unit || undefined,
+      },
+      { onSuccess: () => setNewIngredient({ ingredientId: '', quantityNeeded: '', unit: '' }) }
     )
   }
 
@@ -390,9 +396,10 @@ export default function EditProductPage() {
                       <p className="font-semibold text-foreground truncate">{pi.ingredient.name}</p>
                       <p className="text-sm text-muted-foreground mt-1">
                         {(() => {
+                          const recipeUnit = pi.unit ?? pi.ingredient.unit
                           const { value, unit } = formatRecipeQuantity(
                             pi.quantityNeeded,
-                            pi.ingredient.unit
+                            recipeUnit
                           )
                           return `${value} ${unit} par produit`
                         })()}
@@ -431,14 +438,19 @@ export default function EditProductPage() {
             <div className="space-y-4 pt-6 border-t border-border">
               <div className="p-4 rounded-xl bg-teal-50/50 dark:bg-teal-900/10 border border-teal-200 dark:border-teal-900/30" aria-labelledby="add-ingredient-label">
                 <Label id="add-ingredient-label" className="text-sm font-semibold mb-3 block">Ajouter un ingrédient</Label>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-4">
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Ingrédient</Label>
                     <Select
                       value={newIngredient.ingredientId}
-                      onValueChange={(value) =>
-                        setNewIngredient({ ...newIngredient, ingredientId: value })
-                      }
+                      onValueChange={(value) => {
+                        const ing = availableIngredients.find((i) => i.id === value)
+                        setNewIngredient({
+                          ...newIngredient,
+                          ingredientId: value,
+                          unit: ing ? ing.unit : '',
+                        })
+                      }}
                       disabled={addIngredient.isPending}
                     >
                       <SelectTrigger className="bg-white dark:bg-gray-900">
@@ -467,6 +479,31 @@ export default function EditProductPage() {
                       disabled={addIngredient.isPending}
                       className="bg-white dark:bg-gray-900"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Unité</Label>
+                    <Select
+                      value={newIngredient.unit}
+                      onValueChange={(v) => setNewIngredient({ ...newIngredient, unit: v })}
+                      disabled={addIngredient.isPending || !newIngredient.ingredientId}
+                    >
+                      <SelectTrigger className="bg-white dark:bg-gray-900">
+                        <SelectValue placeholder="Unité" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(newIngredient.ingredientId
+                          ? getCompatibleUnits(
+                              availableIngredients.find((i) => i.id === newIngredient.ingredientId)?.unit ?? 'unité'
+                            )
+                          : []
+                        ).map((u) => (
+                          <SelectItem key={u} value={u}>
+                            {u}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Unité de l&apos;ingrédient en recette</p>
                   </div>
                   <div className="space-y-2 flex items-end">
                     <Button

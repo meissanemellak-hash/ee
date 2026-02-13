@@ -129,10 +129,11 @@ model Ingredient {
 
 // Recette (relation produit-ingrédient)
 model ProductIngredient {
-  id             String @id @default(cuid())
-  productId      String @map("product_id")
-  ingredientId   String @map("ingredient_id")
-  quantityNeeded Float  @map("quantity_needed") // Quantité d'ingrédient pour 1 produit
+  id             String  @id @default(cuid())
+  productId      String  @map("product_id")
+  ingredientId   String  @map("ingredient_id")
+  quantityNeeded Float   @map("quantity_needed") // Quantité d'ingrédient pour 1 produit (dans l'unité "unit")
+  unit           String? @map("unit") // Unité de la recette (ex. g, kg). Si null = unité de l'ingrédient.
 
   product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)

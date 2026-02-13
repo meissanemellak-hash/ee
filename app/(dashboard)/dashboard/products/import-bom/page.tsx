@@ -180,7 +180,12 @@ export default function ImportBomPage() {
         return
       }
       const filename = `recettes_bom_${new Date().toISOString().slice(0, 10)}.csv`
-      exportToCsv(bom, filename)
+      exportToCsv(bom, filename, [
+        { key: 'produit', header: 'Produit' },
+        { key: 'ingrédient', header: 'Ingrédient' },
+        { key: 'quantité', header: 'Quantité' },
+        { key: 'unité', header: 'Unité' },
+      ])
       toast({
         title: 'Export réussi',
         description: `${bom.length} recette(s) exportée(s).`,

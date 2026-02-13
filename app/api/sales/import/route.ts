@@ -4,6 +4,7 @@ import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
 import { runAllAlerts } from '@/lib/services/alerts'
+import { recipeQuantityToInventoryUnit } from '@/lib/units'
 import Papa from 'papaparse'
 import { csvSaleRowSchema } from '@/lib/validations/sales'
 import { logger } from '@/lib/logger'
@@ -181,7 +182,12 @@ export async function POST(request: NextRequest) {
       where: { id: { in: productIds }, organizationId: organization.id },
       include: {
         productIngredients: {
-          select: { ingredientId: true, quantityNeeded: true },
+          select: {
+            ingredientId: true,
+            quantityNeeded: true,
+            unit: true,
+            ingredient: { select: { unit: true } },
+          },
         },
       },
     })
@@ -191,7 +197,13 @@ export async function POST(request: NextRequest) {
         const totalQty = quantityByProduct.get(product.id) ?? 0
         if (totalQty === 0 || product.productIngredients.length === 0) continue
         for (const pi of product.productIngredients) {
-          const amountToDeduct = pi.quantityNeeded * totalQty
+          const ingredientUnit = pi.ingredient?.unit ?? 'unité'
+          const perUnitInInventory = recipeQuantityToInventoryUnit(
+            pi.quantityNeeded,
+            pi.unit,
+            ingredientUnit
+          )
+          const amountToDeduct = perUnitInInventory * totalQty
           const inv = await tx.inventory.findUnique({
             where: {
               restaurantId_ingredientId: {

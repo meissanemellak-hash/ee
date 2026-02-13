@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Loader2, TrendingUp, Package, Euro, Calendar, BarChart3 } from 'lucide-react'
+import { Loader2, TrendingUp, Package, Euro, Calendar, BarChart3, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import {
@@ -261,7 +261,7 @@ export default function SalesAnalyzePage() {
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Ventes totales</CardTitle>
-              <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <ShoppingCart className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{analysis.totalSales}</div>
@@ -281,7 +281,7 @@ export default function SalesAnalyzePage() {
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Moyenne par jour</CardTitle>
-              <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <ShoppingCart className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{analysis.averagePerDay.toFixed(1)}</div>

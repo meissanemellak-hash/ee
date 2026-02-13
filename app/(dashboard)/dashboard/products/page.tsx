@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { formatCurrency, exportToCsv } from '@/lib/utils'
-import { Search, Plus, Edit, Trash2, Package, TrendingUp, Beaker, Tag, Loader2, Download, ChevronDown, Upload, FileText } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Package, ShoppingCart, Beaker, Tag, Loader2, Download, ChevronDown, Upload, FileText } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -131,7 +131,11 @@ export default function ProductsPage() {
       prix_unitaire: p.unitPrice,
     }))
     const filename = `produits_${new Date().toISOString().slice(0, 10)}.csv`
-    exportToCsv(csvData, filename)
+    exportToCsv(csvData, filename, [
+      { key: 'nom', header: 'Nom' },
+      { key: 'categorie', header: 'Catégorie' },
+      { key: 'prix_unitaire', header: 'Prix unitaire' },
+    ])
   }
 
   if (!isLoaded) {
@@ -158,7 +162,7 @@ export default function ProductsPage() {
           <header className="pb-6 border-b border-border/60">
             <h1 className="text-3xl font-bold tracking-tight">Produits</h1>
             <p className="text-muted-foreground mt-1.5">
-              Gérez vos produits, leurs prix et leurs ingrédients
+              Gérez vos produits, leurs prix, leurs recettes et leurs ingrédients
             </p>
           </header>
           <Card className="rounded-xl border shadow-sm bg-card/95">
@@ -184,7 +188,7 @@ export default function ProductsPage() {
           <header className="pb-6 border-b border-border/60">
             <h1 className="text-3xl font-bold tracking-tight">Produits</h1>
             <p className="text-muted-foreground mt-1.5">
-              Gérez vos produits, leurs prix et leurs ingrédients
+              Gérez vos produits, leurs prix, leurs recettes et leurs ingrédients
             </p>
           </header>
           <Card className="rounded-xl border shadow-sm border-red-200 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10">
@@ -210,7 +214,7 @@ export default function ProductsPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Produits</h1>
             <p className="text-muted-foreground mt-1.5">
-              Gérez vos produits, leurs prix et leurs ingrédients
+              Gérez vos produits, leurs prix, leurs recettes et leurs ingrédients
             </p>
             {data && data.total > 0 && (
               <p className="text-xs text-muted-foreground mt-1 font-medium">
@@ -385,7 +389,7 @@ export default function ProductsPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="p-3.5 rounded-xl bg-muted/50 dark:bg-gray-800/50 border border-border/80">
                           <div className="flex items-center gap-2 mb-1">
-                            <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                            <ShoppingCart className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                             <span className="text-xs text-muted-foreground">Ventes</span>
                           </div>
                           <div className="text-lg font-bold text-teal-700 dark:text-teal-400">

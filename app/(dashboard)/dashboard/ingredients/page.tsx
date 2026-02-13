@@ -113,8 +113,14 @@ export default function IngredientsPage() {
       taille_pack: i.packSize ?? '',
       fournisseur: i.supplierName ?? '',
     }))
-    const filename = `ingredients_${new Date().toISOString().slice(0, 10)}.csv`
-    exportToCsv(csvData, filename)
+    const filename = `liste_ingredients_${new Date().toISOString().slice(0, 10)}.csv`
+    exportToCsv(csvData, filename, [
+      { key: 'nom', header: 'Nom' },
+      { key: 'unite', header: 'Unité' },
+      { key: 'cout_unitaire', header: 'Coût unitaire' },
+      { key: 'taille_pack', header: 'Taille pack' },
+      { key: 'fournisseur', header: 'Fournisseur' },
+    ])
   }
 
   if (!isLoaded) {
@@ -363,6 +369,16 @@ export default function IngredientsPage() {
                             <span className="text-xs text-muted-foreground">Taille du pack</span>
                             <span className="text-sm font-semibold text-muted-foreground">
                               {ingredient.packSize} {ingredient.unit}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {ingredient.packSize != null && ingredient.packSize > 0 && (
+                        <div className="p-3.5 rounded-xl bg-teal-50/80 dark:bg-teal-900/20 border border-teal-100/80 dark:border-teal-900/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Coût total de la commande</span>
+                            <span className="text-lg font-bold text-teal-700 dark:text-teal-400">
+                              {formatCurrency(ingredient.costPerUnit * ingredient.packSize)}
                             </span>
                           </div>
                         </div>

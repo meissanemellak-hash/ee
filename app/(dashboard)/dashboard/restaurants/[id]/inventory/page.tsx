@@ -250,7 +250,12 @@ export default function InventoryPage() {
     }))
     const safeName = (restaurant?.name ?? restaurantId ?? 'export').replace(/[^a-zA-Z0-9_-]/g, '_')
     const filename = `inventaire_${safeName}_${new Date().toISOString().slice(0, 10)}.csv`
-    exportToCsv(csvData, filename)
+    exportToCsv(csvData, filename, [
+      { key: 'ingredient', header: 'Ingrédient' },
+      { key: 'stock_actuel', header: 'Stock actuel' },
+      { key: 'seuil_min', header: 'Seuil min' },
+      { key: 'seuil_max', header: 'Seuil max' },
+    ])
   }
 
   if (!isLoaded || loading) {

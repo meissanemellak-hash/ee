@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic'
 const productIngredientSchema = z.object({
   ingredientId: z.string(),
   quantityNeeded: z.number().positive(),
+  unit: z.string().optional().nullable(),
 })
 
 /**
@@ -241,11 +242,12 @@ export async function POST(
     })
 
     if (existing) {
-      // Mettre à jour la quantité
+      // Mettre à jour la quantité et l'unité
       const updated = await prisma.productIngredient.update({
         where: { id: existing.id },
         data: {
           quantityNeeded: validatedData.quantityNeeded,
+          unit: validatedData.unit ?? null,
         },
         include: {
           ingredient: {
@@ -268,6 +270,7 @@ export async function POST(
         productId: params.id,
         ingredientId: validatedData.ingredientId,
         quantityNeeded: validatedData.quantityNeeded,
+        unit: validatedData.unit ?? null,
       },
       include: {
         ingredient: {

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, Lightbulb, TrendingUp, Package, CheckCircle2, XCircle, RefreshCw, Filter, HelpCircle } from 'lucide-react'
+import { Loader2, Lightbulb, TrendingUp, Package, CheckCircle2, XCircle, RefreshCw, Filter, HelpCircle, Euro } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -20,6 +20,7 @@ import {
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { useRecommendations, useRecommendationsLastGenerated, useGenerateBOMRecommendations, useGenerateClassicRecommendations, useGenerateAllRecommendations, useUpdateRecommendationStatus, type RecommendationDetails } from '@/lib/react-query/hooks/use-recommendations'
+import { useOrganizationData } from '@/lib/react-query/hooks/use-organization'
 import { useRestaurants } from '@/lib/react-query/hooks/use-restaurants'
 import { useUserRole } from '@/lib/react-query/hooks/use-user-role'
 import { permissions } from '@/lib/roles'
@@ -42,6 +43,7 @@ interface Recommendation {
 
 export default function RecommendationsPage() {
   const { organization, isLoaded } = useOrganization()
+  const { data: orgData } = useOrganizationData()
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlRestaurant = searchParams.get('restaurant')
@@ -53,6 +55,7 @@ export default function RecommendationsPage() {
   const [showGainExplanationCard, setShowGainExplanationCard] = useState(false)
   const [gainExplanationRecId, setGainExplanationRecId] = useState<string | null>(null)
   const [besoinExplanationRecId, setBesoinExplanationRecId] = useState<string | null>(null)
+  const [showTotalRecoExplanation, setShowTotalRecoExplanation] = useState(false)
   const [showStaffingExplanation, setShowStaffingExplanation] = useState(false)
   const [generationType, setGenerationType] = useState<'bom' | 'staffing'>('bom')
   const [staffingDate, setStaffingDate] = useState<string>(() => {
@@ -151,7 +154,7 @@ export default function RecommendationsPage() {
     } else {
       generateRecommendations.mutate({
         restaurantId,
-        shrinkPct: 0.1,
+        shrinkPct: orgData?.shrinkPct ?? 0.1,
         days: 7,
       })
     }
@@ -286,11 +289,11 @@ export default function RecommendationsPage() {
             </CardContent>
           </Card>
           <Card className="rounded-xl border shadow-sm bg-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Coût estimé des commandes (en attente)
               </CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <Euro className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400 mt-0.5" />
             </CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-9 w-24 mb-2" /> : (
@@ -314,7 +317,7 @@ export default function RecommendationsPage() {
                   <HelpCircle className="h-3.5 w-3.5" />
                 </button>
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <Euro className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
               {showGainExplanationCard && (
@@ -327,17 +330,36 @@ export default function RecommendationsPage() {
                   {formatCurrency(calculateTotalSavings())}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-2">Ruptures / gaspillage évités (indicateur)</p>
+              <p className="text-xs text-muted-foreground mt-2">Ruptures de stock / gaspillage évités (indicateur)</p>
+              {selectedStatus === 'pending' && (
+                <p className="text-xs text-muted-foreground mt-1">Les économies déjà réalisées (recommandations acceptées) sont affichées sur le tableau de bord.</p>
+              )}
+              {(selectedStatus === 'all' || selectedStatus === 'accepted') && (
+                <p className="text-xs text-muted-foreground mt-1">Cumul de toutes les recommandations acceptées. Le tableau de bord affiche les économies du mois en cours uniquement.</p>
+              )}
             </CardContent>
           </Card>
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
                 Total recommandations
+                <button
+                  type="button"
+                  onClick={() => setShowTotalRecoExplanation((v) => !v)}
+                  className="inline-flex text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded focus:outline-none"
+                  aria-label="Afficher l'explication du total recommandations"
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                </button>
               </CardTitle>
-              <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <Lightbulb className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </CardHeader>
             <CardContent>
+              {showTotalRecoExplanation && (
+                <p className="text-xs text-muted-foreground mb-2 p-2 rounded-md bg-muted/60 border border-border">
+                  Sur cette page, seules les 50 recommandations les plus récentes sont affichées. Dans Rapports → Rapport récapitulatif, toutes les recommandations de la période choisie sont prises en compte.
+                </p>
+              )}
               {isLoading ? <Skeleton className="h-9 w-16 mb-2" /> : <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{safeRecommendations.length}</div>}
               <p className="text-xs text-muted-foreground mt-2">Toutes périodes confondues</p>
             </CardContent>
@@ -430,7 +452,7 @@ export default function RecommendationsPage() {
               Générer de nouvelles recommandations
             </CardTitle>
             <CardDescription className="mt-1">
-              Générez des recommandations (commandes ou effectifs) pour un restaurant ou pour tous les restaurants. Vérifiez le statut de chaque recommandation pour voir si elle a déjà été acceptée ou rejetée.
+              Générez des recommandations (commandes ou effectifs) pour un restaurant ou pour tous les restaurants. Vérifiez le statut pour voir si des recommandations ont déjà été acceptées ou rejetées.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -548,7 +570,7 @@ export default function RecommendationsPage() {
                 Aucune recommandation ne correspond à vos critères. Modifiez les filtres ou générez de nouvelles recommandations.
               </p>
               <p className="text-sm text-muted-foreground max-w-md mx-auto mt-2">
-                Une génération automatique a lieu chaque jour. S&apos;il n&apos;y a rien à recommander (stocks suffisants), aucune nouvelle suggestion n&apos;apparaît.
+                Une génération automatique a lieu chaque jour. S&apos;il n&apos;y a rien à recommander (stocks suffisants, effectifs mis à jour), aucune nouvelle suggestion n&apos;apparaît.
               </p>
             </CardContent>
           </Card>
@@ -638,7 +660,7 @@ export default function RecommendationsPage() {
                             </p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Shrink:</span>
+                            <span className="text-muted-foreground">Gaspillage:</span>
                             <p className="font-medium">{(details.assumptions.shrinkPct * 100).toFixed(1)}%</p>
                           </div>
                           {typeof details.estimatedOrderCost === 'number' && details.estimatedOrderCost > 0 && (
@@ -650,7 +672,7 @@ export default function RecommendationsPage() {
                           {typeof details.estimatedSavings === 'number' && (
                             <div>
                               <span className="text-muted-foreground inline-flex items-center gap-1">
-                                Gain estimé (ruptures/gaspillage évités):
+                                Gain estimé (ruptures de stock/gaspillage évités):
                                 <button
                                   type="button"
                                   onClick={() => setGainExplanationRecId((id) => (id === recommendation.id ? null : recommendation.id))}
@@ -664,6 +686,7 @@ export default function RecommendationsPage() {
                               {gainExplanationRecId === recommendation.id && (
                                 <p className="text-xs text-muted-foreground mt-1 p-2 rounded-md bg-muted/60 border border-border">
                                   Valeur estimée des ruptures de stock et du gaspillage évités en passant cette commande. Bénéfice indirect, pas un gain en caisse.
+                                  {details.estimatedSavings >= 10000 && ' Le montant est plafonné à 10\u202f000\u202f€ pour rester indicatif.'}
                                 </p>
                               )}
                             </div>
@@ -722,7 +745,10 @@ export default function RecommendationsPage() {
                                       {ing.currentStock.toFixed(2)}
                                     </td>
                                     <td className="px-4 py-2 text-right">
-                                      {ing.neededQuantity.toFixed(2)}
+                                      <span className="block">{ing.neededQuantity.toFixed(2)}</span>
+                                      <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                        {ing.recommendationSource === 'threshold' ? 'Seuil min' : 'Prévisions'}
+                                      </span>
                                     </td>
                                     <td className="px-4 py-2 text-right font-medium">
                                       {ing.quantityToOrder.toFixed(2)}
@@ -742,7 +768,7 @@ export default function RecommendationsPage() {
                           </div>
                           {besoinExplanationRecId === recommendation.id && (
                             <p className="text-xs text-muted-foreground p-3 rounded-md bg-muted/60 border border-border">
-                              <strong>D’où provient le besoin ?</strong> Quantité calculée à partir de vos ventes prévues et de vos recettes pour la période. Une marge de sécurité (shrink) est incluse pour limiter les ruptures.
+                              <strong>D’où provient le besoin ?</strong> Quand une ligne indique « Prévisions », le besoin est calculé à partir de vos ventes prévues et de vos recettes pour la période (pourcentage de gaspillage inclus). Quand une ligne indique « Seuil min », aucune prévision n’était disponible pour cet ingrédient : la recommandation repose uniquement sur le seuil minimum (rupture de stock).
                             </p>
                           )}
                           <Button

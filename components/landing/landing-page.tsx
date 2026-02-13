@@ -117,7 +117,7 @@ export function LandingPage() {
                   <div className="flex-1 min-w-[160px] rounded-xl border border-border bg-card p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="h-5 w-5" />
-                      <span className="font-medium text-sm">Risque de rupture (7j)</span>
+                      <span className="font-medium text-sm">Risque de rupture de stock (7j)</span>
                     </div>
                     <p className="mt-2 text-xl font-bold text-foreground">1 restaurant</p>
                     <p className="text-xs text-muted-foreground">concerné</p>
@@ -256,7 +256,7 @@ export function LandingPage() {
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                 <Quote className="h-8 w-8 text-teal-600 dark:text-teal-400 opacity-60" aria-hidden />
                 <blockquote className="mt-3 text-foreground">
-                  &ldquo;Les alertes nous ont fait gagner des heures. Avant on apprenait les ruptures le soir. 
+                  &ldquo;Les alertes nous ont fait gagner des heures. Avant on apprenait les ruptures de stock le soir. 
                   Maintenant on anticipe et on compare les restaurants entre eux.&rdquo;
                 </blockquote>
                 <p className="mt-3 text-sm font-semibold text-teal-600 dark:text-teal-400">
@@ -290,12 +290,12 @@ export function LandingPage() {
                 {
                   icon: TrendingDown,
                   title: 'Gaspillage et surstock',
-                  text: 'Vous commandez au feeling, les frigos débordent ou au contraire vous êtes en rupture au moment du service.',
+                  text: 'Vous commandez au feeling, les frigos débordent ou au contraire vous êtes en rupture de stock au moment du service.',
                 },
                 {
                   icon: AlertTriangle,
                   title: 'Alertes trop tard',
-                  text: 'Vous apprenez les problèmes après coup : rupture, dérive des coûts, écarts entre restaurants.',
+                  text: 'Vous apprenez les problèmes après coup : rupture de stock, dérive des coûts, écarts entre restaurants.',
                 },
                 {
                   icon: FileSpreadsheet,
@@ -342,7 +342,7 @@ export function LandingPage() {
               Une seule plateforme pour tout piloter
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Tout est centralisé pour le multi-restaurants. Bénéfices : moins de temps perdu, moins de ruptures, des économies mesurables sur les achats et le gaspillage.
+              Tout est centralisé pour le multi-restaurants. Bénéfices : moins de temps perdu, moins de ruptures de stock, des économies mesurables sur les achats et le gaspillage.
             </p>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
@@ -354,7 +354,7 @@ export function LandingPage() {
                 {
                   icon: Package,
                   title: 'Inventaire et recettes',
-                  text: 'Produits, ingrédients et recettes par restaurant. Suivez les stocks et les seuils d’alerte pour éviter ruptures et surstock.',
+                  text: 'Produits, ingrédients et recettes par restaurant. Suivez les stocks et les seuils d’alerte pour éviter ruptures de stock et surstock.',
                 },
                 {
                   icon: BarChart3,
@@ -369,7 +369,7 @@ export function LandingPage() {
                 {
                   icon: Bell,
                   title: 'Alertes en temps réel',
-                  text: 'Ruptures, dérives et anomalies remontées immédiatement. Priorisez et résolvez avant que le client ne subisse.',
+                  text: 'Ruptures de stock, dérives et anomalies remontées immédiatement. Priorisez et résolvez avant que le client ne subisse.',
                 },
                 {
                   icon: CheckCircle2,
@@ -401,7 +401,7 @@ export function LandingPage() {
               Pour qui ?
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
-              Que vous gériez 3 établissements ou 30 : bénéfices concrets : visibilité en temps réel, réduction du gaspillage et des ruptures, pilotage des coûts et économies sur les achats.
+              Que vous gériez 3 établissements ou 30 : bénéfices concrets : visibilité en temps réel, réduction du gaspillage et des ruptures de stock, pilotage des coûts et économies sur les achats.
             </p>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {[

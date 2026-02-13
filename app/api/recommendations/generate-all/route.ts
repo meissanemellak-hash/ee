@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const { clerkOrgId, shrinkPct = 0.1, days = 7, type, forecastDate } = body
+    const { clerkOrgId, shrinkPct: bodyShrinkPct, days = 7, type, forecastDate } = body
     const isStaffing = type === 'STAFFING'
     const staffingTargetDate = forecastDate ? new Date(forecastDate) : new Date()
     const orgIdToUse = authOrgId || clerkOrgId
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       for (const restaurant of restaurants) {
         try {
           const result = await generateStaffingRecommendations(restaurant.id, staffingTargetDate)
-          if (result.length > 0) {
+          if (result.recommendations.length > 0) {
             byRestaurant.push({
               restaurantId: restaurant.id,
               restaurantName: restaurant.name,
@@ -121,24 +121,40 @@ export async function POST(request: NextRequest) {
           )
 
           if (result.recommendations.length > 0) {
-            const dataToSave = {
-              ...result.details,
-              estimatedSavings: result.estimatedSavings,
-            }
-            await prisma.recommendation.create({
-              data: {
+            const details = result.details as { period?: { start: string; end: string } }
+            const periodStart = details?.period?.start
+            const periodEnd = details?.period?.end
+            const dismissedForRestaurant = await prisma.recommendation.findMany({
+              where: { restaurantId: restaurant.id, type: 'ORDER', status: 'dismissed' },
+              select: { data: true },
+            })
+            const alreadyDismissedSamePeriod =
+              !!periodStart &&
+              !!periodEnd &&
+              dismissedForRestaurant.some((r) => {
+                const d = r.data as { period?: { start?: string; end?: string } } | null
+                return d?.period?.start === periodStart && d?.period?.end === periodEnd
+              })
+            if (!alreadyDismissedSamePeriod) {
+              const dataToSave = {
+                ...result.details,
+                estimatedSavings: result.estimatedSavings,
+              }
+              await prisma.recommendation.create({
+                data: {
+                  restaurantId: restaurant.id,
+                  type: 'ORDER',
+                  data: dataToSave as any,
+                  priority: 'medium',
+                  status: 'pending',
+                },
+              })
+              byRestaurant.push({
                 restaurantId: restaurant.id,
-                type: 'ORDER',
-                data: dataToSave as any,
-                priority: 'medium',
-                status: 'pending',
-              },
-            })
-            byRestaurant.push({
-              restaurantId: restaurant.id,
-              restaurantName: restaurant.name,
-              count: result.recommendations.length,
-            })
+                restaurantName: restaurant.name,
+                count: result.recommendations.length,
+              })
+            }
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Erreur inconnue'

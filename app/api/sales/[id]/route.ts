@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
 import { runAllAlerts } from '@/lib/services/alerts'
+import { recipeQuantityToInventoryUnit } from '@/lib/units'
 import { z } from 'zod'
 import { logger } from '@/lib/logger'
 
@@ -207,7 +208,12 @@ export async function PATCH(
         product: {
           include: {
             productIngredients: {
-              select: { ingredientId: true, quantityNeeded: true },
+              select: {
+                ingredientId: true,
+                quantityNeeded: true,
+                unit: true,
+                ingredient: { select: { unit: true } },
+              },
             },
           },
         },
@@ -252,7 +258,12 @@ export async function PATCH(
           },
           include: {
             productIngredients: {
-              select: { ingredientId: true, quantityNeeded: true },
+              select: {
+                ingredientId: true,
+                quantityNeeded: true,
+                unit: true,
+                ingredient: { select: { unit: true } },
+              },
             },
           },
         })
@@ -282,11 +293,17 @@ export async function PATCH(
       const sale = await prisma.$transaction(async (tx) => {
         // Si quantité ou produit a changé : remonter l'ancienne déduction puis déduire la nouvelle
         if (quantityOrProductChanged) {
-          // Remonter les stocks pour l'ancienne vente (ancien produit × ancienne quantité)
+          // Remonter les stocks pour l'ancienne vente (ancien produit × ancienne quantité, en unité inventaire)
           if (existing.product.productIngredients.length > 0) {
             const oldRestaurantId = existing.restaurantId
             for (const pi of existing.product.productIngredients) {
-              const amountToRestore = pi.quantityNeeded * existing.quantity
+              const ingredientUnit = pi.ingredient?.unit ?? 'unité'
+              const perUnitInInventory = recipeQuantityToInventoryUnit(
+                pi.quantityNeeded,
+                pi.unit,
+                ingredientUnit
+              )
+              const amountToRestore = perUnitInInventory * existing.quantity
               const inv = await tx.inventory.findUnique({
                 where: {
                   restaurantId_ingredientId: {
@@ -307,10 +324,16 @@ export async function PATCH(
             }
           }
 
-          // Déduire pour la nouvelle vente (nouveau produit × nouvelle quantité)
+          // Déduire pour la nouvelle vente (nouveau produit × nouvelle quantité, en unité inventaire)
           if (productForDeduction.productIngredients.length > 0) {
             for (const pi of productForDeduction.productIngredients) {
-              const amountToDeduct = pi.quantityNeeded * newQuantity
+              const ingredientUnit = pi.ingredient?.unit ?? 'unité'
+              const perUnitInInventory = recipeQuantityToInventoryUnit(
+                pi.quantityNeeded,
+                pi.unit,
+                ingredientUnit
+              )
+              const amountToDeduct = perUnitInInventory * newQuantity
               const inv = await tx.inventory.findUnique({
                 where: {
                   restaurantId_ingredientId: {
@@ -460,7 +483,12 @@ export async function DELETE(
         product: {
           include: {
             productIngredients: {
-              select: { ingredientId: true, quantityNeeded: true },
+              select: {
+                ingredientId: true,
+                quantityNeeded: true,
+                unit: true,
+                ingredient: { select: { unit: true } },
+              },
             },
           },
         },
@@ -477,10 +505,16 @@ export async function DELETE(
     const restaurantId = sale.restaurantId
 
     await prisma.$transaction(async (tx) => {
-      // Remonter les stocks : ajouter back la quantité déduite à la création
+      // Remonter les stocks : ajouter back la quantité déduite à la création (en unité inventaire)
       if (sale.product.productIngredients.length > 0) {
         for (const pi of sale.product.productIngredients) {
-          const amountToRestore = pi.quantityNeeded * sale.quantity
+          const ingredientUnit = pi.ingredient?.unit ?? 'unité'
+          const perUnitInInventory = recipeQuantityToInventoryUnit(
+            pi.quantityNeeded,
+            pi.unit,
+            ingredientUnit
+          )
+          const amountToRestore = perUnitInInventory * sale.quantity
           const inv = await tx.inventory.findUnique({
             where: {
               restaurantId_ingredientId: {

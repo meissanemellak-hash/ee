@@ -13,7 +13,7 @@ import {
   TrendingUp,
   BarChart3,
   Lightbulb,
-  Bell,
+  AlertTriangle,
   Settings,
   FileText,
   Users,
@@ -34,7 +34,7 @@ const navigation = [
   { name: 'Prévisions', href: '/dashboard/forecasts', icon: TrendingUp, permission: 'forecasts:view' as const },
   { name: 'Recommandations', href: '/dashboard/recommendations', icon: Lightbulb, permission: 'recommendations:view' as const },
   { name: 'Effectifs', href: '/dashboard/effectifs', icon: Users, permission: 'alerts:view' as const },
-  { name: 'Alertes', href: '/dashboard/alerts', icon: Bell, permission: 'alerts:view' as const },
+  { name: 'Alertes', href: '/dashboard/alerts', icon: AlertTriangle, permission: 'alerts:view' as const },
   { name: 'Rapports', href: '/dashboard/reports', icon: FileText, permission: 'reports:view' as const },
   { name: 'Paramètres', href: '/dashboard/settings', icon: Settings, permission: 'settings:view' as const },
 ]

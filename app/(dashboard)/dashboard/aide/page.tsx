@@ -147,7 +147,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Saisir une vente</h3>
           <p>« Ajouter une vente » (ou depuis la liste) : choisissez le restaurant, le produit, la quantité, la date et l&apos;heure si besoin. Le montant est calculé à partir du prix unitaire du produit.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Déduction automatique des stocks</h3>
-          <p>Dès qu&apos;une vente est enregistrée, les stocks du restaurant sont <strong className="text-teal-700 dark:text-teal-400 font-bold">déduits automatiquement</strong> selon la recette du produit (quantité d&apos;ingrédients par unité vendue). Si vous modifiez une vente (quantité ou produit), l&apos;ancienne déduction est annulée et la nouvelle est appliquée. Si vous supprimez une vente, les quantités sont remises dans l&apos;inventaire. Les <strong className="text-teal-700 dark:text-teal-400 font-bold">alertes</strong> (rupture, surstock) sont recalculées après chaque saisie, modification, suppression ou import de ventes.</p>
+          <p>Dès qu&apos;une vente est enregistrée, les stocks du restaurant sont <strong className="text-teal-700 dark:text-teal-400 font-bold">déduits automatiquement</strong> selon la recette du produit (quantité d&apos;ingrédients par unité vendue). Si vous modifiez une vente (quantité ou produit), l&apos;ancienne déduction est annulée et la nouvelle est appliquée. Si vous supprimez une vente, les quantités sont remises dans l&apos;inventaire. Les <strong className="text-teal-700 dark:text-teal-400 font-bold">alertes</strong> (rupture de stock, surstock) sont recalculées après chaque saisie, modification, suppression ou import de ventes.</p>
           <p className="mt-2">Un produit sans recette n&apos;impacte pas l&apos;inventaire ; les ventes restent enregistrées pour le chiffre d&apos;affaires et les analyses.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Import CSV</h3>
           <p>Pour charger un historique de ventes, utilisez l&apos;import CSV depuis la page Ventes. Le fichier doit contenir les colonnes attendues (restaurant, produit, quantité, date, etc.). Les ventes importées déduisent elles aussi les stocks selon les recettes et déclenchent la mise à jour des alertes pour le restaurant concerné. Consultez les instructions sur la page d&apos;import.</p>
@@ -166,12 +166,12 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
       body: (
         <>
           <p>
-            Les prévisions sont générées à partir de vos données historiques de ventes et du pourcentage de shrink (gaspillage) défini dans Paramètres → Organisation. Elles aident à anticiper la demande et à planifier les commandes et la production.
+            Les prévisions sont générées à partir de vos données historiques de ventes. Le pourcentage de gaspillage (Paramètres → Organisation) sert à majorer les quantités à commander, pas les chiffres de prévisions affichés ici. Elles aident à anticiper la demande et à planifier les commandes et la production.
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Générer une prévision</h3>
           <p>Sur la page Prévisions, renseignez les filtres (période, restaurant si besoin) puis cliquez sur « Générer ». Les résultats s&apos;affichent sous le formulaire : prévisions de ventes et, selon le cas, impact sur la consommation d&apos;ingrédients.</p>
-          <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Shrink (gaspillage)</h3>
-          <p>Le pourcentage de shrink par défaut est réglé dans Paramètres → Organisation (valeur entre 0 et 1, ex. 0,1 = 10 %). Il est utilisé pour estimer le gaspillage dans les calculs de prévision et les quantités à commander (marge de sécurité). <strong className="text-teal-700 dark:text-teal-400">Comment choisir un % cohérent ?</strong> Vous pouvez suivre votre gaspillage réel sur quelques semaines (produits jetés, périmés, pertes en préparation), vous appuyer sur des fourchettes courantes en restauration (souvent 5 à 15 %), ou partir de 10 % puis ajuster selon les retours terrain.</p>
+          <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Pourcentage de gaspillage</h3>
+          <p>Le pourcentage de gaspillage par défaut est réglé dans Paramètres → Organisation (valeur entre 0 et 1, ex. 0,1 = 10 %). Il anticipe les pertes sur la période (gaspillage, casse, pertes en préparation) lors du calcul des quantités à commander à partir des prévisions ; il n’affecte pas les chiffres de prévisions de ventes affichés. <strong className="text-teal-700 dark:text-teal-400">Comment choisir un % cohérent ?</strong> Suivez vos pertes réelles sur quelques semaines (produits jetés, périmés, pertes en préparation) ou partez d&apos;une fourchette courante en restauration (souvent 5 à 15 %), puis ajustez selon les retours terrain.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Bon à savoir</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
             <li>Plus vous avez d&apos;historique de ventes, plus les prévisions peuvent être pertinentes.</li>
@@ -186,7 +186,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
       body: (
         <>
           <p>
-            Les recommandations sont des suggestions générées à partir de vos données (recettes, ventes, stocks, coûts) : commandes d&apos;ingrédients, effectifs, etc. Chaque recommandation affiche le <strong className="text-teal-700 dark:text-teal-400 font-bold">coût estimé de la commande</strong> (montant à dépenser) et le <strong className="text-teal-700 dark:text-teal-400 font-bold">gain estimé</strong> (ruptures et gaspillage évités, indicateur).
+            Les recommandations sont des suggestions générées à partir de vos données (recettes, ventes, stocks, coûts) : commandes d&apos;ingrédients, effectifs, etc. Chaque recommandation affiche le <strong className="text-teal-700 dark:text-teal-400 font-bold">coût estimé de la commande</strong> (montant à dépenser) et le <strong className="text-teal-700 dark:text-teal-400 font-bold">gain estimé</strong> (ruptures de stock et gaspillage évités, indicateur).
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Consulter les recommandations</h3>
           <p>Sur la page Recommandations, la liste affiche les suggestions avec type, coût et gain estimés. Vous pouvez filtrer par restaurant, type et statut (en attente, acceptée, rejetée).</p>
@@ -220,7 +220,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
       body: (
         <>
           <p>
-            Les alertes vous informent lorsque le stock d&apos;un ingrédient dans un restaurant est sous le seuil minimum (risque de rupture) ou au-dessus du seuil maximum (surstock). Elles permettent d&apos;agir rapidement sur les commandes et la production.
+            Les alertes vous informent lorsque le stock d&apos;un ingrédient dans un restaurant est sous le seuil minimum (risque de rupture de stock) ou au-dessus du seuil maximum (surstock). Elles permettent d&apos;agir rapidement sur les commandes et la production.
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">D&apos;où viennent les alertes ?</h3>
           <p>Les seuils min et max sont définis dans l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">inventaire</strong> de chaque restaurant (page Restaurants → Voir détails → Inventaire). Les alertes sont <strong className="text-teal-700 dark:text-teal-400 font-bold">générées automatiquement</strong> dès que les stocks changent : après une modification d&apos;inventaire (saisie manuelle ou import), et après chaque vente enregistrée, modifiée, supprimée ou importée (car les ventes déduisent les stocks selon les recettes). Vous pouvez aussi lancer manuellement la génération depuis la page Alertes (sélectionnez un restaurant puis le bouton « Générer les alertes ») pour recalculer les alertes à partir des stocks actuels. Le bouton « Actualiser » rafraîchit la liste sans relancer la génération.</p>
@@ -228,13 +228,13 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
           <p>Les alertes apparaissent sur le <strong className="text-teal-700 dark:text-teal-400 font-bold">tableau de bord</strong> (section « Alertes critiques ») et sur la page <strong className="text-teal-700 dark:text-teal-400 font-bold">Alertes</strong> (menu Dashboard → Alertes), où vous pouvez filtrer par restaurant, type, sévérité et consulter ou marquer comme résolues. Chaque fiche restaurant affiche aussi le nombre d&apos;alertes actives.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Sur la page Alertes</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
-            <li>Consultez la liste des alertes actives (rupture, surstock). Filtrez par restaurant si besoin.</li>
+            <li>Consultez la liste des alertes actives (rupture de stock, surstock). Filtrez par restaurant si besoin.</li>
             <li>Générez les alertes pour un restaurant (bouton « Générer les alertes ») si vous souhaitez forcer un recalcul selon les stocks et seuils actuels. « Actualiser » rafraîchit uniquement la liste.</li>
             <li>Après avoir traité le problème (commande, ajustement), marquez l&apos;alerte comme <strong className="text-teal-700 dark:text-teal-400 font-bold">résolue</strong>.</li>
             <li>Vous pouvez afficher les alertes résolues pour l&apos;historique.</li>
           </ul>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Conseil</h3>
-          <p>Renseignez des seuils réalistes dans l&apos;inventaire pour éviter trop d&apos;alertes ou au contraire des ruptures non signalées. Vous pouvez laisser le seuil max optionnel si vous ne gérez que des seuils minimum.</p>
+          <p>Renseignez des seuils réalistes dans l&apos;inventaire pour éviter trop d&apos;alertes ou au contraire des ruptures de stock non signalées. Vous pouvez laisser le seuil max optionnel si vous ne gérez que des seuils minimum.</p>
         </>
       ),
     },
@@ -271,7 +271,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Organisation</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
             <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Nom de l&apos;organisation</strong> : modifiable par le créateur ou un administrateur. Ce nom est utilisé dans toute l&apos;application.</li>
-            <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Pourcentage de shrink (gaspillage) par défaut</strong> : valeur entre 0 et 1 (ex. 0,1 = 10 %) utilisée dans les prévisions et les recommandations de commande. Pour l&apos;estimer : suivez votre gaspillage réel ou partez d&apos;une fourchette courante (5–15 %) puis affinez. Voir la section Prévisions dans le centre d&apos;aide pour plus de détail.</li>
+            <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Pourcentage de gaspillage par défaut</strong> : valeur entre 0 et 1 (ex. 0,1 = 10 %) utilisée dans les prévisions et les recommandations de commande (pertes, casse, gaspillage). Pour l&apos;estimer : suivez vos pertes réelles ou partez d&apos;une fourchette courante (5–15 %) puis affinez. Voir la section Prévisions dans le centre d&apos;aide pour plus de détail.</li>
           </ul>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Membres</h3>
           <p>Les administrateurs peuvent inviter des membres et attribuer les rôles (admin, manager, employé). Chaque rôle dispose de permissions précises (création, modification, suppression, rapports, etc.). Consultez la section Membres pour gérer les invitations et les rôles.</p>

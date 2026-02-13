@@ -232,6 +232,7 @@ export interface ProductIngredientItem {
   id: string
   ingredientId: string
   quantityNeeded: number
+  unit?: string | null
   ingredient: {
     id: string
     name: string
@@ -267,10 +268,12 @@ export function useAddProductIngredient() {
       productId,
       ingredientId,
       quantityNeeded,
+      unit,
     }: {
       productId: string
       ingredientId: string
       quantityNeeded: number
+      unit?: string | null
     }) => {
       if (!organization?.id) throw new Error('No organization selected')
       const response = await fetch(`/api/products/${productId}/ingredients`, {
@@ -279,6 +282,7 @@ export function useAddProductIngredient() {
         body: JSON.stringify({
           ingredientId,
           quantityNeeded,
+          unit: unit ?? undefined,
           clerkOrgId: organization.id,
         }),
       })

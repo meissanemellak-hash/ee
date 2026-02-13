@@ -5,7 +5,7 @@ import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, FileText, Download, TrendingUp, Package, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react'
+import { Loader2, FileText, Download, Package, AlertTriangle, CheckCircle2, LayoutDashboard, Euro, Store, Warehouse, Lightbulb } from 'lucide-react'
 import Link from 'next/link'
 import {
   Select,
@@ -69,6 +69,8 @@ export default function ReportsPage() {
   })
   const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split('T')[0])
 
+  const todayIso = new Date().toISOString().split('T')[0]
+
   const [selectedReportType, setSelectedReportType] = useState<ReportType>('SUMMARY')
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
 
@@ -118,7 +120,7 @@ export default function ReportsPage() {
         report.restaurants.forEach((restaurant) => {
           restaurant.ingredients.forEach((ing) => {
             const statusLabel = statusLabelsInventory[ing.status] || ing.status
-            csvContent += `${restaurant.restaurantName},${ing.ingredientName},${ing.currentStock},${ing.minThreshold},${ing.maxThreshold || 'N/A'},${statusLabel}\n`
+            csvContent += `${restaurant.restaurantName},${ing.ingredientName},${ing.currentStock},${ing.minThreshold},${ing.maxThreshold || 'N/D'},${statusLabel}\n`
           })
         })
         break
@@ -128,7 +130,8 @@ export default function ReportsPage() {
           const typeLabel = typeLabels[rec.type] || rec.type
           const priorityLabel = priorityLabels[rec.priority] || rec.priority
           const statusLabel = statusLabels[rec.status] || rec.status
-          csvContent += `${typeLabel},${rec.restaurantName},${priorityLabel},${statusLabel},${rec.estimatedSavings},${new Date(rec.createdAt).toLocaleDateString('fr-FR')}\n`
+          const savingsCell = rec.type === 'STAFFING' ? 'N' : String(rec.estimatedSavings)
+          csvContent += `${typeLabel},${rec.restaurantName},${priorityLabel},${statusLabel},${savingsCell},${new Date(rec.createdAt).toLocaleDateString('fr-FR')}\n`
         })
         break
       case 'ALERTS':
@@ -142,7 +145,7 @@ export default function ReportsPage() {
         break
       case 'SUMMARY':
         csvContent = 'Métrique,Valeur\n'
-        csvContent += `Total ventes,${report.sales.totalSales}\n`
+        csvContent += `Quantité totale vendue,${report.sales.totalSales}\n`
         csvContent += `Revenu total,${report.sales.totalRevenue}\n`
         csvContent += `Revenu moyen/jour,${report.sales.averagePerDay}\n`
         csvContent += `Recommandations totales,${report.recommendations.total}\n`
@@ -156,8 +159,16 @@ export default function ReportsPage() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
+    const exportSlug: Record<ReportType, string> = {
+      SALES: 'ventes',
+      PERFORMANCE: 'performance',
+      INVENTORY: 'inventaire',
+      RECOMMENDATIONS: 'recommandations',
+      ALERTS: 'alertes',
+      SUMMARY: 'recapitulatif',
+    }
     link.setAttribute('href', url)
-    link.setAttribute('download', `rapport-${selectedReportType.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`)
+    link.setAttribute('download', `rapport-${exportSlug[selectedReportType]}-${new Date().toISOString().split('T')[0]}.csv`)
     link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
@@ -270,7 +281,7 @@ export default function ReportsPage() {
               <SelectContent>
                 <SelectItem value="SUMMARY">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
+                    <LayoutDashboard className="h-4 w-4" />
                     <div>
                       <div className="font-medium">Rapport récapitulatif</div>
                       <div className="text-xs text-muted-foreground">Vue d&apos;ensemble complète</div>
@@ -279,7 +290,7 @@ export default function ReportsPage() {
                 </SelectItem>
                 <SelectItem value="SALES">
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4" />
+                    <Euro className="h-4 w-4" />
                     <div>
                       <div className="font-medium">Rapport de ventes</div>
                       <div className="text-xs text-muted-foreground">Analyse détaillée des ventes</div>
@@ -288,7 +299,7 @@ export default function ReportsPage() {
                 </SelectItem>
                 <SelectItem value="PERFORMANCE">
                   <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4" />
+                    <Store className="h-4 w-4" />
                     <div>
                       <div className="font-medium">Rapport de performance</div>
                       <div className="text-xs text-muted-foreground">Performance des restaurants</div>
@@ -297,7 +308,7 @@ export default function ReportsPage() {
                 </SelectItem>
                 <SelectItem value="INVENTORY">
                   <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4" />
+                    <Warehouse className="h-4 w-4" />
                     <div>
                       <div className="font-medium">Rapport d&apos;inventaire</div>
                       <div className="text-xs text-muted-foreground">État des stocks</div>
@@ -306,7 +317,7 @@ export default function ReportsPage() {
                 </SelectItem>
                 <SelectItem value="RECOMMENDATIONS">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
+                    <Lightbulb className="h-4 w-4" />
                     <div>
                       <div className="font-medium">Rapport de recommandations</div>
                       <div className="text-xs text-muted-foreground">Historique des recommandations</div>
@@ -363,9 +374,13 @@ export default function ReportsPage() {
                 id="report-end"
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setEndDate(v > todayIso ? todayIso : v)
+                }}
+                max={todayIso}
                 className="bg-muted/50 dark:bg-gray-900 border-border"
-                aria-label="Date de fin"
+                aria-label="Date de fin (au plus aujourd'hui)"
               />
             </div>
           </div>
@@ -416,7 +431,7 @@ export default function ReportsPage() {
                   <CardTitle className="text-lg font-semibold">{getReportTypeLabel(report.type)}</CardTitle>
                   <CardDescription className="mt-1">
                     {report.type !== 'INVENTORY' && 'period' in report
-                      ? `Période: ${report.period.start} - ${report.period.end}`
+                      ? `Période: ${new Date(report.period.start + 'T12:00:00').toLocaleDateString('fr-FR')} - ${new Date(report.period.end + 'T12:00:00').toLocaleDateString('fr-FR')}`
                       : report.type === 'INVENTORY'
                       ? `Généré le ${new Date(report.generatedAt).toLocaleDateString('fr-FR')} — les stocks correspondent à cet instant (une différence avec l'inventaire actuel est normale si des ventes ou mises à jour ont eu lieu depuis)`
                       : ''}
@@ -434,7 +449,7 @@ export default function ReportsPage() {
                 <div className="grid gap-4 md:grid-cols-3">
                   <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">Total ventes</CardTitle>
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Quantité totale vendue</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.totalSales}</div>
@@ -455,7 +470,7 @@ export default function ReportsPage() {
                       <CardTitle className="text-sm font-medium text-muted-foreground">Moyenne par jour</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.averagePerDay}</div>
+                      <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{Number(report.summary.averagePerDay).toFixed(1)}</div>
                       <p className="text-xs text-muted-foreground mt-2">unités/jour</p>
                     </CardContent>
                   </Card>
@@ -534,7 +549,7 @@ export default function ReportsPage() {
                   </Card>
                   <Card className="rounded-xl border shadow-sm bg-card">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">Total ventes</CardTitle>
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Quantité totale vendue</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-3xl font-bold text-teal-700 dark:text-teal-400">{report.summary.totalSales}</div>
@@ -589,7 +604,7 @@ export default function ReportsPage() {
             {report.type === 'INVENTORY' && (
               <div className="space-y-6">
                 <p className="text-sm text-muted-foreground">
-                  Les stocks affichés sont ceux au moment de la génération du rapport. Pour voir l&apos;inventaire en temps réel, consultez la fiche du restaurant (Restaurants → nom du restaurant).
+                  Les stocks affichés sont ceux au moment de la génération du rapport. Pour voir l&apos;inventaire en temps réel, consultez la fiche du restaurant (Restaurants → Voir les détails → Gérer l&apos;inventaire).
                 </p>
                 {report.restaurants.map((restaurant) => (
                   <div key={restaurant.restaurantId}>
@@ -767,7 +782,13 @@ export default function ReportsPage() {
                                   : 'En attente'}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-teal-700 dark:text-teal-400">{formatCurrency(rec.estimatedSavings)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-teal-700 dark:text-teal-400">
+                              {rec.type === 'STAFFING' ? (
+                                <span className="text-muted-foreground" title="Neutre — les économies ne s’appliquent pas aux recommandations effectif">N</span>
+                              ) : (
+                                formatCurrency(rec.estimatedSavings)
+                              )}
+                            </td>
                             <td className="px-4 py-3">{new Date(rec.createdAt).toLocaleDateString('fr-FR')}</td>
                           </tr>
                         ))}
@@ -889,7 +910,7 @@ export default function ReportsPage() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div>
-                        <p className="text-xs text-muted-foreground">Total ventes</p>
+                        <p className="text-xs text-muted-foreground">Quantité totale vendue</p>
                         <p className="text-2xl font-bold text-teal-700 dark:text-teal-400">{report.sales.totalSales}</p>
                       </div>
                       <div>

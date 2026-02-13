@@ -21,6 +21,8 @@ interface Activity {
   amount?: number
   date: string
   icon: string
+  /** Sévérité pour les alertes (alignée avec la page Alertes) */
+  severity?: string
 }
 
 interface RecentActivityTableProps {
@@ -97,7 +99,42 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
     return () => clearInterval(interval)
   }, [isLoaded, organization?.id, fetchActivities])
 
-  const getActivityConfig = (type: Activity['type']) => {
+  const getAlertSeverityConfig = (severity: string | undefined) => {
+    switch (severity) {
+      case 'critical':
+        return {
+          borderColor: 'border-l-red-500',
+          bgColor: 'bg-red-50/50 dark:bg-red-900/10',
+          textColor: 'text-red-700 dark:text-red-400',
+          iconColor: 'text-red-600 dark:text-red-400',
+        }
+      case 'high':
+        return {
+          borderColor: 'border-l-orange-500',
+          bgColor: 'bg-orange-50/50 dark:bg-orange-900/10',
+          textColor: 'text-orange-700 dark:text-orange-400',
+          iconColor: 'text-orange-600 dark:text-orange-400',
+        }
+      case 'medium':
+        return {
+          borderColor: 'border-l-yellow-500',
+          bgColor: 'bg-yellow-50/50 dark:bg-yellow-900/10',
+          textColor: 'text-yellow-700 dark:text-yellow-400',
+          iconColor: 'text-yellow-600 dark:text-yellow-400',
+        }
+      case 'low':
+      default:
+        return {
+          borderColor: 'border-l-teal-500',
+          bgColor: 'bg-teal-50/50 dark:bg-teal-900/10',
+          textColor: 'text-teal-700 dark:text-teal-400',
+          iconColor: 'text-teal-600 dark:text-teal-400',
+        }
+    }
+  }
+
+  const getActivityConfig = (activity: Activity) => {
+    const type = activity.type
     switch (type) {
       case 'sale':
         return {
@@ -115,22 +152,20 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
           icon: CheckCircle2,
           iconColor: 'text-teal-600 dark:text-teal-400',
         }
-      case 'alert_created':
+      case 'alert_created': {
+        const severityConfig = getAlertSeverityConfig(activity.severity)
         return {
-          borderColor: 'border-l-orange-500',
-          bgColor: 'bg-orange-50/50 dark:bg-orange-900/10',
-          textColor: 'text-orange-700 dark:text-orange-400',
+          ...severityConfig,
           icon: AlertTriangle,
-          iconColor: 'text-orange-600 dark:text-orange-400',
         }
-      case 'alert_resolved':
+      }
+      case 'alert_resolved': {
+        const severityConfig = getAlertSeverityConfig(activity.severity)
         return {
-          borderColor: 'border-l-teal-500',
-          bgColor: 'bg-teal-50/50 dark:bg-teal-900/10',
-          textColor: 'text-teal-700 dark:text-teal-400',
+          ...severityConfig,
           icon: CheckCircle,
-          iconColor: 'text-teal-600 dark:text-teal-400',
         }
+      }
       default:
         return {
           borderColor: 'border-l-gray-300',
@@ -200,7 +235,7 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
         {activities.length > 0 ? (
           <div className="space-y-3">
             {activities.slice(0, 10).map((activity) => {
-              const config = getActivityConfig(activity.type)
+              const config = getActivityConfig(activity)
               const Icon = config.icon
               
               return (

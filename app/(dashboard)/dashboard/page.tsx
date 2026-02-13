@@ -9,9 +9,10 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { calculateExecutiveDashboardMetrics } from '@/lib/services/dashboard-metrics'
 import { logger } from '@/lib/logger'
-import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight } from 'lucide-react'
 import { DashboardRecommendationsList } from '@/components/dashboard/dashboard-recommendations-list'
 import { GaspillageEstimeCard } from '@/components/dashboard/gaspillage-estime-card'
+import { RuptureStockRiskCard } from '@/components/dashboard/rupture-stock-risk-card'
 import { ReloadButton } from '@/components/dashboard/reload-button'
 import { RecentActivityTable } from '@/components/dashboard/recent-activity-table'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -232,22 +233,10 @@ export default async function DashboardPage(props: PageProps) {
             </p>
           </CardContent>
           </Card>
-          <Card className="rounded-xl border shadow-sm bg-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Risque de rupture (7 jours)
-              </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-orange-600" aria-hidden="true" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600">
-              {formatCurrency(metrics.criticalAlertsRisk)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {metrics.criticalAlertsCount} restaurant{metrics.criticalAlertsCount > 1 ? 's' : ''} concerné{metrics.criticalAlertsCount > 1 ? 's' : ''}
-            </p>
-          </CardContent>
-          </Card>
+          <RuptureStockRiskCard
+            criticalAlertsRisk={metrics.criticalAlertsRisk}
+            criticalAlertsCount={metrics.criticalAlertsCount}
+          />
           <GaspillageEstimeCard estimatedWaste={metrics.estimatedWaste} />
         </section>
 
@@ -303,7 +292,7 @@ export default async function DashboardPage(props: PageProps) {
                         </span>
                       </div>
                       <CardDescription className="mt-2">
-                        {alert.restaurantName} • {alert.message}
+                        {alert.restaurantName} • {alert.message.replace(/\b(ruptures?)\b(?!\s+de\s+stock)/gi, (_, word) => `${word} de stock`)}
                       </CardDescription>
                     </div>
                   </div>

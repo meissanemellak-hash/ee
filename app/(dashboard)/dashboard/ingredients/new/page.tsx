@@ -180,7 +180,7 @@ export default function NewIngredientPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Unité de mesure pour cet ingrédient (kg, L, unité, etc.)
+                Unité de mesure pour cet ingrédient commandé à votre fournisseur (kg, L, unité, etc.)
               </p>
             </div>
 

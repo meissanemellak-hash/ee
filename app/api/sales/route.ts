@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
 import { runAllAlerts } from '@/lib/services/alerts'
+import { recipeQuantityToInventoryUnit } from '@/lib/units'
 import { z } from 'zod'
 import { logger } from '@/lib/logger'
 
@@ -327,7 +328,12 @@ export async function POST(request: NextRequest) {
       },
       include: {
         productIngredients: {
-          select: { ingredientId: true, quantityNeeded: true },
+          select: {
+            ingredientId: true,
+            quantityNeeded: true,
+            unit: true,
+            ingredient: { select: { unit: true } },
+          },
         },
       },
     })
@@ -368,10 +374,16 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Déduction des stocks pour chaque ingrédient de la recette
+      // Déduction des stocks pour chaque ingrédient de la recette (unité recette → unité inventaire)
       if (product.productIngredients.length > 0) {
         for (const pi of product.productIngredients) {
-          const amountToDeduct = pi.quantityNeeded * quantitySold
+          const ingredientUnit = pi.ingredient?.unit ?? 'unité'
+          const perUnitInInventory = recipeQuantityToInventoryUnit(
+            pi.quantityNeeded,
+            pi.unit,
+            ingredientUnit
+          )
+          const amountToDeduct = perUnitInInventory * quantitySold
           const inv = await tx.inventory.findUnique({
             where: {
               restaurantId_ingredientId: {

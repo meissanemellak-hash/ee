@@ -37,6 +37,7 @@ export type Permission =
   | 'reports:generate'
   | 'settings:view'
   | 'settings:edit'
+  | 'billing:view'
   | 'organizations:update'
   | 'users:invite'
 
@@ -74,6 +75,7 @@ const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
     'reports:generate',
     'settings:view',
     'settings:edit',
+    'billing:view',
     'organizations:update',
     'users:invite',
   ],
@@ -166,6 +168,7 @@ export const permissions = {
   canGenerateReport: (role: Role | undefined) => can(role, 'reports:generate'),
   canViewSettings: (role: Role | undefined) => can(role, 'settings:view'),
   canEditSettings: (role: Role | undefined) => can(role, 'settings:edit'),
+  canViewBilling: (role: Role | undefined) => can(role, 'billing:view'),
   canUpdateOrganization: (role: Role | undefined) => can(role, 'organizations:update'),
   canInviteUsers: (role: Role | undefined) => can(role, 'users:invite'),
 }

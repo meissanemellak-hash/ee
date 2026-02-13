@@ -14,7 +14,7 @@ import {
   TrendingUp,
   BarChart3,
   Lightbulb,
-  Bell,
+  AlertTriangle,
   Settings,
   FileText,
 } from 'lucide-react'
@@ -29,7 +29,7 @@ const navigation = [
   { name: 'Ventes & Analyse', href: '/dashboard/sales', icon: BarChart3, permission: 'sales:view' as const },
   { name: 'Prévisions', href: '/dashboard/forecasts', icon: TrendingUp, permission: 'forecasts:view' as const },
   { name: 'Recommandations', href: '/dashboard/recommendations', icon: Lightbulb, permission: 'recommendations:view' as const },
-  { name: 'Alertes', href: '/dashboard/alerts', icon: Bell, permission: 'alerts:view' as const },
+  { name: 'Alertes', href: '/dashboard/alerts', icon: AlertTriangle, permission: 'alerts:view' as const },
   { name: 'Rapports', href: '/dashboard/reports', icon: FileText, permission: 'reports:view' as const },
   { name: 'Paramètres', href: '/dashboard/settings', icon: Settings, permission: 'settings:view' as const },
 ]
