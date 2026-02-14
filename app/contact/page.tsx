@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 
 export const metadata = {
   title: 'Contact | IA Restaurant Manager',
@@ -23,10 +22,7 @@ export default function ContactPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Contact</h1>
-        <p className="mt-3 text-muted-foreground max-w-2xl">
-          Vous gérez plusieurs restaurants et souhaitez centraliser ventes, inventaire et alertes ? Notre équipe est à votre écoute pour une démo, un devis personnalisé ou toute question sur la plateforme IA Restaurant Manager.
-        </p>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl text-center">Contact</h1>
 
         <section className="mt-10">
           <h2 className="text-lg font-semibold text-foreground">Nous contacter</h2>
@@ -38,33 +34,12 @@ export default function ContactPage() {
               </a>
             </li>
             <li>
-              <strong className="text-foreground">Objet :</strong> démo, devis, question technique ou commerciale — précisez votre besoin et le nombre d&apos;établissements que vous pilotez.
+              <strong className="text-foreground">Objet :</strong> précisez bien votre besoin.
             </li>
           </ul>
           <p className="mt-4 text-sm text-muted-foreground">
-            Nous nous engageons à vous répondre sous 48 h ouvrées. Pour une démo ou un devis, remplissez le formulaire de demande de démo ci-dessous ou envoyez-nous un email.
+            Nous nous engageons à vous répondre sous 48 h ouvrées.
           </p>
-        </section>
-
-        <section className="mt-10">
-          <h2 className="text-lg font-semibold text-foreground">Actions rapides</h2>
-          <div className="mt-4 flex flex-col sm:flex-row gap-4">
-            <Button asChild className="bg-teal-600 hover:bg-teal-700 text-white border-0">
-              <Link href="/demo">Demander une démo</Link>
-            </Button>
-            <Button asChild variant="ghost" className="text-muted-foreground">
-              <a href="mailto:contact@ai-operations.fr">Envoyer un email</a>
-            </Button>
-          </div>
-        </section>
-
-        <section className="mt-10 rounded-xl border border-border bg-card p-6">
-          <h2 className="text-lg font-semibold text-foreground">Pourquoi nous contacter ?</h2>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>• <strong className="text-foreground">Demander une démo</strong> : découvrez la plateforme en direct, adaptée à votre nombre de restaurants.</li>
-            <li>• <strong className="text-foreground">Obtenir un devis</strong> : tarification selon le nombre d&apos;établissements et d&apos;utilisateurs.</li>
-            <li>• <strong className="text-foreground">Questions techniques ou commerciales</strong> : intégration, formation, support — nous vous répondons.</li>
-          </ul>
         </section>
       </main>
 

@@ -251,11 +251,15 @@ export default function RestaurantsPage() {
             <p className="text-muted-foreground max-w-md mx-auto mb-2">
               Créez votre premier établissement pour activer le suivi des ventes, l’inventaire et les alertes.
             </p>
-            <ul className="text-sm text-muted-foreground max-w-sm mx-auto mb-0 list-disc space-y-1 flex flex-col items-center text-center [list-style-position:outside]">
+            <ul className="text-sm text-muted-foreground max-w-sm mx-auto mb-6 list-disc space-y-1 flex flex-col items-center text-center [list-style-position:outside]">
               <li>Suivi des ventes et chiffre d’affaires</li>
               <li>Gestion des stocks et seuils d’alerte</li>
               <li>Tableau de bord par restaurant</li>
             </ul>
+            <p className="text-sm text-muted-foreground mb-2">Vous avez besoin d’aide ?</p>
+            <Button asChild variant="outline" size="sm" className="border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20">
+              <Link href="/dashboard/aide">Centre d’aide</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (

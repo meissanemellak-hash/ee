@@ -55,6 +55,13 @@
 
 ---
 
+## Pages légales (bas de page)
+
+- [ ] **Mentions légales** (`/mentions-legales`) : remplacer tous les **[À compléter]** et **[contact@votredomaine.fr]** par les vraies informations (raison sociale, forme juridique, siège, RCS, hébergeur, responsable de la publication, email).
+- [ ] **Politique de confidentialité** (`/confidentialite`) : remplacer **[À compléter]** et les placeholders (raison sociale, adresse, email DPO/contact). Vérifier les durées de conservation si besoin.
+
+---
+
 ## À faire avant la prod (rappels)
 
 - [ ] **Nom de domaine** : avoir un domaine pour l’app (ex. app.tonnom.com ou tonnom.com) et le configurer sur l’hébergeur.

@@ -8,7 +8,7 @@ import {
   Bell,
   Package,
   Store,
-  Target,
+  Lightbulb,
   CheckCircle2,
   Quote,
   LayoutDashboard,
@@ -18,6 +18,8 @@ import {
   Lock,
   Server,
   Users,
+  Euro,
+  Warehouse,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -57,8 +59,8 @@ export function LandingPage() {
             </p>
             {/* Ancres en pills (3 principales) */}
             <nav className="mt-8 flex flex-wrap justify-center gap-2" aria-label="Aller à une section">
-              <a href="#pour-qui" className="rounded-full bg-muted/60 hover:bg-muted border border-border/60 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Pour qui
+              <a href="#tarifs" className="rounded-full bg-muted/60 hover:bg-muted border border-border/60 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Tarifs
               </a>
               <a href="#confiance" className="rounded-full bg-muted/60 hover:bg-muted border border-border/60 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Sécurité
@@ -139,7 +141,7 @@ export function LandingPage() {
               {[
                 { icon: LayoutDashboard, label: 'Tableau de bord', desc: 'Vue groupe et KPIs' },
                 { icon: Store, label: 'Restaurants', desc: 'Liste et détail par restaurant' },
-                { icon: BellRing, label: 'Alertes & rapports', desc: 'Suivi et recommandations' },
+                { icon: AlertTriangle, label: 'Alertes & rapports', desc: 'Suivi et recommandations' },
                 { icon: Users, label: 'Effectif', desc: 'Effectif prévu et alertes' },
               ].map((item) => (
                 <div
@@ -176,12 +178,12 @@ export function LandingPage() {
                   text: 'Définissez l\'effectif prévu par restaurant et par créneau. Une vue claire pour anticiper les besoins en personnel et aligner les plannings sur l\'activité.',
                 },
                 {
-                  icon: Bell,
+                  icon: AlertTriangle,
                   title: 'Alertes sur/sous-effectif',
                   text: 'Recevez des alertes lorsque l\'effectif prévu s\'écarte des besoins réels : évitez la surcharge des équipes ou le sous-effectif au moment du service.',
                 },
                 {
-                  icon: Target,
+                  icon: Lightbulb,
                   title: 'Recommandations',
                   text: 'Des suggestions pour ajuster vos plannings en fonction des prévisions de ventes et des écarts détectés. Moins de stress, un service mieux assuré.',
                 },
@@ -295,7 +297,7 @@ export function LandingPage() {
                 {
                   icon: AlertTriangle,
                   title: 'Alertes trop tard',
-                  text: 'Vous apprenez les problèmes après coup : rupture de stock, dérive des coûts, écarts entre restaurants.',
+                  text: 'Vous apprenez les problèmes après coup : rupture de stock, dérive des coûts, écarts entre restaurants, effectifs.',
                 },
                 {
                   icon: FileSpreadsheet,
@@ -313,7 +315,7 @@ export function LandingPage() {
                   text: 'Les équipes terrain et la direction ne sont pas alignées : les décisions arrivent trop tard.',
                 },
                 {
-                  icon: Package,
+                  icon: Euro,
                   title: 'Recettes et coûts flous',
                   text: 'Difficile de savoir quel produit rapporte, quel ingrédient coûte trop cher ou quelle recette ajuster.',
                 },
@@ -342,7 +344,7 @@ export function LandingPage() {
               Une seule plateforme pour tout piloter
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Tout est centralisé pour le multi-restaurants. Bénéfices : moins de temps perdu, moins de ruptures de stock, des économies mesurables sur les achats et le gaspillage.
+              Tout est centralisé pour le multi-restaurants. Bénéfices : moins de temps perdu, moins de ruptures de stock, économies mesurables sur achats et gaspillage, pilotage des effectifs (alertes sur/sous-effectif) pour aligner les plannings sur l&apos;activité.
             </p>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
@@ -352,7 +354,7 @@ export function LandingPage() {
                   text: 'Consultez en un coup d’œil tous vos établissements, comparez les performances et identifiez les restaurants à risque.',
                 },
                 {
-                  icon: Package,
+                  icon: Warehouse,
                   title: 'Inventaire et recettes',
                   text: 'Produits, ingrédients et recettes par restaurant. Suivez les stocks et les seuils d’alerte pour éviter ruptures de stock et surstock.',
                 },
@@ -362,19 +364,19 @@ export function LandingPage() {
                   text: 'Saisie des ventes, analyse par période et par restaurant. Import CSV possible pour raccorder vos flux existants.',
                 },
                 {
-                  icon: Target,
+                  icon: Lightbulb,
                   title: 'Prévisions et recommandations',
                   text: 'Anticipez les besoins et recevez des recommandations actionnables pour optimiser commandes et coûts.',
                 },
                 {
-                  icon: Bell,
+                  icon: AlertTriangle,
                   title: 'Alertes en temps réel',
-                  text: 'Ruptures de stock, dérives et anomalies remontées immédiatement. Priorisez et résolvez avant que le client ne subisse.',
+                  text: 'Ruptures de stock, dérives et anomalies remontées immédiatement. Priorisez et résolvez avant que vos clients n\'en subissent les conséquences.',
                 },
                 {
-                  icon: CheckCircle2,
-                  title: 'Rapports et économies',
-                  text: 'Générez des rapports (ventes, alertes, recommandations) et mesurez les économies réalisées sur la durée.',
+                  icon: Users,
+                  title: 'Effectifs',
+                  text: 'Effectif prévu par restaurant et par créneau, alertes sur-effectif et sous-effectif pour aligner les plannings sur l\'activité.',
                 },
               ].map((item) => (
                 <div
@@ -394,54 +396,14 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Pour qui */}
-        <section id="pour-qui" className="py-16 lg:py-20 border-t border-border/60 bg-background/50" aria-labelledby="pour-qui-titre">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 id="pour-qui-titre" className="text-2xl font-bold text-center text-foreground sm:text-3xl">
-              Pour qui ?
-            </h2>
-            <p className="mt-3 text-center text-muted-foreground max-w-2xl mx-auto">
-              Que vous gériez 3 établissements ou 30 : bénéfices concrets : visibilité en temps réel, réduction du gaspillage et des ruptures de stock, pilotage des coûts et économies sur les achats.
-            </p>
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  title: 'Chaînes de restaurants',
-                  text: 'Centralisez ventes, inventaire et alertes sur tous vos restaurants. Comparez les performances, identifiez les décrocheurs et pilotez à l\'échelle du groupe.',
-                },
-                {
-                  title: 'Groupes multi-restaurants',
-                  text: 'Restaurants indépendants ou franchises : une seule plateforme pour la direction et les équipes terrain. Vue groupe et vue par établissement.',
-                },
-                {
-                  title: 'Direction opérations',
-                  text: 'Tableau de bord unifié, alertes en temps réel et rapports pour prendre les bonnes décisions. Moins de tableaux Excel, plus de pilotage efficace.',
-                },
-                {
-                  title: 'Achats & logistique',
-                  text: 'Suivez les stocks, les seuils d\'alerte et les prévisions. Réduisez le gaspillage et les ruptures de stocks en anticipant les besoins par restaurant.',
-                },
-              ].map((item) => (
-                <div
-                  key={item.title}
-                  className="rounded-xl border border-border bg-card p-6 shadow-sm"
-                >
-                  <h3 className="font-semibold text-foreground">{item.title}</h3>
-                  <p className="mt-3 text-sm text-muted-foreground">{item.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Pricing / Offres */}
         <section id="tarifs" className="py-16 lg:py-20 border-t border-border/60 bg-background/50" aria-labelledby="tarifs-titre">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <h2 id="tarifs-titre" className="text-2xl font-bold text-center text-foreground sm:text-3xl">
-              Une offre pensée pour la croissance
+              Des formules adaptées à votre périmètre
             </h2>
             <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
-              Tarification adaptée à votre périmètre (Essentiel, Croissance, Pro). Un investissement qui se traduit par des économies concrètes et le pilotage de vos restaurants sur une seule plate-forme.
+              Pilotez ventes, stocks, alertes et prévisions. Des économies concrètes à la clé, des formules qui <span className="whitespace-nowrap">s&apos;adaptent : Essentiel, Croissance, Pro.</span>
             </p>
             <div className="mt-12 grid gap-6 sm:grid-cols-3 max-w-5xl mx-auto">
               {[
@@ -479,7 +441,7 @@ export function LandingPage() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
-                Prévisions et rapports
+                Effectifs, prévisions, rapports
               </li>
             </ul>
           </div>
@@ -514,7 +476,7 @@ export function LandingPage() {
                 {
                   icon: LifeBuoy,
                   title: 'Support dédié',
-                  text: 'Équipe à l\'écoute pour l\'onboarding, la formation et le suivi (plans Croissance et Pro).',
+                  text: 'Équipe à l\'écoute pour l\'onboarding, la formation et le suivi.',
                 },
               ].map((item) => (
                 <div
@@ -547,11 +509,11 @@ export function LandingPage() {
               {[
                 {
                   q: 'Pour qui est conçue la plateforme ?',
-                  a: 'IA Restaurant Manager est pensée pour les groupes et chaînes qui gèrent plusieurs établissements (restaurants, points de vente). Que vous ayez 3 ou 30 restaurants, la plateforme centralise ventes, inventaire, alertes et prévisions sur un seul tableau de bord.',
+                  a: 'IA Restaurant Manager est pensée pour les groupes et chaînes qui gèrent plusieurs établissements (restaurants). Que vous ayez 2 à 30 restaurants, la plateforme centralise ventes, inventaire, effectifs, alertes et prévisions sur un seul tableau de bord.',
                 },
                 {
                   q: 'Comment sont calculés les tarifs ?',
-                  a: 'La tarification dépend du nombre de restaurants : Essentiel (1–5), Croissance (6–10), Pro (10+). À partir de 1 500 € / mois. Un devis personnalisé vous est proposé selon votre périmètre.',
+                  a: 'La tarification dépend du nombre de restaurants : Essentiel (1–5), Croissance (6–10), Pro (10+). À partir de 1 500 € / mois. La formule adaptée (Essentiel, Croissance ou Pro) vous est proposée selon votre périmètre.',
                 },
                 {
                   q: 'Peut-on connecter nos outils existants (caisse, Excel) ?',
@@ -559,7 +521,7 @@ export function LandingPage() {
                 },
                 {
                   q: 'Comment se passe la mise en place et le support ?',
-                  a: 'Pour les plans Croissance et Pro, nous assurons un onboarding, une formation des équipes et un support prioritaire. L\'équipe vous accompagne pour configurer les restaurants, les alertes et les rapports selon votre organisation.',
+                  a: 'Vous n\'êtes pas seul : nous assurons un onboarding, une formation des équipes et un support prioritaire. L\'équipe vous accompagne pas à pas dans la mise en place.',
                 },
               ].map((item, i) => (
                 <details

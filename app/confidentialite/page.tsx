@@ -22,7 +22,7 @@ export default function ConfidentialitePage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Politique de confidentialité</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl text-center">Politique de confidentialité</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Dernière mise à jour : janvier 2026
         </p>

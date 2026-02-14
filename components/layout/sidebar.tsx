@@ -130,18 +130,33 @@ export function Sidebar() {
         })}
       </nav>
       
-      {/* Help Section (Style Sequence) */}
+      {/* Help Section (même style actif que les autres liens de la sidebar) */}
       <div className="border-t border-gray-200 dark:border-gray-800 p-4">
         <Link
           href="/dashboard/aide"
           prefetch={true}
-          className="block rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+          className={cn(
+            'block rounded-lg p-3 transition-all duration-200 focus:outline-none',
+            pathname === '/dashboard/aide' || pathname?.startsWith('/dashboard/aide/')
+              ? 'bg-teal-50 dark:bg-teal-900/20 shadow-sm'
+              : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800'
+          )}
           aria-label="Accéder au centre d'aide"
         >
-          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+          <p className={cn(
+            'text-xs font-medium',
+            pathname === '/dashboard/aide' || pathname?.startsWith('/dashboard/aide/')
+              ? 'text-teal-700 dark:text-teal-400'
+              : 'text-gray-700 dark:text-gray-300'
+          )}>
             Besoin d&apos;aide ?
           </p>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+          <p className={cn(
+            'text-xs mt-1',
+            pathname === '/dashboard/aide' || pathname?.startsWith('/dashboard/aide/')
+              ? 'text-teal-600 dark:text-teal-400'
+              : 'text-gray-600 dark:text-gray-400'
+          )}>
             Consultez notre documentation
           </p>
         </Link>

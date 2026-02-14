@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { HelpCircle, LayoutDashboard, Store, Package, Beaker, BarChart3, TrendingUp, Lightbulb, Bell, FileText, Settings, BookOpen, ChevronRight, Users } from 'lucide-react'
+import { HelpCircle, LayoutDashboard, Store, Package, Beaker, BarChart3, TrendingUp, Lightbulb, AlertTriangle, FileText, Settings, BookOpen, ChevronRight, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const sections = [
@@ -16,7 +16,7 @@ const sections = [
   { id: 'previsions', label: 'Prévisions', icon: TrendingUp },
   { id: 'recommandations', label: 'Recommandations', icon: Lightbulb },
   { id: 'effectifs', label: 'Effectifs', icon: Users },
-  { id: 'alertes', label: 'Alertes', icon: Bell },
+  { id: 'alertes', label: 'Alertes', icon: AlertTriangle },
   { id: 'rapports', label: 'Rapports', icon: FileText },
   { id: 'parametres', label: 'Paramètres', icon: Settings },
 ] as const
@@ -44,10 +44,11 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
             <li>Créez vos <strong className="text-teal-700 dark:text-teal-400 font-bold">produits</strong> (prix, catégorie) et définissez leurs <strong className="text-teal-700 dark:text-teal-400 font-bold">recettes</strong> (ingrédients et quantités).</li>
             <li>Enregistrez des <strong className="text-teal-700 dark:text-teal-400 font-bold">ventes</strong> pour alimenter le tableau de bord et les prévisions.</li>
             <li>Consultez les <strong className="text-teal-700 dark:text-teal-400 font-bold">alertes</strong> (stocks) et les <strong className="text-teal-700 dark:text-teal-400 font-bold">recommandations</strong> pour optimiser.</li>
+            <li>Utilisez la page <strong className="text-teal-700 dark:text-teal-400 font-bold">Effectifs</strong> pour le dimensionnement du personnel (recommandations effectif).</li>
           </ol>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Rôles et permissions</h3>
           <p>
-            L&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">administrateur</strong> peut tout gérer (organisation, membres, suppression). Le <strong className="text-teal-700 dark:text-teal-400 font-bold">manager</strong> peut créer et modifier la plupart des données ; l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">employé</strong> a des droits limités (consultation, saisie de ventes selon la config). La page Paramètres affiche ou masque certaines options selon votre rôle.
+            L&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">administrateur</strong> peut tout gérer (organisation, membres, suppression). Le <strong className="text-teal-700 dark:text-teal-400 font-bold">manager</strong> peut créer et modifier la plupart des données ; l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">employé</strong> a des droits limités (consultation, saisie de ventes...). La page Paramètres affiche ou masque certaines options selon votre rôle.
           </p>
         </>
       ),
@@ -62,7 +63,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Filtrer par restaurant</h3>
           <p>
-            Le sélecteur en haut de page (à côté du logo ou dans le header) permet de choisir un restaurant ou « Tous ». Les données affichées (ventes, alertes, etc.) sont alors filtrées pour ce ou ces établissements. L&apos;option sélectionnée est conservée lorsque vous naviguez entre les pages (Dashboard, Ventes, Alertes…).
+            Le sélecteur en haut de page (à côté du logo ou dans le header) permet de choisir un restaurant ou <span className="whitespace-nowrap">« Tous »</span>. Les données affichées (ventes, alertes, etc.) sont alors filtrées pour ce ou ces établissements. L&apos;option sélectionnée est conservée lorsque vous naviguez entre les pages (Dashboard, Ventes, Alertes…).
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Ce que vous voyez</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
@@ -100,7 +101,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
       body: (
         <>
           <p>
-            Les produits sont vos plats ou articles vendus. Pour chaque produit vous définissez un prix unitaire et une catégorie. La recette (BOM) associe des ingrédients et des quantités : elle sert à calculer les coûts et la consommation de stock lors des ventes.
+            Les produits sont vos plats ou articles vendus. Pour chaque produit vous définissez un prix unitaire et une catégorie (plats, desserts…). La recette (BOM) associe des ingrédients et des quantités : elle sert à calculer les coûts et la consommation de stock lors des ventes.
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Créer un produit</h3>
           <p>« Ajouter un produit » → nom, prix unitaire, catégorie (optionnelle). Enregistrez puis éditez le produit pour ajouter sa recette (ingrédients et quantités).</p>
@@ -124,10 +125,10 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
             Les ingrédients sont les matières premières utilisées dans les recettes produits. Ils sont partagés au niveau de l&apos;organisation ; les stocks sont gérés par restaurant dans l&apos;inventaire.
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Créer un ingrédient</h3>
-          <p>« Ajouter un ingrédient » → nom, unité (kg, L, pièce, g, etc.), coût par unité. Optionnel : taille de pack, nom du fournisseur. Choisissez l&apos;unité comme dans vos recettes : si vos recettes indiquent la farine en grammes, mettez « gramme » (g) pour l&apos;ingrédient ; si elles utilisent des kg, mettez kg. Si vous commandez en kilos chez le fournisseur mais travaillez en grammes dans les recettes, gardez « gramme » dans l&apos;app : à la réception, saisissez le stock en grammes (ex. 25 kg = 25 000 g) et le coût par gramme (prix au kg ÷ 1000).</p>
+          <p>« Ajouter un ingrédient » → nom, unité (kg, L, pièce, g, etc.), coût par unité. Optionnel : taille de pack, nom du fournisseur. Nous recommandons de renseigner l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">unité de commande fournisseur</strong> (ex. kg) : le stock et le coût sont alors dans cette unité. Dans la recette de chaque produit (page Produits), un <strong className="text-teal-700 dark:text-teal-400 font-bold">sélecteur d&apos;unité</strong> permet de saisir la quantité dans l&apos;unité qui vous convient (ex. g pour des quantités précises) ; les déductions de stock sont calculées automatiquement en cohérence avec l&apos;unité de l&apos;ingrédient.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Où sont utilisés les ingrédients ?</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
-            <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Recettes produits</strong> : chaque produit peut associer des ingrédients et des quantités (BOM).</li>
+            <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Recettes produits</strong> : chaque produit associe des ingrédients et des quantités par unité vendue (BOM = détail des quantités par unité). Ces quantités servent à déduire automatiquement les stocks à chaque vente. Accès : page Produits → modifier un produit → Recette (en bas de page).</li>
             <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Inventaire</strong> : par restaurant, vous renseignez le stock actuel et les seuils min/max. Les ventes de produits avec recette déduisent automatiquement les stocks (saisie, modification, suppression ou import de ventes).</li>
             <li>Les <strong className="text-teal-700 dark:text-teal-400 font-bold">alertes</strong> se créent ou se mettent à jour automatiquement quand un stock sort des seuils min/max, après toute modification d&apos;inventaire ou après des ventes (qui déduisent les stocks).</li>
           </ul>
@@ -145,7 +146,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
             La section Ventes permet d&apos;enregistrer les ventes (restaurant, produit, quantité, date) et de consulter des analyses (statistiques, tendances, meilleurs produits).
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Saisir une vente</h3>
-          <p>« Ajouter une vente » (ou depuis la liste) : choisissez le restaurant, le produit, la quantité, la date et l&apos;heure si besoin. Le montant est calculé à partir du prix unitaire du produit.</p>
+          <p>« Ajouter une vente » (ou importez vos ventes) : choisissez le restaurant, le produit, la quantité, la date et l&apos;heure si besoin. Le montant est calculé à partir du prix unitaire du produit.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Déduction automatique des stocks</h3>
           <p>Dès qu&apos;une vente est enregistrée, les stocks du restaurant sont <strong className="text-teal-700 dark:text-teal-400 font-bold">déduits automatiquement</strong> selon la recette du produit (quantité d&apos;ingrédients par unité vendue). Si vous modifiez une vente (quantité ou produit), l&apos;ancienne déduction est annulée et la nouvelle est appliquée. Si vous supprimez une vente, les quantités sont remises dans l&apos;inventaire. Les <strong className="text-teal-700 dark:text-teal-400 font-bold">alertes</strong> (rupture de stock, surstock) sont recalculées après chaque saisie, modification, suppression ou import de ventes.</p>
           <p className="mt-2">Un produit sans recette n&apos;impacte pas l&apos;inventaire ; les ventes restent enregistrées pour le chiffre d&apos;affaires et les analyses.</p>
@@ -169,7 +170,7 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
             Les prévisions sont générées à partir de vos données historiques de ventes. Le pourcentage de gaspillage (Paramètres → Organisation) sert à majorer les quantités à commander, pas les chiffres de prévisions affichés ici. Elles aident à anticiper la demande et à planifier les commandes et la production.
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Générer une prévision</h3>
-          <p>Sur la page Prévisions, renseignez les filtres (période, restaurant si besoin) puis cliquez sur « Générer ». Les résultats s&apos;affichent sous le formulaire : prévisions de ventes et, selon le cas, impact sur la consommation d&apos;ingrédients.</p>
+          <p>Sur la page Prévisions, renseignez les filtres (période, restaurant si besoin) puis cliquez sur <span className="whitespace-nowrap">« Générer »</span>. Les résultats s&apos;affichent sous le formulaire : prévisions de ventes et, selon le cas, impact sur la consommation d&apos;ingrédients.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Pourcentage de gaspillage</h3>
           <p>Le pourcentage de gaspillage par défaut est réglé dans Paramètres → Organisation (valeur entre 0 et 1, ex. 0,1 = 10 %). Il anticipe les pertes sur la période (gaspillage, casse, pertes en préparation) lors du calcul des quantités à commander à partir des prévisions ; il n’affecte pas les chiffres de prévisions de ventes affichés. <strong className="text-teal-700 dark:text-teal-400">Comment choisir un % cohérent ?</strong> Suivez vos pertes réelles sur quelques semaines (produits jetés, périmés, pertes en préparation) ou partez d&apos;une fourchette courante en restauration (souvent 5 à 15 %), puis ajustez selon les retours terrain.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Bon à savoir</h3>
@@ -223,13 +224,13 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
             Les alertes vous informent lorsque le stock d&apos;un ingrédient dans un restaurant est sous le seuil minimum (risque de rupture de stock) ou au-dessus du seuil maximum (surstock). Elles permettent d&apos;agir rapidement sur les commandes et la production.
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">D&apos;où viennent les alertes ?</h3>
-          <p>Les seuils min et max sont définis dans l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">inventaire</strong> de chaque restaurant (page Restaurants → Voir détails → Inventaire). Les alertes sont <strong className="text-teal-700 dark:text-teal-400 font-bold">générées automatiquement</strong> dès que les stocks changent : après une modification d&apos;inventaire (saisie manuelle ou import), et après chaque vente enregistrée, modifiée, supprimée ou importée (car les ventes déduisent les stocks selon les recettes). Vous pouvez aussi lancer manuellement la génération depuis la page Alertes (sélectionnez un restaurant puis le bouton « Générer les alertes ») pour recalculer les alertes à partir des stocks actuels. Le bouton « Actualiser » rafraîchit la liste sans relancer la génération.</p>
+          <p>Les seuils min et max sont définis dans l&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">inventaire</strong> de chaque restaurant (page Restaurants → Voir détails → Inventaire). Les alertes sont <strong className="text-teal-700 dark:text-teal-400 font-bold">générées automatiquement</strong> dès que les stocks changent : après une modification d&apos;inventaire (saisie manuelle ou import), et après chaque vente enregistrée, modifiée, supprimée ou importée (car les ventes déduisent les stocks selon les recettes).</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Où les voir ?</h3>
-          <p>Les alertes apparaissent sur le <strong className="text-teal-700 dark:text-teal-400 font-bold">tableau de bord</strong> (section « Alertes critiques ») et sur la page <strong className="text-teal-700 dark:text-teal-400 font-bold">Alertes</strong> (menu Dashboard → Alertes), où vous pouvez filtrer par restaurant, type, sévérité et consulter ou marquer comme résolues. Chaque fiche restaurant affiche aussi le nombre d&apos;alertes actives.</p>
+          <p>Les alertes apparaissent sur le <strong className="text-teal-700 dark:text-teal-400 font-bold">tableau de bord</strong> (section « Alertes critiques » et activités récentes), et sur la page <strong className="text-teal-700 dark:text-teal-400 font-bold">Alertes</strong> (menu Dashboard → Alertes), où vous pouvez filtrer par restaurant, type, sévérité et consulter ou marquer comme résolues. Chaque fiche restaurant affiche aussi le nombre d&apos;alertes actives.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Sur la page Alertes</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
             <li>Consultez la liste des alertes actives (rupture de stock, surstock). Filtrez par restaurant si besoin.</li>
-            <li>Générez les alertes pour un restaurant (bouton « Générer les alertes ») si vous souhaitez forcer un recalcul selon les stocks et seuils actuels. « Actualiser » rafraîchit uniquement la liste.</li>
+            <li>Consultez et filtrez la liste des alertes ; « Actualiser » rafraîchit la liste.</li>
             <li>Après avoir traité le problème (commande, ajustement), marquez l&apos;alerte comme <strong className="text-teal-700 dark:text-teal-400 font-bold">résolue</strong>.</li>
             <li>Vous pouvez afficher les alertes résolues pour l&apos;historique.</li>
           </ul>
@@ -270,13 +271,13 @@ function SectionContent({ sectionId }: { sectionId: SectionId }) {
           </p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Organisation</h3>
           <ul className="list-disc list-inside space-y-1 ml-1">
-            <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Nom de l&apos;organisation</strong> : modifiable par le créateur ou un administrateur. Ce nom est utilisé dans toute l&apos;application.</li>
+            <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Nom de l&apos;organisation</strong> : modifiable par un administrateur. Ce nom est utilisé dans toute l&apos;application.</li>
             <li><strong className="text-teal-700 dark:text-teal-400 font-bold">Pourcentage de gaspillage par défaut</strong> : valeur entre 0 et 1 (ex. 0,1 = 10 %) utilisée dans les prévisions et les recommandations de commande (pertes, casse, gaspillage). Pour l&apos;estimer : suivez vos pertes réelles ou partez d&apos;une fourchette courante (5–15 %) puis affinez. Voir la section Prévisions dans le centre d&apos;aide pour plus de détail.</li>
           </ul>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Membres</h3>
-          <p>Les administrateurs peuvent inviter des membres et attribuer les rôles (admin, manager, employé). Chaque rôle dispose de permissions précises (création, modification, suppression, rapports, etc.). Consultez la section Membres pour gérer les invitations et les rôles.</p>
+          <p>Les <strong className="text-teal-700 dark:text-teal-400 font-bold">administrateurs</strong> peuvent tout gérer : inviter des membres, attribuer les rôles, modifier le nom de l&apos;organisation et le pourcentage de gaspillage, accéder à la facturation, supprimer un restaurant. Les <strong className="text-teal-700 dark:text-teal-400 font-bold">managers</strong> peuvent créer et modifier les restaurants, produits, ingrédients, ventes, inventaire, et consulter rapports, alertes et recommandations ; ils ne peuvent pas inviter des membres, modifier les rôles, accéder à la facturation ni supprimer un restaurant. L&apos;<strong className="text-teal-700 dark:text-teal-400 font-bold">employé</strong> peut consulter le dashboard, les restaurants, produits, ingrédients, ventes, inventaire, alertes, prévisions, recommandations et rapports, et saisir des ventes ; il ne peut pas modifier ni supprimer les données (pas d&apos;accès aux Paramètres). Consultez la section Membres (Paramètres) pour gérer les invitations et les rôles.</p>
           <h3 className="text-sm font-semibold text-foreground mt-4 mb-1">Profil utilisateur</h3>
-          <p>Vous pouvez consulter votre nom, votre email et les informations de compte. Pour modifier votre profil (nom, email, mot de passe), utilisez le menu utilisateur en haut à droite (avatar ou nom). Le bouton « Déconnexion » vous déconnecte et vous renvoie à l&apos;accueil.</p>
+          <p>Vous pouvez consulter votre nom, votre email et les informations de compte. Pour modifier votre profil (nom, email, mot de passe), utilisez le menu utilisateur en haut à droite (avatar ou nom). Le bouton <span className="whitespace-nowrap">« Déconnexion »</span> vous déconnecte et vous renvoie à l&apos;accueil.</p>
         </>
       ),
     },
