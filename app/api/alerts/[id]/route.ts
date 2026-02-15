@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,7 +37,16 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -58,6 +62,10 @@ export async function PATCH(
       )
     }
 
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
+
     let organization: any = null
 
     if (orgIdToUse) {
@@ -72,7 +80,7 @@ export async function PATCH(
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           
           if (isMember) {
             try {
@@ -109,6 +117,7 @@ export async function PATCH(
       )
     }
 
+    const { checkApiPermission } = await import('@/lib/auth-role')
     const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'alerts:resolve')
     if (forbidden) return forbidden
 
@@ -170,6 +179,7 @@ export async function PATCH(
 
     return NextResponse.json(updated)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error updating alert:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
