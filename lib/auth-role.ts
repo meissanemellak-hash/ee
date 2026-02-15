@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { clerkClient } from '@clerk/nextjs/server'
 import type { Role } from './roles'
 import { can, type Permission } from './roles'
 
@@ -7,18 +6,15 @@ import { can, type Permission } from './roles'
 export const APP_ROLE_METADATA_KEY = 'appRole'
 
 /**
- * Récupère le rôle de l'utilisateur dans l'organisation
- * Option A : metadata Clerk sur le membership
- * - Clerk admin → admin
- * - Clerk member + appRole=manager → manager
- * - Clerk member + appRole=staff ou non défini → staff
- * - Pas de membership ou erreur → admin (rétrocompatibilité, ne casse pas les users existants)
+ * Récupère le rôle de l'utilisateur dans l'organisation.
+ * Clerk importé dynamiquement pour ne pas casser le build Next.
  */
 export async function getCurrentUserRole(
   userId: string,
   clerkOrgId: string
 ): Promise<Role> {
   try {
+    const { clerkClient } = await import('@clerk/nextjs/server')
     const client = await clerkClient()
     const memberships = await client.users.getOrganizationMembershipList({
       userId,

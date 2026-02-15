@@ -1,6 +1,6 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
-import { prisma } from './db/prisma'
-import { logger } from './logger'
+/**
+ * Auth helpers. Use dynamic imports so this module is safe to load at build time (no Clerk/Prisma at top level).
+ */
 
 /**
  * Récupère l'organisation de l'utilisateur actuel
@@ -8,11 +8,12 @@ import { logger } from './logger'
  * Ne retourne jamais null si orgId existe (sauf en cas d'erreur vraiment critique)
  */
 export async function getCurrentOrganization() {
+  const { auth } = await import('@clerk/nextjs/server')
   const { orgId } = auth()
-  
-  if (!orgId) {
-    return null
-  }
+  if (!orgId) return null
+
+  const { prisma } = await import('./db/prisma')
+  const { logger } = await import('./logger')
 
   // Chercher l'organisation dans la DB
   let organization = await prisma.organization.findUnique({
@@ -104,6 +105,9 @@ export async function getCurrentOrganization() {
  * À appeler avec un clerkOrgId : si l'org n'est pas en DB, on la crée depuis Clerk puis on la retourne.
  */
 export async function ensureOrganizationInDb(clerkOrgId: string) {
+  const { prisma } = await import('./db/prisma')
+  const { logger } = await import('./logger')
+
   let organization = await prisma.organization.findUnique({
     where: { clerkOrgId },
   })
@@ -187,6 +191,7 @@ export async function getOrganizationByClerkIdIfMember(
     )
     if (!isMember) return null
 
+    const { prisma } = await import('./db/prisma')
     let organization = await prisma.organization.findUnique({
       where: { clerkOrgId },
     })
@@ -220,6 +225,7 @@ export async function getOrganizationByClerkIdIfMember(
  * Récupère l'utilisateur actuel avec son organisation
  */
 export async function getCurrentUserWithOrg() {
+  const { currentUser } = await import('@clerk/nextjs/server')
   const user = await currentUser()
   const organization = await getCurrentOrganization()
 
