@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { getCurrentOrganization } from '@/lib/auth'
-import { getStripe } from '@/lib/stripe'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/stripe/invoice-pdf?invoiceId=in_xxx
- * Proxy du PDF de facture Stripe pour forcer le nom de fichier en français (Facture-xxx.pdf).
+ * Proxy du PDF de facture Stripe. Imports dynamiques pour le build.
  */
 export async function GET(request: NextRequest) {
+  const { getCurrentOrganization } = await import('@/lib/auth')
+  const { getStripe } = await import('@/lib/stripe')
+  const { prisma } = await import('@/lib/db/prisma')
+  const { logger } = await import('@/lib/logger')
+
   const { searchParams } = new URL(request.url)
   const invoiceId = searchParams.get('invoiceId')?.trim()
   if (!invoiceId) {
@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   let organization = await getCurrentOrganization()
   if (!organization) {
     try {
+      const { auth, clerkClient } = await import('@clerk/nextjs/server')
       const { userId } = auth()
       if (userId) {
         const client = await clerkClient()
@@ -55,7 +56,8 @@ export async function GET(request: NextRequest) {
         }
       }
     } catch (e) {
-      logger.error('[stripe/invoice-pdf] Fallback org:', e)
+      const { logger: log } = await import('@/lib/logger')
+      log.error('[stripe/invoice-pdf] Fallback org:', e)
     }
   }
   if (!organization) {

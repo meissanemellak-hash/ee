@@ -1,25 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
-import Papa from 'papaparse'
 import { z } from 'zod'
-import { csvProductRowSchema } from '@/lib/validations/products'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/products/import
- * Importe des produits depuis un fichier CSV
+ * Importe des produits depuis un fichier CSV. Imports dynamiques pour le build.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = auth()
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization, getOrganizationByClerkIdIfMember } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
 
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -31,6 +34,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    const Papa = (await import('papaparse')).default
+    const { csvProductRowSchema } = await import('@/lib/validations/products')
 
     let organization = await getCurrentOrganization()
     if (!organization && clerkOrgIdFromClient) {
@@ -139,6 +145,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[POST /api/products/import] Erreur:', error)
     return NextResponse.json(
       { error: 'Erreur serveur', details: error instanceof Error ? error.message : 'Erreur inconnue' },
