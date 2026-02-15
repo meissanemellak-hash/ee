@@ -22,14 +22,20 @@ const LOOKUP_KEY_TO_PLAN_ID: Record<string, PlanId> = {
  * Réservé au super-admin. Crée une session Stripe Checkout pour le plan choisi.
  */
 export async function POST(request: NextRequest) {
-  const { userId } = auth()
-  if (!userId) {
+  let userId: string | null = null
+  let userEmail: string | null = null
+  try {
+    const authResult = auth()
+    userId = authResult.userId ?? null
+    if (!userId) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    }
+    const user = await currentUser()
+    userEmail = user?.emailAddresses?.[0]?.emailAddress?.trim().toLowerCase() ?? null
+  } catch {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
-
-  const user = await currentUser()
-  const email = user?.emailAddresses?.[0]?.emailAddress?.trim().toLowerCase()
-  if (!SUPER_ADMIN_EMAIL || email !== SUPER_ADMIN_EMAIL) {
+  if (!SUPER_ADMIN_EMAIL || userEmail !== SUPER_ADMIN_EMAIL) {
     return NextResponse.json({ error: 'Accès réservé à l\'administrateur' }, { status: 403 })
   }
 
