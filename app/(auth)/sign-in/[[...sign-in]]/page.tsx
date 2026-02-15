@@ -12,13 +12,6 @@ export default function SignInPage() {
           routing="hash"
           signUpUrl="/demo"
           fallbackRedirectUrl="/dashboard"
-          localization={{
-            signIn: {
-              start: {
-                actionLink: 'Demander une démo',
-              },
-            },
-          }}
         />
       </div>
     </main>
