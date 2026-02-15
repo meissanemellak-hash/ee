@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Sauvegarder la recommandation : soit des commandes à passer, soit une recommandation "surstocks" (ne pas commander)
-    const details = result.details as { overstockIngredients?: Array<unknown>; reason?: string; period?: { start: string; end: string }; [k: string]: unknown }
+    const details = result.details as unknown as { overstockIngredients?: Array<unknown>; reason?: string; period?: { start: string; end: string }; [k: string]: unknown }
     const hasOverstock = (details?.overstockIngredients?.length ?? 0) > 0
     const periodStart = details?.period?.start
     const periodEnd = details?.period?.end

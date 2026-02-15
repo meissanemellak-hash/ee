@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { z } from 'zod'
 import { checkApiPermission, APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
+import { logger } from '@/lib/logger'
 
 const inviteSchema = z.object({
   email: z.string().email('Email invalide'),

@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Déduire les stocks selon les recettes (BOM) pour chaque produit importé
-    const productIds = [...new Set(salesToCreate.map(s => s.productId))]
+    const productIds = Array.from(new Set(salesToCreate.map(s => s.productId)))
     const quantityByProduct = new Map<string, number>()
     for (const s of salesToCreate) {
       quantityByProduct.set(s.productId, (quantityByProduct.get(s.productId) ?? 0) + s.quantity)

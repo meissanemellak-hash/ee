@@ -216,6 +216,7 @@ export async function GET(request: NextRequest) {
       amount?: number
       date: Date
       icon: string
+      severity?: string
     }> = []
 
     // Ajouter les ventes

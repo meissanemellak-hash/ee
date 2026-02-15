@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider localization={localization}>
+    <ClerkProvider localization={localization as Parameters<typeof ClerkProvider>[0]['localization']}>
       <ReactQueryProvider>
         <html lang="fr" suppressHydrationWarning>
           <body className={inter.className} suppressHydrationWarning>

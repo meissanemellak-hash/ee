@@ -858,11 +858,14 @@ export default function RecommendationsPage() {
                   {recommendation.type === 'STAFFING' && (
                     <div className="space-y-3">
                       <h4 className="text-sm font-semibold text-foreground">Effectifs recommandés par créneau</h4>
-                      {Array.isArray(details) && details.length > 0 && (details as { date?: string }[])[0]?.date ? (
-                        <p className="text-xs text-muted-foreground">
-                          Pour le {formatDate((details as { date?: string }[])[0].date)}
-                        </p>
-                      ) : null}
+                      {Array.isArray(details) && details.length > 0 ? (() => {
+                        const firstDate = (details as { date?: string }[])[0]?.date
+                        return firstDate ? (
+                          <p className="text-xs text-muted-foreground">
+                            Pour le {formatDate(firstDate)}
+                          </p>
+                        ) : null
+                      })() : null}
                       {Array.isArray(details) ? (
                         <div className="rounded-xl border border-border overflow-hidden">
                           <table className="w-full text-sm">

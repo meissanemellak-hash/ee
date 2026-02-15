@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
+import { translateApiError } from '@/lib/translate-api-error'
 
 interface ApplyRecommendationButtonProps {
   recommendationId: string

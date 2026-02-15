@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { checkApiPermission } from '@/lib/auth-role'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentOrganization } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 import { generateBOMOrderRecommendations } from '@/lib/services/recommender-bom'
 import { generateStaffingRecommendations } from '@/lib/services/recommender'
 
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
         try {
           const result = await generateBOMOrderRecommendations(
             restaurant.id,
-            typeof shrinkPct === 'number' ? shrinkPct : 0.1,
+            typeof bodyShrinkPct === 'number' ? bodyShrinkPct : 0.1,
             typeof days === 'number' ? days : 7
           )
 

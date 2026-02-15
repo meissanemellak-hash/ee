@@ -123,18 +123,19 @@ export default function IngredientDetailPage() {
     )
   }
 
-  const allInventory = ingredient.inventory ?? []
+  const currentIngredient = ingredient!
+  const allInventory = currentIngredient.inventory ?? []
   const inventoryList = activeRestaurantId
     ? allInventory.filter((inv) => inv.restaurant.id === activeRestaurantId)
     : allInventory
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Détail de l'ingrédient ${ingredient.name}`}>
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label={`Détail de l'ingrédient ${currentIngredient.name}`}>
       <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
         <Breadcrumbs
           items={[
             { label: 'Ingrédients', href: '/dashboard/ingredients' },
-            { label: ingredient.name },
+            { label: currentIngredient.name },
           ]}
         />
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
@@ -149,14 +150,14 @@ export default function IngredientDetailPage() {
                 <Beaker className="h-6 w-6 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold tracking-tight truncate">{ingredient.name}</h1>
-                <p className="text-muted-foreground text-sm mt-0.5">{ingredient.unit}</p>
+                <h1 className="text-2xl font-bold tracking-tight truncate">{currentIngredient.name}</h1>
+                <p className="text-muted-foreground text-sm mt-0.5">{currentIngredient.unit}</p>
               </div>
             </div>
           </div>
           {canEdit && (
             <Button variant="outline" size="sm" className="shrink-0 rounded-xl border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300" asChild>
-              <Link href={`/dashboard/ingredients/${ingredient.id}/edit`}>
+              <Link href={`/dashboard/ingredients/${currentIngredient.id}/edit`}>
                 <Edit className="h-4 w-4 mr-2" />
                 Modifier
               </Link>
@@ -175,36 +176,36 @@ export default function IngredientDetailPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Coût par unité</span>
                   <span className="text-xl font-bold text-teal-700 dark:text-teal-400">
-                    {formatCurrency(ingredient.costPerUnit)}
+                    {formatCurrency(currentIngredient.costPerUnit)}
                   </span>
                 </div>
               </div>
-              {ingredient.packSize != null && (
+              {currentIngredient.packSize != null && (
                 <div className="flex justify-between items-center py-2 border-b border-border/80">
                   <span className="text-sm text-muted-foreground">Taille du pack</span>
-                  <span className="text-sm font-medium">{ingredient.packSize} {ingredient.unit}</span>
+                  <span className="text-sm font-medium">{currentIngredient.packSize} {currentIngredient.unit}</span>
                 </div>
               )}
-              {ingredient.packSize != null && ingredient.packSize > 0 && (
+              {currentIngredient.packSize != null && currentIngredient.packSize > 0 && (
                 <div className="p-4 rounded-xl bg-teal-50/80 dark:bg-teal-900/20 border border-teal-100/80 dark:border-teal-900/30">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Coût total de la commande</span>
                     <span className="text-xl font-bold text-teal-700 dark:text-teal-400">
-                      {formatCurrency(ingredient.costPerUnit * ingredient.packSize)}
+                      {formatCurrency(currentIngredient.costPerUnit * currentIngredient.packSize)}
                     </span>
                   </div>
                 </div>
               )}
-              {ingredient.supplierName && (
+              {currentIngredient.supplierName && (
                 <div className="flex justify-between items-center py-2 border-b border-border/80">
                   <span className="text-sm text-muted-foreground">Fournisseur</span>
-                  <span className="text-sm font-medium truncate max-w-[200px]" title={ingredient.supplierName}>{ingredient.supplierName}</span>
+                  <span className="text-sm font-medium truncate max-w-[200px]" title={currentIngredient.supplierName}>{currentIngredient.supplierName}</span>
                 </div>
               )}
               <div className="flex items-center gap-2 pt-2">
                 <Package className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                 <span className="text-sm text-muted-foreground">
-                  Utilisé dans {ingredient._count?.productIngredients ?? 0} recette(s)
+                  Utilisé dans {currentIngredient._count?.productIngredients ?? 0} recette(s)
                 </span>
               </div>
             </CardContent>
@@ -271,9 +272,9 @@ export default function IngredientDetailPage() {
                         {inventoryList.map((inv) => (
                           <tr key={inv.id} className="border-b border-border last:border-0 hover:bg-muted/30 dark:hover:bg-gray-800/30 transition-colors">
                             <td className="px-3 py-2 font-medium">{inv.restaurant.name}</td>
-                            <td className="px-3 py-2 text-right">{inv.currentStock} {ingredient.unit}</td>
-                            <td className="px-3 py-2 text-right">{inv.minThreshold} {ingredient.unit}</td>
-                            <td className="px-3 py-2 text-right">{inv.maxThreshold != null ? `${inv.maxThreshold} ${ingredient.unit}` : '—'}</td>
+                            <td className="px-3 py-2 text-right">{inv.currentStock} {currentIngredient.unit}</td>
+                            <td className="px-3 py-2 text-right">{inv.minThreshold} {currentIngredient.unit}</td>
+                            <td className="px-3 py-2 text-right">{inv.maxThreshold != null ? `${inv.maxThreshold} ${currentIngredient.unit}` : '—'}</td>
                           </tr>
                         ))}
                       </tbody>

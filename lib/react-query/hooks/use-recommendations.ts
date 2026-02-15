@@ -173,7 +173,7 @@ export function useGenerateBOMRecommendations() {
       } else {
         toast({
           title: 'Recommandations générées',
-          description: `${recommendationsCount} recommandation${recommendationsCount > 1 ? 's' : ''} créée${recommendationsCount > 1 ? 's' : ''}. Coût estimé: ${formatCurrency((result as any).estimatedOrderCost ?? result.details?.estimatedOrderCost ?? 0)} • Gain estimé: ${formatCurrency(result.estimatedSavings || 0)}`,
+          description: `${recommendationsCount} recommandation${recommendationsCount > 1 ? 's' : ''} créée${recommendationsCount > 1 ? 's' : ''}. Coût estimé: ${formatCurrency((result as any).estimatedOrderCost ?? (result.details as { estimatedOrderCost?: number } | undefined)?.estimatedOrderCost ?? 0)} • Gain estimé: ${formatCurrency(result.estimatedSavings || 0)}`,
         })
       }
     },
@@ -289,7 +289,7 @@ export function useGenerateAllRecommendations() {
       if (total === 0 && (!result.byRestaurant || result.byRestaurant.length === 0)) {
         toast({
           title: 'Aucune recommandation générée',
-          description: result.message || (isStaffing ? 'Aucun restaurant ou pas assez de ventes par créneau.' : 'Aucun restaurant ou stocks suffisants.'),
+          description: (result as { message?: string }).message || (isStaffing ? 'Aucun restaurant ou pas assez de ventes par créneau.' : 'Aucun restaurant ou stocks suffisants.'),
         })
       } else {
         const label = isStaffing ? 'd\'effectifs' : 'de commande'

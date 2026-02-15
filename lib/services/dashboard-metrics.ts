@@ -171,7 +171,7 @@ export async function calculateExecutiveDashboardMetrics(
   })
 
   // Inventaire des restaurants des alertes critiques (pour calcul d'impact basé sur les données)
-  const alertRestaurantIds = [...new Set(criticalAlerts.map((a) => a.restaurantId))]
+  const alertRestaurantIds = Array.from(new Set(criticalAlerts.map((a) => a.restaurantId)))
   const inventoryForAlerts =
     alertRestaurantIds.length > 0
       ? await prisma.inventory.findMany({

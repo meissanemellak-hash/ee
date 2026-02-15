@@ -114,9 +114,10 @@ export async function PATCH(
 
       if (Array.isArray(data)) {
         for (const r of data) {
+          const row = r as Record<string, unknown>
           const qty = readQty(r)
-          if (r?.ingredientId && qty > 0) {
-            items.push({ ingredientId: String(r.ingredientId), quantity: qty })
+          if (row?.ingredientId != null && qty > 0) {
+            items.push({ ingredientId: String(row.ingredientId), quantity: qty })
           }
         }
       } else if (data && typeof data === 'object') {

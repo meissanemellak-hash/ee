@@ -29,7 +29,7 @@ export interface InventoryTableProps {
   onSave: (itemId?: string) => void
   onCancel: () => void
   setDeletingId: (id: string | null) => void
-  updateMutation: UseMutationResult<InventoryItem, Error, { id: string; restaurantId: string; data: { currentStock: number; minThreshold: number; maxThreshold: number | null } }, unknown>
+  updateMutation: UseMutationResult<InventoryItem, Error, { id: string; restaurantId: string; data: { currentStock?: number; minThreshold?: number; maxThreshold?: number | null } }, unknown>
   canEdit: boolean
 }
 

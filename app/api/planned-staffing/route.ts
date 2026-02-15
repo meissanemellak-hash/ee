@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const clerkOrgId = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgId
-    const organization = await resolveOrganization(userId, orgIdToUse)
+    const organization = await resolveOrganization(userId, orgIdToUse ?? null)
     if (!organization) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
 
     const restaurantId = searchParams.get('restaurantId')
@@ -115,7 +115,7 @@ export async function PUT(request: NextRequest) {
       clerkOrgId?: string
     }
     const orgIdToUse = authOrgId || bodyClerkOrgId
-    const organization = await resolveOrganization(userId, orgIdToUse)
+    const organization = await resolveOrganization(userId, orgIdToUse ?? null)
     if (!organization) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     if (!restaurantId || !dateStr || !Array.isArray(slots)) {
       return NextResponse.json(
