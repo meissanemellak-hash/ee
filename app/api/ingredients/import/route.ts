@@ -1,24 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
-import Papa from 'papaparse'
-import { csvIngredientRowSchema } from '@/lib/validations/ingredients'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/ingredients/import
- * Importe des ingrédients depuis un fichier CSV
+ * Importe des ingrédients depuis un fichier CSV. Imports dynamiques pour le build.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = auth()
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization, getOrganizationByClerkIdIfMember } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
 
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -47,6 +50,9 @@ export async function POST(request: NextRequest) {
 
     const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'ingredients:create')
     if (forbidden) return forbidden
+
+    const Papa = (await import('papaparse')).default
+    const { csvIngredientRowSchema } = await import('@/lib/validations/ingredients')
 
     const text = await file.text()
     const parseResult = Papa.parse(text, {
@@ -159,6 +165,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[POST /api/ingredients/import] Erreur:', error)
     return NextResponse.json(
       {
