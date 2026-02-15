@@ -74,7 +74,7 @@ export function BillingClientSection({ canCancel = false }: BillingClientSection
             variant="outline"
             onClick={() => setCancelDialogOpen(true)}
           >
-            Résilier l'abonnement
+            Résilier l&apos;abonnement
           </Button>
         )}
       </div>

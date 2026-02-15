@@ -362,7 +362,7 @@ export default function ForecastsPage() {
             {selectedRestaurantHasNoSales && (
               <div className="mt-3 p-3 rounded-xl bg-amber-100/80 dark:bg-amber-900/20 border border-amber-300/80 dark:border-amber-800/50" role="alert">
                 <p className="text-sm text-amber-900 dark:text-amber-200">
-                  Ce restaurant n'a aucune vente enregistrée. Enregistrez des ventes pour pouvoir générer des prévisions cohérentes.
+                  Ce restaurant n&apos;a aucune vente enregistrée. Enregistrez des ventes pour pouvoir générer des prévisions cohérentes.
                 </p>
               </div>
             )}
