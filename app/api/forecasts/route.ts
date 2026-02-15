@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/forecasts
- * Liste toutes les prévisions de l'organisation avec filtres optionnels
+ * Liste toutes les prévisions de l'organisation. Imports dynamiques pour le build.
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
@@ -39,7 +47,7 @@ export async function GET(request: NextRequest) {
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           
           if (isMember) {
             try {
@@ -135,6 +143,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(forecasts)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching forecasts:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
