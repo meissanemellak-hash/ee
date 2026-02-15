@@ -1,37 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
+/** Route debug org : imports dynamiques pour éviter échec au build. */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = auth()
-    
+    let userId: string | null = null
+    let orgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      orgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
+
     const client = await clerkClient()
-    
-    // Récupérer les organisations de l'utilisateur depuis Clerk
+
     const userMemberships = await client.users.getOrganizationMembershipList({ userId })
     const userOrganizations = userMemberships.data || []
-    
-    // Récupérer l'organisation active depuis Clerk si orgId existe
-    let activeClerkOrg = null
+
+    let activeClerkOrg: { id: string; name: string } | null = null
     if (orgId) {
       try {
-        activeClerkOrg = await client.organizations.getOrganization({ organizationId: orgId })
+        const org = await client.organizations.getOrganization({ organizationId: orgId })
+        activeClerkOrg = org ? { id: org.id, name: org.name } : null
       } catch (error) {
         logger.error('Error getting active org from Clerk:', error)
       }
     }
-    
-    // Vérifier dans la DB
+
     const orgsInDb = await Promise.all(
-      userOrganizations.map(async (membership) => {
+      userOrganizations.map(async (membership: { organization: { id: string; name: string } }) => {
         const orgInDb = await prisma.organization.findUnique({
           where: { clerkOrgId: membership.organization.id },
         })
@@ -44,27 +52,20 @@ export async function GET(request: NextRequest) {
         }
       })
     )
-    
-    // Vérifier l'organisation active dans la DB
-    let activeOrgInDb = null
+
+    let activeOrgInDb: { id: string; name: string; clerkOrgId: string } | null = null
     if (orgId) {
-      activeOrgInDb = await prisma.organization.findUnique({
+      const org = await prisma.organization.findUnique({
         where: { clerkOrgId: orgId },
       })
+      activeOrgInDb = org ? { id: org.id, name: org.name, clerkOrgId: org.clerkOrgId } : null
     }
 
     return NextResponse.json({
       userId,
       orgId,
-      activeClerkOrg: activeClerkOrg ? {
-        id: activeClerkOrg.id,
-        name: activeClerkOrg.name,
-      } : null,
-      activeOrgInDb: activeOrgInDb ? {
-        id: activeOrgInDb.id,
-        name: activeOrgInDb.name,
-        clerkOrgId: activeOrgInDb.clerkOrgId,
-      } : null,
+      activeClerkOrg,
+      activeOrgInDb,
       allOrganizations: orgsInDb,
       summary: {
         hasOrgId: !!orgId,
@@ -74,11 +75,12 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Debug error:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Error',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )
