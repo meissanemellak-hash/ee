@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -24,6 +22,13 @@ function formatAlertMessage(msg: string): string {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Pendant le build Next.js (collect page data), ne pas appeler la DB ni Clerk
+    const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL
+    if (isBuildPhase) {
+      return NextResponse.json({ activities: [] })
+    }
+
+    const { auth } = await import('@clerk/nextjs/server')
     let userId: string | null = null
     let authOrgId: string | null = null
     try {
@@ -37,6 +42,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { prisma } = await import('@/lib/db/prisma')
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
@@ -308,6 +314,10 @@ export async function GET(request: NextRequest) {
       activities: serializedActivities,
     })
   } catch (error) {
+    const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL
+    if (isBuildPhase) {
+      return NextResponse.json({ activities: [] })
+    }
     logger.error('[GET /api/activity/recent] ❌ Erreur complète:', error)
     if (error instanceof Error) {
       logger.error('[GET /api/activity/recent] ❌ Stack trace:', error.stack)
