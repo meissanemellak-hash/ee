@@ -22,8 +22,8 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url)
-    const clerkOrgId = searchParams.get('clerkOrgId')
-    const orgIdToUse = authOrgId || clerkOrgId
+    const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
+    const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
     let organization: any = null
 

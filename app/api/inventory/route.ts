@@ -142,8 +142,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { restaurantId, ingredientId, currentStock, minThreshold, maxThreshold, clerkOrgId } = body
-    const orgIdToUse = authOrgId || clerkOrgId
+    const { restaurantId, ingredientId, currentStock, minThreshold, maxThreshold, clerkOrgId: clerkOrgIdFromBody } = body
+    const orgIdToUse = authOrgId || clerkOrgIdFromBody
 
     if (!restaurantId || !ingredientId || currentStock === undefined || !minThreshold) {
       return NextResponse.json(

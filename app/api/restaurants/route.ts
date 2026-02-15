@@ -181,8 +181,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, address, timezone, clerkOrgId } = body
-    const orgIdToUse = authOrgId || clerkOrgId
+    const { name, address, timezone, clerkOrgId: clerkOrgIdFromBody } = body
+    const orgIdToUse = authOrgId || clerkOrgIdFromBody
 
     let organization: any = null
 
