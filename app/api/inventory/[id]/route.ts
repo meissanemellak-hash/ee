@@ -1,26 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { runAllAlerts } from '@/lib/services/alerts'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * PATCH /api/inventory/[id]
- * Met à jour un inventaire spécifique
+ * Met à jour un inventaire spécifique. Imports dynamiques pour le build.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const { currentStock, minThreshold, maxThreshold, clerkOrgId } = body
@@ -125,13 +133,16 @@ export async function PATCH(
 
     // Génération automatique des alertes après mise à jour de l'inventaire
     try {
+      const { runAllAlerts } = await import('@/lib/services/alerts')
       await runAllAlerts(updatedInventory.restaurantId)
     } catch (alertError) {
+      const { logger } = await import('@/lib/logger')
       logger.error('[PATCH /api/inventory/[id]] runAllAlerts:', alertError)
     }
 
     return NextResponse.json(updatedInventory)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[PATCH /api/inventory/[id]] Erreur:', error)
     return NextResponse.json(
       { 
@@ -145,17 +156,31 @@ export async function PATCH(
 
 /**
  * DELETE /api/inventory/[id]
- * Supprime un inventaire
+ * Supprime un inventaire. Imports dynamiques pour le build.
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const { searchParams } = new URL(request.url)
     const clerkOrgId = searchParams.get('clerkOrgId')
@@ -244,6 +269,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[DELETE /api/inventory/[id]] Erreur:', error)
     return NextResponse.json(
       { 
