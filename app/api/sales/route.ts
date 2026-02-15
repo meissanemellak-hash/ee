@@ -1,27 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
-import { runAllAlerts } from '@/lib/services/alerts'
-import { recipeQuantityToInventoryUnit } from '@/lib/units'
 import { z } from 'zod'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/sales
- * Liste toutes les ventes de l'organisation avec filtres optionnels
+ * Liste toutes les ventes de l'organisation avec filtres optionnels. Imports dynamiques pour le build.
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
@@ -65,6 +70,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
+          const { logger } = await import('@/lib/logger')
           logger.error('[GET /api/sales] Erreur synchronisation:', error)
         }
       }
@@ -223,6 +229,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(sales)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching sales:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -233,15 +240,28 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/sales
- * Crée une nouvelle vente
+ * Crée une nouvelle vente. Imports dynamiques pour le build.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const validatedData = saleSchema.parse(body)
@@ -285,6 +305,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
+          const { logger } = await import('@/lib/logger')
           logger.error('[POST /api/sales] Erreur synchronisation:', error)
         }
       }
@@ -375,6 +396,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Déduction des stocks pour chaque ingrédient de la recette (unité recette → unité inventaire)
+      const { recipeQuantityToInventoryUnit } = await import('@/lib/units')
       if (product.productIngredients.length > 0) {
         for (const pi of product.productIngredients) {
           const ingredientUnit = pi.ingredient?.unit ?? 'unité'
@@ -417,6 +439,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(sale, { status: 201 })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error creating sale:', error)
     
     if (error instanceof z.ZodError) {

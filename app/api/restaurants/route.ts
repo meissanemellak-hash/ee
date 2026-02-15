@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
+          const { logger } = await import('@/lib/logger')
           logger.error('[GET /api/restaurants] Erreur synchronisation:', error)
         }
       }
@@ -173,6 +174,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(restaurantsWithActiveAlerts)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching restaurants:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -240,6 +242,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
+          const { logger } = await import('@/lib/logger')
           logger.error('[POST /api/restaurants] Erreur synchronisation:', error)
         }
       }
@@ -275,6 +278,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(restaurant)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error creating restaurant:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
