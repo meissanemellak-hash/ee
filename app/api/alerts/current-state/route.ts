@@ -1,23 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { getCurrentAlertsStateFromInventory } from '@/lib/services/alerts'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/alerts/current-state?restaurantId=xxx&clerkOrgId=xxx
  * Retourne l'état actuel des ruptures/surstocks calculé depuis l'inventaire (sans écrire en base).
- * Permet d'afficher "État actuel" sur la page Alertes même si les alertes en base sont vides ou résolues.
+ * Imports dynamiques pour éviter tout chargement Clerk/Prisma au build.
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
 
     const { searchParams } = new URL(request.url)
     const clerkOrgId = searchParams.get('clerkOrgId')
@@ -37,7 +45,7 @@ export async function GET(request: NextRequest) {
           const client = await clerkClient()
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some((m) => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           if (isMember) {
             const created = await prisma.organization.create({
               data: { name: clerkOrg.name, clerkOrgId: orgIdToUse, shrinkPct: 0.1 },
@@ -75,9 +83,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const { getCurrentAlertsStateFromInventory } = await import('@/lib/services/alerts')
     const state = await getCurrentAlertsStateFromInventory(restaurantId)
     return NextResponse.json(state)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[GET /api/alerts/current-state]', error)
     return NextResponse.json(
       { error: 'Internal server error' },
