@@ -24,7 +24,15 @@ function formatAlertMessage(msg: string): string {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
