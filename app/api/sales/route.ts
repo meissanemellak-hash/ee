@@ -432,6 +432,7 @@ export async function POST(request: NextRequest) {
 
     // Relancer les alertes (sans faire échouer la création si les alertes plantent)
     try {
+      const { runAllAlerts } = await import('@/lib/services/alerts')
       await runAllAlerts(restaurantId)
     } catch (alertError) {
       logger.error('[POST /api/sales] runAllAlerts:', alertError)
