@@ -1,13 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
-import { runAllAlerts } from '@/lib/services/alerts'
-import { recipeQuantityToInventoryUnit } from '@/lib/units'
-import Papa from 'papaparse'
-import { csvSaleRowSchema } from '@/lib/validations/sales'
-import { logger } from '@/lib/logger'
 
 /** Parse une date au format JJ/MM/AAAA (ou JJ-MM-AAAA) ou AAAA-MM-JJ (ISO). */
 function parseSaleDate(dateStr: string): Date | null {
@@ -24,10 +15,20 @@ function parseSaleDate(dateStr: string): Date | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = auth()
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization, getOrganizationByClerkIdIfMember } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
 
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -72,6 +73,10 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       )
     }
+
+    const Papa = (await import('papaparse')).default
+    const { csvSaleRowSchema } = await import('@/lib/validations/sales')
+    const { recipeQuantityToInventoryUnit } = await import('@/lib/units')
 
     // Lire et parser le CSV
     const text = await file.text()
@@ -226,8 +231,10 @@ export async function POST(request: NextRequest) {
     })
 
     try {
+      const { runAllAlerts } = await import('@/lib/services/alerts')
       await runAllAlerts(restaurantId)
     } catch (alertError) {
+      const { logger } = await import('@/lib/logger')
       logger.error('[POST /api/sales/import] runAllAlerts:', alertError)
     }
 
@@ -237,6 +244,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error importing sales:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

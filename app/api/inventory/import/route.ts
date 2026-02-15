@@ -1,12 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
-import Papa from 'papaparse'
-import { csvInventoryRowSchema } from '@/lib/validations/inventory'
-import { runAllAlerts } from '@/lib/services/alerts'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,14 +6,29 @@ export const dynamic = 'force-dynamic'
  * POST /api/inventory/import
  * Importe l'inventaire d'un restaurant depuis un fichier CSV.
  * Colonnes : ingrédient, stock_actuel, seuil_min, seuil_max (optionnel).
- * Le restaurant est fourni dans le body (restaurantId).
+ * Le restaurant est fourni dans le body (restaurantId). Imports dynamiques pour le build.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = auth()
+    // Éviter de charger auth/prisma pendant la phase de build (collect page data)
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    try {
+      const mod = await import('@clerk/nextjs/server')
+      userId = mod.auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization, getOrganizationByClerkIdIfMember } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
 
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -69,6 +76,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       )
     }
+
+    const Papa = (await import('papaparse')).default
+    const { csvInventoryRowSchema } = await import('@/lib/validations/inventory')
 
     const text = await file.text()
     const parseResult = Papa.parse(text, {
@@ -254,8 +264,10 @@ export async function POST(request: NextRequest) {
 
     // Génération automatique des alertes après import d'inventaire
     try {
+      const { runAllAlerts } = await import('@/lib/services/alerts')
       await runAllAlerts(restaurant.id)
     } catch (alertError) {
+      const { logger } = await import('@/lib/logger')
       logger.error('[POST /api/inventory/import] runAllAlerts:', alertError)
     }
 
@@ -267,6 +279,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[POST /api/inventory/import] Erreur:', error)
     return NextResponse.json(
       {

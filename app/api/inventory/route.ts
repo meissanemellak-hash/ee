@@ -1,23 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { runAllAlerts } from '@/lib/services/alerts'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/inventory
- * Récupère les inventaires d'un restaurant
+ * Récupère les inventaires d'un restaurant. Imports dynamiques pour le build.
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const { searchParams } = new URL(request.url)
     const restaurantId = searchParams.get('restaurantId')
@@ -65,6 +72,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
+          const { logger } = await import('@/lib/logger')
           logger.error('[GET /api/inventory] Erreur synchronisation:', error)
         }
       }
@@ -119,6 +127,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(inventory)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[GET /api/inventory] Erreur:', error)
     return NextResponse.json(
       { 
@@ -132,14 +141,28 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/inventory
- * Crée ou met à jour un inventaire
+ * Crée ou met à jour un inventaire. Imports dynamiques pour le build.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const { restaurantId, ingredientId, currentStock, minThreshold, maxThreshold, clerkOrgId: clerkOrgIdFromBody } = body
@@ -186,6 +209,7 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
+          const { logger } = await import('@/lib/logger')
           logger.error('[POST /api/inventory] Erreur synchronisation:', error)
         }
       }
@@ -272,13 +296,16 @@ export async function POST(request: NextRequest) {
 
     // Génération automatique des alertes après mise à jour de l'inventaire
     try {
+      const { runAllAlerts } = await import('@/lib/services/alerts')
       await runAllAlerts(restaurantId)
     } catch (alertError) {
+      const { logger } = await import('@/lib/logger')
       logger.error('[POST /api/inventory] runAllAlerts:', alertError)
     }
 
     return NextResponse.json(inventory)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[POST /api/inventory] Erreur:', error)
     return NextResponse.json(
       { 

@@ -8,6 +8,10 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     let userId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
