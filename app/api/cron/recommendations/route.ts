@@ -1,24 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db/prisma'
-import { generateBOMOrderRecommendations } from '@/lib/services/recommender-bom'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 /**
  * GET /api/cron/recommendations
- * Génère automatiquement des recommandations BOM pour tous les restaurants de toutes les organisations.
- *
- * Sécurisé par CRON_SECRET (env). Vercel Cron envoie automatiquement Authorization: Bearer <CRON_SECRET>.
- * Sinon: header x-cron-secret, Authorization: Bearer <secret>, ou query ?secret=.
- *
- * Config: définir CRON_SECRET dans .env.local et dans Vercel (Project → Settings → Environment Variables).
- * Planification: vercel.json définit 0 6 * * * (tous les jours à 6h UTC).
+ * Génère automatiquement des recommandations BOM pour tous les restaurants.
+ * Imports dynamiques pour éviter tout chargement Prisma/services au build.
  */
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[cron/recommendations] CRON_SECRET non configuré')
     return NextResponse.json(
       { error: 'Cron not configured' },
@@ -36,6 +29,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { prisma } = await import('@/lib/db/prisma')
+    const { generateBOMOrderRecommendations } = await import('@/lib/services/recommender-bom')
+    const { logger } = await import('@/lib/logger')
+
     const organizations = await prisma.organization.findMany({
       select: { id: true, shrinkPct: true },
     })
@@ -117,6 +114,7 @@ export async function GET(request: NextRequest) {
       ...(errors.length > 0 && { errors: errors.slice(0, 20) }),
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[cron/recommendations]', error)
     return NextResponse.json(
       { error: 'Internal server error' },

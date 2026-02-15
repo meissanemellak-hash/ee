@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db/prisma'
-import { runAllAlerts } from '@/lib/services/alerts'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -9,15 +6,12 @@ export const maxDuration = 120
 /**
  * GET /api/cron/alerts
  * Génère automatiquement les alertes (inventaire + prévisions) pour tous les restaurants.
- *
- * Sécurisé par CRON_SECRET (env). Vercel Cron envoie Authorization: Bearer <CRON_SECRET>
- * ou header x-cron-secret / query ?secret=.
- *
- * Planification (vercel.json) : toutes les heures (0 * * * *). Définir CRON_SECRET en production.
+ * Imports dynamiques pour éviter tout chargement Prisma/services au build.
  */
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[cron/alerts] CRON_SECRET non configuré')
     return NextResponse.json(
       { error: 'Cron not configured' },
@@ -35,6 +29,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { prisma } = await import('@/lib/db/prisma')
+    const { runAllAlerts } = await import('@/lib/services/alerts')
+    const { logger } = await import('@/lib/logger')
+
     const restaurants = await prisma.restaurant.findMany({
       select: { id: true, name: true },
     })
@@ -60,6 +58,7 @@ export async function GET(request: NextRequest) {
       results,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[cron/alerts]', error)
     return NextResponse.json(
       { error: 'Internal server error' },
