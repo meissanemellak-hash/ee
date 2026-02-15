@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { logger } from '@/lib/logger'
-import { generateForecastsForRestaurant } from '@/lib/services/forecast'
 
 export const dynamic = 'force-dynamic'
 
+/** POST /api/forecasts/generate - Imports dynamiques pour le build. */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const { restaurantId, forecastDate, startDate, endDate, method, clerkOrgId } = body
@@ -36,7 +44,7 @@ export async function POST(request: NextRequest) {
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           
           if (isMember) {
             try {
@@ -74,6 +82,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { checkApiPermission } = await import('@/lib/auth-role')
     const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'forecasts:generate')
     if (forbidden) return forbidden
 
@@ -112,6 +121,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { generateForecastsForRestaurant } = await import('@/lib/services/forecast')
     const methodValue = method || 'moving_average'
     let forecasts: Awaited<ReturnType<typeof generateForecastsForRestaurant>>
 
@@ -155,6 +165,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, forecasts })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error generating forecasts:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
