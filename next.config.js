@@ -2,8 +2,9 @@ const { withSentryConfig } = require('@sentry/nextjs')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Réduire le bundle en important uniquement les icônes utilisées (lucide-react)
   experimental: {
+    // S'assurer que Prisma n'est pas bundlé (évite erreurs au build sur les API routes)
+    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
     optimizePackageImports: ['lucide-react'],
   },
   // Optimisations pour éviter les problèmes de cache CSS

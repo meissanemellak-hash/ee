@@ -1,36 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
 import { z } from 'zod'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-// Schéma de validation pour la modification
-const ingredientSchema = z.object({
-  name: z.string().min(1, 'Le nom est requis'),
-  unit: z.string().min(1, 'L\'unité est requise'),
-  costPerUnit: z.number().positive('Le coût par unité doit être positif'),
-  packSize: z.number().positive().optional().nullable(),
-  supplierName: z.string().optional().nullable(),
-})
+function getIngredientSchema() {
+  return z.object({
+    name: z.string().min(1, 'Le nom est requis'),
+    unit: z.string().min(1, 'L\'unité est requise'),
+    costPerUnit: z.number().positive('Le coût par unité doit être positif'),
+    packSize: z.number().positive().optional().nullable(),
+    supplierName: z.string().optional().nullable(),
+  })
+}
 
 /**
  * GET /api/ingredients/[id]
- * Récupère un ingrédient par son ID
+ * Récupère un ingrédient par son ID. Imports dynamiques pour le build.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
@@ -50,7 +58,7 @@ export async function GET(
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           
           if (isMember) {
             try {
@@ -113,6 +121,7 @@ export async function GET(
 
     return NextResponse.json({ ingredient })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching ingredient:', error)
     return NextResponse.json(
       { error: 'Error fetching ingredient', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -123,18 +132,31 @@ export async function GET(
 
 /**
  * PATCH /api/ingredients/[id]
- * Modifie un ingrédient
+ * Modifie un ingrédient. Imports dynamiques pour le build.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
+    const { checkApiPermission } = await import('@/lib/auth-role')
 
     const body = await request.json()
     const clerkOrgIdFromBody = (body as any).clerkOrgId
@@ -154,7 +176,7 @@ export async function PATCH(
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           
           if (isMember) {
             try {
@@ -173,8 +195,9 @@ export async function PATCH(
               }
             }
           }
-        } catch (error) {
-          logger.error('[PATCH /api/ingredients/[id]] Erreur synchronisation:', error)
+        } catch (syncError) {
+          const { logger } = await import('@/lib/logger')
+          logger.error('[PATCH /api/ingredients/[id]] Erreur synchronisation:', syncError)
         }
       }
     } else {
@@ -184,6 +207,9 @@ export async function PATCH(
     if (!organization) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
+
+    const forbidden = await checkApiPermission(userId, organization.clerkOrgId, 'ingredients:edit')
+    if (forbidden) return forbidden
 
     // Vérifier que l'ingrédient existe et appartient à l'organisation
     const existingIngredient = await prisma.ingredient.findFirst({
@@ -202,7 +228,7 @@ export async function PATCH(
     const bodyToValidate = bodyWithoutOrgId
     
     // Valider les données
-    const validatedData = ingredientSchema.parse(bodyToValidate)
+    const validatedData = getIngredientSchema().parse(bodyToValidate)
 
     // Vérifier si un autre ingrédient avec le même nom existe déjà
     if (validatedData.name !== existingIngredient.name) {
@@ -245,7 +271,7 @@ export async function PATCH(
         { status: 400 }
       )
     }
-
+    const { logger } = await import('@/lib/logger')
     logger.error('Error updating ingredient:', error)
     return NextResponse.json(
       { error: 'Error updating ingredient', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -256,18 +282,31 @@ export async function PATCH(
 
 /**
  * DELETE /api/ingredients/[id]
- * Supprime un ingrédient
+ * Supprime un ingrédient. Imports dynamiques pour le build.
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
+    const { checkApiPermission } = await import('@/lib/auth-role')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
@@ -287,7 +326,7 @@ export async function DELETE(
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           
           if (isMember) {
             try {
@@ -306,8 +345,9 @@ export async function DELETE(
               }
             }
           }
-        } catch (error) {
-          logger.error('[DELETE /api/ingredients/[id]] Erreur synchronisation:', error)
+        } catch (syncError) {
+          const { logger } = await import('@/lib/logger')
+          logger.error('[DELETE /api/ingredients/[id]] Erreur synchronisation:', syncError)
         }
       }
     } else {
@@ -371,6 +411,7 @@ export async function DELETE(
       message: 'Ingrédient supprimé avec succès',
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error deleting ingredient:', error)
     return NextResponse.json(
       { error: 'Error deleting ingredient', details: error instanceof Error ? error.message : 'Unknown error' },
