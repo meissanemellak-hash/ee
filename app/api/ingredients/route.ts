@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-// Schéma de validation pour la création/modification
+// Schéma de validation pour la création/modification (zod uniquement en tête pour le build)
 const ingredientSchema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
   unit: z.string().min(1, 'L\'unité est requise'),
@@ -19,15 +15,26 @@ const ingredientSchema = z.object({
 
 /**
  * GET /api/ingredients
- * Liste tous les ingrédients de l'organisation
+ * Liste tous les ingrédients de l'organisation. Imports dynamiques pour le build.
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     // Accepter clerkOrgId depuis les paramètres de requête si auth().orgId est undefined
     const searchParams = request.nextUrl.searchParams
@@ -167,6 +174,7 @@ export async function GET(request: NextRequest) {
       units: units.map(u => u.unit).filter((u): u is string => u !== null && u !== ''),
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching ingredients:', error)
     return NextResponse.json(
       { error: 'Error fetching ingredients', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -177,15 +185,27 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/ingredients
- * Crée un nouvel ingrédient
+ * Crée un nouvel ingrédient. Imports dynamiques pour le build.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     
@@ -320,6 +340,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { logger } = await import('@/lib/logger')
     logger.error('Error creating ingredient:', error)
     return NextResponse.json(
       { error: 'Error creating ingredient', details: error instanceof Error ? error.message : 'Unknown error' },
