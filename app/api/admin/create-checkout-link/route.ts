@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, currentUser } from '@clerk/nextjs/server'
-import { getStripe, STRIPE_PLANS, type PlanId } from '@/lib/stripe'
-import { ensureOrganizationInDb } from '@/lib/auth'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase()
-
 /** Mapping lookup_key Stripe (essentiel, croissance, pro) → PlanId. */
-const LOOKUP_KEY_TO_PLAN_ID: Record<string, PlanId> = {
+const LOOKUP_KEY_TO_PLAN_ID: Record<string, 'starter' | 'growth' | 'pro'> = {
   essentiel: 'starter',
   croissance: 'growth',
   pro: 'pro',
@@ -20,11 +13,13 @@ const LOOKUP_KEY_TO_PLAN_ID: Record<string, PlanId> = {
  * POST /api/admin/create-checkout-link
  * Body: { clerkOrgId: string, plan?: 'starter' | 'growth' | 'pro' } ou { organizationId: string, plan?: ... }
  * Réservé au super-admin. Crée une session Stripe Checkout pour le plan choisi.
+ * Imports dynamiques pour éviter tout chargement Clerk/Stripe/Prisma au build.
  */
 export async function POST(request: NextRequest) {
   let userId: string | null = null
   let userEmail: string | null = null
   try {
+    const { auth, currentUser } = await import('@clerk/nextjs/server')
     const authResult = auth()
     userId = authResult.userId ?? null
     if (!userId) {
@@ -35,10 +30,13 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
-  if (!SUPER_ADMIN_EMAIL || userEmail !== SUPER_ADMIN_EMAIL) {
+
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase()
+  if (!superAdminEmail || userEmail !== superAdminEmail) {
     return NextResponse.json({ error: 'Accès réservé à l\'administrateur' }, { status: 403 })
   }
 
+  const { getStripe, STRIPE_PLANS } = await import('@/lib/stripe')
   const stripe = getStripe()
   if (!stripe) {
     return NextResponse.json(
@@ -55,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
 
   const rawPlan = (body.plan ?? 'pro') as string
-  const planId: PlanId = LOOKUP_KEY_TO_PLAN_ID[rawPlan.toLowerCase()] ?? (rawPlan as PlanId)
+  const planId = LOOKUP_KEY_TO_PLAN_ID[rawPlan.toLowerCase()] ?? (rawPlan as 'starter' | 'growth' | 'pro')
   const plan = STRIPE_PLANS[planId]
   if (!plan?.priceId) {
     return NextResponse.json(
@@ -78,9 +76,11 @@ export async function POST(request: NextRequest) {
 
   if (clerkOrgId) {
     try {
+      const { ensureOrganizationInDb } = await import('@/lib/auth')
       const org = await ensureOrganizationInDb(clerkOrgId)
       organization = org ? { id: org.id, name: org.name } : null
     } catch (err) {
+      const { logger } = await import('@/lib/logger')
       logger.error('[admin/create-checkout-link] ensureOrganizationInDb:', err)
       return NextResponse.json(
         { error: 'Impossible de synchroniser l\'organisation depuis Clerk' },
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } else if (organizationId) {
+    const { prisma } = await import('@/lib/db/prisma')
     organization = await prisma.organization.findUnique({
       where: { id: organizationId },
       select: { id: true, name: true },
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
     })
   } catch (err) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[admin/create-checkout-link]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur Stripe' },
