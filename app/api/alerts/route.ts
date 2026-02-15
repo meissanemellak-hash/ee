@@ -1,10 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { runAllAlerts, createTestAlerts } from '@/lib/services/alerts'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,10 +39,23 @@ function parseStaffingAlertMessage(
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
 
     const { searchParams } = new URL(request.url)
     const clerkOrgId = searchParams.get('clerkOrgId')
@@ -73,7 +80,7 @@ export async function GET(request: NextRequest) {
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           
           if (isMember) {
             try {
@@ -141,6 +148,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(alerts)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching alerts:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -151,10 +159,23 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const { restaurantId, clerkOrgId, createTest } = body
@@ -176,7 +197,7 @@ export async function POST(request: NextRequest) {
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           
           if (isMember) {
             try {
@@ -238,6 +259,7 @@ export async function POST(request: NextRequest) {
     // Si createTest est true, créer des alertes de test
     if (createTest === true) {
       try {
+        const { createTestAlerts } = await import('@/lib/services/alerts')
         await createTestAlerts(restaurantId)
         return NextResponse.json({ 
           success: true,
@@ -257,6 +279,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      const { runAllAlerts } = await import('@/lib/services/alerts')
       await runAllAlerts(restaurantId)
     } catch (alertError) {
       logger.error('[POST /api/alerts] Erreur lors de la génération des alertes:', alertError)
@@ -279,6 +302,7 @@ export async function POST(request: NextRequest) {
         : 'Aucune alerte active. Les stocks sont dans les seuils ou l’inventaire n’a pas encore de seuils min/max configurés.'
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[POST /api/alerts] Erreur complète:', error)
     return NextResponse.json(
       { 
@@ -293,10 +317,24 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
+    const { checkApiPermission } = await import('@/lib/auth-role')
 
     const body = await request.json()
     const { alertId, resolved, clerkOrgId } = body
@@ -323,7 +361,7 @@ export async function PATCH(request: NextRequest) {
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
           
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-          const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
+          const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
           
           if (isMember) {
             try {
@@ -415,6 +453,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(updated)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error updating alert:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
