@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
       lastGeneratedAt: latest?.createdAt ? latest.createdAt.toISOString() : null,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[GET /api/recommendations/last-generated]', error)
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const { sendAlertEmail, sendNotificationEmail } = await import('@/lib/services/email')
     let result
 
     // Envoyer l'email selon le type
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
       details: result,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error sending test email:', error)
     return NextResponse.json(
       {
@@ -95,7 +97,16 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = auth()
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please sign in first.' },
+        { status: 401 }
+      )
+    }
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in first.' },
@@ -122,6 +133,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { sendAlertEmail, sendNotificationEmail } = await import('@/lib/services/email')
     let result
 
     if (type === 'alert') {
@@ -147,6 +159,7 @@ export async function POST(request: NextRequest) {
       details: result,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error sending test email:', error)
     return NextResponse.json(
       {

@@ -187,6 +187,7 @@ export async function POST(request: NextRequest) {
       ...(errors.length > 0 && { errors }),
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error generate-all recommendations:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

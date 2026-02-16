@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
 async function upsertSubscriptionFromStripe(
   sub: Stripe.Subscription,
-  prisma: Awaited<ReturnType<typeof import('@/lib/db/prisma')['prisma']>>,
+  prisma: (typeof import('@/lib/db/prisma'))['prisma'],
   logger: typeof import('@/lib/logger')['logger']
 ) {
   const organizationId = (sub.metadata?.organizationId as string) || null
@@ -126,7 +126,7 @@ async function upsertSubscriptionFromStripe(
 
 async function markSubscriptionCanceled(
   stripeSubscriptionId: string,
-  prisma: Awaited<ReturnType<typeof import('@/lib/db/prisma')['prisma']>>
+  prisma: (typeof import('@/lib/db/prisma'))['prisma']
 ) {
   await prisma.subscription.updateMany({
     where: { stripeSubscriptionId },
