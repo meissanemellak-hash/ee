@@ -41,6 +41,20 @@ export const dynamic = 'force-dynamic'
 type PageProps = { searchParams?: Promise<{ restaurant?: string }> | { restaurant?: string } }
 
 export default async function DashboardPage(props: PageProps) {
+  // Pendant le build Vercel, ne pas charger auth/prisma pour éviter "Failed to collect page data"
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Dashboard">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8">
+          <header className="pb-6 border-b border-border/60">
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground mt-1.5">Chargement...</p>
+          </header>
+        </div>
+      </main>
+    )
+  }
+
   const { userId } = auth()
   const rawParams = props.searchParams
   const searchParams = rawParams && typeof (rawParams as Promise<unknown>).then === 'function'
