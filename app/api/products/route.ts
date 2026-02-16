@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
 import { z } from 'zod'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,11 +17,26 @@ const productSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const a = auth()
+      userId = a.userId ?? null
+      authOrgId = a.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     // Accepter clerkOrgId depuis les paramètres de requête si auth().orgId est undefined
     const searchParams = request.nextUrl.searchParams
@@ -216,6 +226,7 @@ export async function GET(request: NextRequest) {
       categories,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching products:', error)
     return NextResponse.json(
       { error: 'Error fetching products', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -230,11 +241,26 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const a = auth()
+      userId = a.userId ?? null
+      authOrgId = a.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     
@@ -389,6 +415,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { logger } = await import('@/lib/logger')
     logger.error('Error creating product:', error)
     return NextResponse.json(
       { error: 'Error creating product', details: error instanceof Error ? error.message : 'Unknown error' },

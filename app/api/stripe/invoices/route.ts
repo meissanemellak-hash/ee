@@ -1,20 +1,25 @@
 import { NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { getCurrentOrganization } from '@/lib/auth'
-import { getStripe } from '@/lib/stripe'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/stripe/invoices
- * Liste les factures Stripe du client de l'organisation.
+ * Liste les factures Stripe. Imports dynamiques pour le build.
  */
 export async function GET() {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+  }
+
+  const { getCurrentOrganization } = await import('@/lib/auth')
+  const { getStripe } = await import('@/lib/stripe')
+  const { prisma } = await import('@/lib/db/prisma')
+  const { logger } = await import('@/lib/logger')
+
   let organization = await getCurrentOrganization()
   if (!organization) {
     try {
+      const { auth, clerkClient } = await import('@clerk/nextjs/server')
       const { userId } = auth()
       if (userId) {
         const client = await clerkClient()

@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { getStripe } from '@/lib/stripe'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-/** Ne pas parser le body en JSON pour garder le corps brut (signature Stripe). */
+/** Ne pas parser le body en JSON pour garder le corps brut (signature Stripe). Imports dynamiques pour le build. */
 export async function POST(request: NextRequest) {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { getStripe } = await import('@/lib/stripe')
+  const { prisma } = await import('@/lib/db/prisma')
+  const { logger } = await import('@/lib/logger')
+
   const stripe = getStripe()
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
@@ -39,19 +44,19 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription
-        await upsertSubscriptionFromStripe(subscription)
+        await upsertSubscriptionFromStripe(subscription, prisma, logger)
         break
       }
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
-        await markSubscriptionCanceled(subscription.id)
+        await markSubscriptionCanceled(subscription.id, prisma)
         break
       }
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice
         if (invoice.subscription && typeof invoice.subscription === 'string') {
           const sub = await stripe.subscriptions.retrieve(invoice.subscription)
-          await upsertSubscriptionFromStripe(sub)
+          await upsertSubscriptionFromStripe(sub, prisma, logger)
         }
         break
       }
@@ -59,12 +64,11 @@ export async function POST(request: NextRequest) {
         const invoice = event.data.object as Stripe.Invoice
         if (invoice.subscription && typeof invoice.subscription === 'string') {
           const sub = await stripe.subscriptions.retrieve(invoice.subscription)
-          await upsertSubscriptionFromStripe(sub)
+          await upsertSubscriptionFromStripe(sub, prisma, logger)
         }
         break
       }
       default:
-        // Ignorer les autres événements
         break
     }
   } catch (err) {
@@ -78,7 +82,11 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true })
 }
 
-async function upsertSubscriptionFromStripe(sub: Stripe.Subscription) {
+async function upsertSubscriptionFromStripe(
+  sub: Stripe.Subscription,
+  prisma: Awaited<ReturnType<typeof import('@/lib/db/prisma')['prisma']>>,
+  logger: typeof import('@/lib/logger')['logger']
+) {
   const organizationId = (sub.metadata?.organizationId as string) || null
   if (!organizationId) {
     logger.warn('[webhooks/stripe] Subscription sans metadata.organizationId:', sub.id)
@@ -116,7 +124,10 @@ async function upsertSubscriptionFromStripe(sub: Stripe.Subscription) {
   })
 }
 
-async function markSubscriptionCanceled(stripeSubscriptionId: string) {
+async function markSubscriptionCanceled(
+  stripeSubscriptionId: string,
+  prisma: Awaited<ReturnType<typeof import('@/lib/db/prisma')['prisma']>>
+) {
   await prisma.subscription.updateMany({
     where: { stripeSubscriptionId },
     data: { status: 'canceled' },

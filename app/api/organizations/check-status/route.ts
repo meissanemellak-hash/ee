@@ -1,8 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,23 +8,40 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId } = auth()
-    
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let orgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      orgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
+
     const client = await clerkClient()
-    
+
     // Récupérer toutes les organisations de l'utilisateur depuis Clerk
     const userMemberships = await client.users.getOrganizationMembershipList({ userId })
     const userOrganizations = userMemberships.data || []
-    
+
     // Chercher "graille M" spécifiquement
     const grailleM = userOrganizations.find(
       m => m.organization.name.toLowerCase().includes('graille')
     )
-    
+
     // Récupérer l'organisation active depuis Clerk si orgId existe
     let activeClerkOrg = null
     if (orgId) {
@@ -38,10 +51,10 @@ export async function GET(request: NextRequest) {
         logger.error('Error getting active org from Clerk:', error)
       }
     }
-    
+
     // Vérifier l'organisation dans la DB via getCurrentOrganization()
     const organizationInDb = await getCurrentOrganization()
-    
+
     // Vérifier "graille M" dans la DB
     let grailleMInDb = null
     if (grailleM) {
@@ -87,9 +100,10 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Check status error:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

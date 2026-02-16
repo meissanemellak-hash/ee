@@ -1,22 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization, getOrganizationByClerkIdIfMember } from '@/lib/auth'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/products/bom/export
  * Exporte toutes les recettes (BOM - Bill of Materials) de l'organisation en JSON.
- * Format: [{ produit, ingrédient, quantité, unité }]
+ * Format: [{ produit, ingrédient, quantité, unité }]. Imports dynamiques pour le build.
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization, getOrganizationByClerkIdIfMember } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db/prisma')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromClient = searchParams.get('clerkOrgId')
@@ -62,6 +71,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ bom: bomData })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[GET /api/products/bom/export] Erreur:', error)
     return NextResponse.json(
       {

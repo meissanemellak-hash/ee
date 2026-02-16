@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { getCurrentUserRole } from '@/lib/auth-role'
-import { APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
 import type { Role } from '@/lib/roles'
-import { logger } from '@/lib/logger'
+
+export const dynamic = 'force-dynamic'
 
 function mapMembershipToRole(
   clerkRole: string,
-  publicMetadata: Record<string, unknown>
+  publicMetadata: Record<string, unknown>,
+  APP_ROLE_METADATA_KEY: string
 ): Role {
   if (clerkRole === 'org:admin' || clerkRole === 'admin') return 'admin'
   const appRole = publicMetadata[APP_ROLE_METADATA_KEY] as string | undefined
@@ -22,10 +21,26 @@ function mapMembershipToRole(
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentUserRole, APP_ROLE_METADATA_KEY } = await import('@/lib/auth-role')
+    const { clerkClient } = await import('@clerk/nextjs/server')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
@@ -56,12 +71,13 @@ export async function GET(request: NextRequest) {
     const members = memberships.data?.map((m) => {
       const appRole = mapMembershipToRole(
         m.role,
-        (m.publicMetadata as Record<string, unknown>) || {}
+        (m.publicMetadata as Record<string, unknown>) || {},
+        APP_ROLE_METADATA_KEY
       )
       const mAny = m as { userId?: string; publicUserData?: { userId?: string; identifier?: string; firstName?: string; lastName?: string } }
-      const userId = mAny.userId ?? mAny.publicUserData?.userId
+      const uid = mAny.userId ?? mAny.publicUserData?.userId
       return {
-        userId,
+        userId: uid,
         email: mAny.publicUserData?.identifier ?? null,
         firstName: mAny.publicUserData?.firstName ?? null,
         lastName: mAny.publicUserData?.lastName ?? null,
@@ -72,6 +88,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ members })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[GET /api/organizations/members]', error)
     const message =
       error instanceof Error ? error.message : 'Erreur lors du chargement'

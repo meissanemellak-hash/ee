@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { runAllAlerts } from '@/lib/services/alerts'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +10,16 @@ function toPlanDate(dateStr: string): Date {
   return d
 }
 
-async function resolveOrganization(userId: string, orgIdToUse: string | null) {
+type PrismaClient = Awaited<ReturnType<typeof import('@/lib/db/prisma')['prisma']>>
+type GetCurrentOrg = () => Promise<{ id: string } | null>
+
+async function resolveOrganization(
+  userId: string,
+  orgIdToUse: string | null,
+  prisma: PrismaClient,
+  getCurrentOrganization: GetCurrentOrg,
+  logger: { error: (msg: string, err: unknown) => void }
+) {
   if (!orgIdToUse) return getCurrentOrganization()
   let organization = await prisma.organization.findUnique({
     where: { clerkOrgId: orgIdToUse },
@@ -55,13 +59,29 @@ async function resolveOrganization(userId: string, orgIdToUse: string | null) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const a = auth()
+      userId = a.userId ?? null
+      authOrgId = a.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
 
     const { searchParams } = new URL(request.url)
     const clerkOrgId = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgId
-    const organization = await resolveOrganization(userId, orgIdToUse ?? null)
+    const organization = await resolveOrganization(userId, orgIdToUse ?? null, prisma, getCurrentOrganization, logger)
     if (!organization) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
 
     const restaurantId = searchParams.get('restaurantId')
@@ -92,6 +112,7 @@ export async function GET(request: NextRequest) {
     if (e instanceof Error && e.message === 'Invalid date') {
       return NextResponse.json({ error: 'Invalid date format (use YYYY-MM-DD)' }, { status: 400 })
     }
+    const { logger } = await import('@/lib/logger')
     logger.error('[GET /api/planned-staffing]', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -104,8 +125,24 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const a = auth()
+      userId = a.userId ?? null
+      authOrgId = a.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const { restaurantId, date: dateStr, slots, clerkOrgId: bodyClerkOrgId } = body as {
@@ -115,7 +152,7 @@ export async function PUT(request: NextRequest) {
       clerkOrgId?: string
     }
     const orgIdToUse = authOrgId || bodyClerkOrgId
-    const organization = await resolveOrganization(userId, orgIdToUse ?? null)
+    const organization = await resolveOrganization(userId, orgIdToUse ?? null, prisma, getCurrentOrganization, logger)
     if (!organization) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     if (!restaurantId || !dateStr || !Array.isArray(slots)) {
       return NextResponse.json(
@@ -144,6 +181,7 @@ export async function PUT(request: NextRequest) {
     }
 
     try {
+      const { runAllAlerts } = await import('@/lib/services/alerts')
       await runAllAlerts(restaurantId)
     } catch (alertErr) {
       logger.error('[PUT /api/planned-staffing] runAllAlerts:', alertErr)
@@ -163,6 +201,7 @@ export async function PUT(request: NextRequest) {
     if (e instanceof Error && e.message === 'Invalid date') {
       return NextResponse.json({ error: 'Invalid date format (use YYYY-MM-DD)' }, { status: 400 })
     }
+    const { logger } = await import('@/lib/logger')
     logger.error('[PUT /api/planned-staffing]', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,8 +8,16 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = auth()
-    
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -24,6 +30,7 @@ export async function GET(request: NextRequest) {
       source: 'server-side auth()',
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[GET /api/user/current] Erreur:', error)
     return NextResponse.json(
       { 

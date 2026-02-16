@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, currentUser } from '@clerk/nextjs/server'
-import { getCurrentOrganization } from '@/lib/auth'
-import { getStripe, STRIPE_PLANS, type PlanId } from '@/lib/stripe'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
+import type { PlanId } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,13 +13,27 @@ const LOOKUP_KEY_TO_PLAN_ID: Record<string, PlanId> = {
 /**
  * POST /api/stripe/create-checkout-session
  * Body: { plan: 'starter' | 'growth' | 'pro' | 'essentiel' | 'croissance' | 'pro' }
- * Redirige l'utilisateur vers Stripe Checkout pour souscrire à un abonnement.
+ * Redirige l'utilisateur vers Stripe Checkout. Imports dynamiques pour le build.
  */
 export async function POST(request: NextRequest) {
-  const { userId } = auth()
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+  }
+
+  let userId: string | null = null
+  try {
+    const { auth } = await import('@clerk/nextjs/server')
+    userId = auth().userId ?? null
+  } catch {
+    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+  }
   if (!userId) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
+
+  const { getCurrentOrganization } = await import('@/lib/auth')
+  const { getStripe, STRIPE_PLANS } = await import('@/lib/stripe')
+  const { prisma } = await import('@/lib/db/prisma')
 
   const organization = await getCurrentOrganization()
   if (!organization) {
@@ -69,6 +79,7 @@ export async function POST(request: NextRequest) {
     customerId = existing.stripeCustomerId
   }
 
+  const { currentUser } = await import('@clerk/nextjs/server')
   const user = await currentUser()
   const customerEmail = user?.emailAddresses?.[0]?.emailAddress
 
@@ -100,6 +111,7 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
     })
   } catch (err) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[stripe/create-checkout-session]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur Stripe' },

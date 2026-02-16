@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,10 +8,24 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json().catch(() => ({}))
     const { deleteAll = false } = body
@@ -30,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Récupérer toutes les organisations de la DB
     const allOrgsInDb = await prisma.organization.findMany()
-    
+
     logger.log('📋 Organisations dans la DB:', allOrgsInDb.map(o => ({ id: o.id, name: o.name, clerkOrgId: o.clerkOrgId })))
 
     // Si deleteAll est true, supprimer TOUTES les organisations de la DB
@@ -46,7 +57,7 @@ export async function POST(request: NextRequest) {
         org => !clerkOrgIds.has(org.clerkOrgId)
       )
     }
-    
+
     logger.log('🔍 Organisations à supprimer:', orphanOrgs.map(o => ({ id: o.id, name: o.name, clerkOrgId: o.clerkOrgId })))
 
     // Supprimer les organisations orphelines
@@ -57,12 +68,12 @@ export async function POST(request: NextRequest) {
         await prisma.restaurant.deleteMany({
           where: { organizationId: org.id },
         })
-        
+
         // Supprimer l'organisation
         await prisma.organization.delete({
           where: { id: org.id },
         })
-        
+
         deletedOrgs.push({
           id: org.id,
           name: org.name,
@@ -80,9 +91,10 @@ export async function POST(request: NextRequest) {
       message: `${deletedOrgs.length} organisation(s) orpheline(s) supprimée(s)`,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error cleaning up organizations:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Erreur lors du nettoyage',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

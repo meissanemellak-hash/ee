@@ -1,19 +1,23 @@
 import { NextResponse } from 'next/server'
-import { auth, currentUser, clerkClient } from '@clerk/nextjs/server'
-import { getStripe } from '@/lib/stripe'
-import { getCurrentOrganization } from '@/lib/auth'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
-import { syncStripeSubscriptionToOrg } from '@/lib/sync-stripe-subscription'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/stripe/sync-subscription
- * Cherche un abonnement Stripe actif pour l'email de l'utilisateur et le rattache
- * à l'organisation courante (cas où le webhook n'a pas enregistré l'abonnement).
+ * Cherche un abonnement Stripe actif et le rattache à l'organisation. Imports dynamiques pour le build.
  */
 export async function POST() {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { auth, currentUser, clerkClient } = await import('@clerk/nextjs/server')
+  const { getStripe } = await import('@/lib/stripe')
+  const { getCurrentOrganization } = await import('@/lib/auth')
+  const { prisma } = await import('@/lib/db/prisma')
+  const { logger } = await import('@/lib/logger')
+  const { syncStripeSubscriptionToOrg } = await import('@/lib/sync-stripe-subscription')
+
   const { userId } = auth()
   if (!userId) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })

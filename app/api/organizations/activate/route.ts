@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,14 +8,26 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: currentOrgId } = auth()
-    
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }
       )
     }
+
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const { prisma } = await import('@/lib/db/prisma')
 
     const body = await request.json()
     const { organizationId } = body
@@ -33,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Vérifier que l'utilisateur est membre de cette organisation
     const client = await clerkClient()
     const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-    
+
     const membership = userMemberships.data?.find(
       m => m.organization.id === organizationId
     )
@@ -75,7 +84,7 @@ export async function POST(request: NextRequest) {
     // IMPORTANT: On ne peut pas activer l'organisation côté serveur avec Clerk
     // L'activation doit se faire côté client via le cookie de session
     // On retourne juste un succès et le client utilisera OrganizationSwitcher ou setActive
-    
+
     return NextResponse.json({
       success: true,
       organization: organization ? {
@@ -86,9 +95,10 @@ export async function POST(request: NextRequest) {
       message: 'Organisation prête à être activée',
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('❌ Error in activate organization API:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Erreur lors de l\'activation',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       },

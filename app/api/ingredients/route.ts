@@ -19,6 +19,9 @@ const ingredientSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     let userId: string | null = null
     let authOrgId: string | null = null
     try {
@@ -189,6 +192,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     let userId: string | null = null
     let authOrgId: string | null = null
     try {

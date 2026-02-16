@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
 import { z } from 'zod'
-import { checkApiPermission, APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
-import { logger } from '@/lib/logger'
+
+export const dynamic = 'force-dynamic'
 
 const updateRoleSchema = z.object({
   role: z.enum(['admin', 'manager', 'staff']),
@@ -19,10 +18,26 @@ export async function PATCH(
   { params }: { params: { userId: string } }
 ) {
   try {
-    const { userId: currentUserId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let currentUserId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      currentUserId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!currentUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { checkApiPermission, APP_ROLE_METADATA_KEY } = await import('@/lib/auth-role')
+    const { clerkClient } = await import('@clerk/nextjs/server')
 
     const body = await request.json()
     const parsed = updateRoleSchema.safeParse(body)
@@ -85,6 +100,7 @@ export async function PATCH(
       role: newRole,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[PATCH /api/organizations/members/[userId]]', error)
     const message =
       error instanceof Error ? error.message : 'Erreur lors de la mise à jour'

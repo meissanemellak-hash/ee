@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
 import { z } from 'zod'
-import { checkApiPermission, APP_ROLE_METADATA_KEY } from '@/lib/auth-role'
-import { logger } from '@/lib/logger'
 
 const inviteSchema = z.object({
   email: z.string().email('Email invalide'),
   role: z.enum(['admin', 'manager', 'staff']),
   clerkOrgId: z.string().optional(),
 })
+
+export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/organizations/invite
@@ -17,10 +16,25 @@ const inviteSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { checkApiPermission, APP_ROLE_METADATA_KEY } = await import('@/lib/auth-role')
 
     const body = await request.json()
     const parsed = inviteSchema.safeParse(body)
@@ -44,6 +58,7 @@ export async function POST(request: NextRequest) {
     const forbidden = await checkApiPermission(userId, orgId, 'users:invite')
     if (forbidden) return forbidden
 
+    const { clerkClient } = await import('@clerk/nextjs/server')
     const client = await clerkClient()
 
     const clerkRole: 'org:admin' | 'org:member' =
@@ -73,6 +88,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[POST /api/organizations/invite]', error)
     const message =
       error instanceof Error ? error.message : 'Erreur lors de l\'invitation'

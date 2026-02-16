@@ -1,10 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { runAllAlerts } from '@/lib/services/alerts'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,10 +7,28 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const { clerkOrgId } = body
@@ -173,6 +185,7 @@ export async function PATCH(
       })
 
       try {
+        const { runAllAlerts } = await import('@/lib/services/alerts')
         await runAllAlerts(restaurantId)
       } catch (alertError) {
         logger.error('[PATCH /api/recommendations/[id]] runAllAlerts:', alertError)
@@ -211,6 +224,7 @@ export async function PATCH(
         data: { status },
       })
       try {
+        const { runAllAlerts } = await import('@/lib/services/alerts')
         await runAllAlerts(restaurantId)
       } catch (alertError) {
         logger.error('[PATCH /api/recommendations/[id]] runAllAlerts:', alertError)
@@ -229,6 +243,7 @@ export async function PATCH(
 
     return NextResponse.json(updated)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error updating recommendation:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

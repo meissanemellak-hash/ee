@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import { getCurrentOrganization } from '@/lib/auth'
-import { prisma } from '@/lib/db/prisma'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,9 +8,15 @@ export const dynamic = 'force-dynamic'
  * Si Stripe n'est pas configuré (dev), retourne active: true pour ne pas bloquer.
  */
 export async function GET() {
+  if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+    return NextResponse.json({ active: false })
+  }
   if (!process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json({ active: true, status: null, currentPeriodEnd: null })
   }
+
+  const { getCurrentOrganization } = await import('@/lib/auth')
+  const { prisma } = await import('@/lib/db/prisma')
 
   const organization = await getCurrentOrganization()
   if (!organization) {

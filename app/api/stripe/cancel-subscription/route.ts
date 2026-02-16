@@ -1,22 +1,25 @@
 import { NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { getCurrentOrganization } from '@/lib/auth'
-import { getStripe } from '@/lib/stripe'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/stripe/cancel-subscription
- * Annule l'abonnement à la fin de la période en cours (cancel_at_period_end).
- * Le webhook Stripe mettra à jour la base ; on met aussi à jour en local pour un retour immédiat.
- * Utilise le même fallback org que la page Facturation si aucune org en session.
+ * Annule l'abonnement à la fin de la période en cours. Imports dynamiques pour le build.
  */
 export async function POST() {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { getCurrentOrganization } = await import('@/lib/auth')
+  const { getStripe } = await import('@/lib/stripe')
+  const { prisma } = await import('@/lib/db/prisma')
+  const { logger } = await import('@/lib/logger')
+
   let organization = await getCurrentOrganization()
   if (!organization) {
     try {
+      const { auth, clerkClient } = await import('@clerk/nextjs/server')
       const { userId } = auth()
       if (userId) {
         const client = await clerkClient()

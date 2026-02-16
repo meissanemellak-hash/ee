@@ -7,6 +7,10 @@ export const dynamic = 'force-dynamic'
  * Proxy du PDF de facture Stripe. Imports dynamiques pour le build.
  */
 export async function GET(request: NextRequest) {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { getCurrentOrganization } = await import('@/lib/auth')
   const { getStripe } = await import('@/lib/stripe')
   const { prisma } = await import('@/lib/db/prisma')

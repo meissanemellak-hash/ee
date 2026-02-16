@@ -1,18 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { generateBOMOrderRecommendations } from '@/lib/services/recommender-bom'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
+    const { generateBOMOrderRecommendations } = await import('@/lib/services/recommender-bom')
 
     const body = await request.json()
     const { clerkOrgId, ...restBody } = body
@@ -178,6 +191,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ...result, recommendationCreated })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error generating BOM recommendations:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

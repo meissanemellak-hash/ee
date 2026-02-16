@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     // Éviter de charger auth/prisma pendant la phase de build (collect page data)
-    if (process.env.NEXT_PHASE === 'phase-production-build') {
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

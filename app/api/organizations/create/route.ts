@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const { name } = body
@@ -74,8 +85,9 @@ export async function POST(request: NextRequest) {
       message: `L'organisation "${organization.name}" a été créée avec succès dans Clerk et la base de données.`,
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error creating organization:', error)
-    
+
     if (error instanceof Error) {
       // Si l'organisation existe déjà dans Clerk
       if (error.message.includes('already exists') || error.message.includes('duplicate')) {
@@ -88,7 +100,7 @@ export async function POST(request: NextRequest) {
       // Erreur spécifique de Clerk
       if (error.message.includes('organizations') || error.message.includes('organization')) {
         return NextResponse.json(
-          { 
+          {
             error: 'Erreur Clerk lors de la création',
             details: error.message
           },
@@ -99,7 +111,7 @@ export async function POST(request: NextRequest) {
       // Erreur de base de données
       if (error.message.includes('Unique constraint') || error.message.includes('duplicate key')) {
         return NextResponse.json(
-          { 
+          {
             error: 'Cette organisation existe déjà dans la base de données',
             details: error.message
           },
@@ -109,7 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { 
+      {
         error: 'Erreur lors de la création de l\'organisation',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

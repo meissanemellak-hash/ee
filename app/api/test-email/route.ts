@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { sendNotificationEmail, sendAlertEmail } from '@/lib/services/email'
-import { logger } from '@/lib/logger'
 
 /**
  * Route API de test pour vérifier l'envoi d'emails avec Resend
@@ -11,8 +8,16 @@ import { logger } from '@/lib/logger'
  */
 export async function GET(request: NextRequest) {
   try {
-    // Vérifier l'authentification (optionnel pour le test, mais recommandé)
-    const { userId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      userId = auth().userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized. Please sign in first.' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in first.' },

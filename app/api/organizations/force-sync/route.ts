@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,11 +8,27 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId } = auth()
-    
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let orgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      orgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const client = await clerkClient()
 
@@ -28,7 +41,7 @@ export async function POST(request: NextRequest) {
       if (!organization) {
         try {
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgId })
-          
+
           organization = await prisma.organization.create({
             data: {
               name: clerkOrg.name,
@@ -36,7 +49,7 @@ export async function POST(request: NextRequest) {
               shrinkPct: 0.1,
             },
           })
-          
+
           return NextResponse.json({
             synced: true,
             organization: {
@@ -64,7 +77,7 @@ export async function POST(request: NextRequest) {
     // Si pas d'orgId dans les cookies, vérifier les organisations de l'utilisateur
     // et synchroniser la première organisation trouvée
     const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-    
+
     if (!userMemberships.data || userMemberships.data.length === 0) {
       return NextResponse.json({ synced: false, error: 'No organizations found' }, { status: 404 })
     }
@@ -107,6 +120,7 @@ export async function POST(request: NextRequest) {
       message: organization ? 'Organization synced' : 'Organization not found',
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error in force-sync:', error)
     return NextResponse.json(
       {

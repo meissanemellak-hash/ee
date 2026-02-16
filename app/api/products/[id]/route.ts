@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
 import { z } from 'zod'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,18 +12,34 @@ const productSchema = z.object({
 
 /**
  * GET /api/products/[id]
- * Récupère un produit par son ID
+ * Récupère un produit par son ID. Imports dynamiques pour le build.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     // Accepter clerkOrgId depuis les paramètres de requête
     const searchParams = request.nextUrl.searchParams
@@ -101,6 +112,7 @@ export async function GET(
 
     return NextResponse.json({ product })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching product:', error)
     return NextResponse.json(
       { error: 'Error fetching product', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -111,18 +123,34 @@ export async function GET(
 
 /**
  * PATCH /api/products/[id]
- * Modifie un produit
+ * Modifie un produit. Imports dynamiques pour le build.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const clerkOrgIdFromBody = (body as any).clerkOrgId
@@ -232,6 +260,7 @@ export async function PATCH(
       )
     }
 
+    const { logger } = await import('@/lib/logger')
     logger.error('Error updating product:', error)
     return NextResponse.json(
       { error: 'Error updating product', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -242,18 +271,35 @@ export async function PATCH(
 
 /**
  * DELETE /api/products/[id]
- * Supprime un produit
+ * Supprime un produit. Imports dynamiques pour le build.
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
-    
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const searchParams = request.nextUrl.searchParams
     let clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
@@ -356,6 +402,7 @@ export async function DELETE(
       message: 'Produit supprimé avec succès',
     })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error deleting product:', error)
     return NextResponse.json(
       { error: 'Error deleting product', details: error instanceof Error ? error.message : 'Unknown error' },

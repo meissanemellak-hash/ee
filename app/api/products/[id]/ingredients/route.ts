@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { logger } from '@/lib/logger'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
@@ -16,17 +11,34 @@ const productIngredientSchema = z.object({
 
 /**
  * GET /api/products/[id]/ingredients
- * Récupère tous les ingrédients d'un produit (recette)
+ * Récupère tous les ingrédients d'un produit (recette). Imports dynamiques pour le build.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
@@ -119,6 +131,7 @@ export async function GET(
 
     return NextResponse.json(productIngredients)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching product ingredients:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -129,17 +142,35 @@ export async function GET(
 
 /**
  * POST /api/products/[id]/ingredients
- * Ajoute un ingrédient à un produit
+ * Ajoute un ingrédient à un produit. Imports dynamiques pour le build.
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const { clerkOrgId, ...restBody } = body
@@ -286,6 +317,7 @@ export async function POST(
 
     return NextResponse.json(productIngredient, { status: 201 })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error adding product ingredient:', error)
     
     if (error instanceof z.ZodError) {

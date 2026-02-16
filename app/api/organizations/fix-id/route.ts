@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,13 +8,27 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
+
     const body = await request.json()
-    const { correctClerkOrgId, currentOrgId } = body
+    const { correctClerkOrgId, currentOrgId } = body as { correctClerkOrgId?: string; currentOrgId?: string }
 
     if (!correctClerkOrgId) {
       return NextResponse.json(
@@ -214,6 +225,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[POST /api/organizations/fix-id] Erreur:', error)
     return NextResponse.json(
       { 

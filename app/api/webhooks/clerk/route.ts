@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
-import { prisma } from '@/lib/db/prisma'
-import { sendEmail } from '@/lib/services/email'
-import { getAccountLockedEmailHtml } from '@/lib/services/email-templates'
-import { logger } from '@/lib/logger'
 
 const webhookSecret = process.env.CLERK_WEBHOOK_SECRET
 
@@ -12,6 +8,15 @@ const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'IA Restaurant Manager'
 const EMAIL_FROM = process.env.EMAIL_FROM ?? 'noreply@resend.dev'
 
 export async function POST(request: NextRequest) {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { prisma } = await import('@/lib/db/prisma')
+  const { logger } = await import('@/lib/logger')
+  const { sendEmail } = await import('@/lib/services/email')
+  const { getAccountLockedEmailHtml } = await import('@/lib/services/email-templates')
+
   if (!webhookSecret) {
     return NextResponse.json(
       { error: 'Webhook secret not configured' },

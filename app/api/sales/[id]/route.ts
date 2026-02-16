@@ -1,29 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
 import { saleSchema } from '@/lib/validations/sales'
-import { runAllAlerts } from '@/lib/services/alerts'
-import { recipeQuantityToInventoryUnit } from '@/lib/units'
 import { z } from 'zod'
-import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/sales/[id]
- * Récupère une vente spécifique
+ * Récupère une vente spécifique. Imports dynamiques pour le build.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
@@ -111,6 +121,7 @@ export async function GET(
 
     return NextResponse.json(sale)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error fetching sale:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -121,17 +132,36 @@ export async function GET(
 
 /**
  * PATCH /api/sales/[id]
- * Met à jour une vente
+ * Met à jour une vente. Imports dynamiques pour le build.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
+    const { recipeQuantityToInventoryUnit } = await import('@/lib/units')
 
     const body = await request.json()
     const { clerkOrgId, ...updateData } = body
@@ -370,6 +400,7 @@ export async function PATCH(
       })
 
       try {
+        const { runAllAlerts } = await import('@/lib/services/alerts')
         await runAllAlerts(restaurantId)
       } catch (alertError) {
         logger.error('[PATCH /api/sales/[id]] runAllAlerts:', alertError)
@@ -380,6 +411,7 @@ export async function PATCH(
 
     return NextResponse.json(existing)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error updating sale:', error)
     
     if (error instanceof z.ZodError) {
@@ -398,17 +430,36 @@ export async function PATCH(
 
 /**
  * DELETE /api/sales/[id]
- * Supprime une vente
+ * Supprime une vente. Imports dynamiques pour le build.
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { logger } = await import('@/lib/logger')
+    const { recipeQuantityToInventoryUnit } = await import('@/lib/units')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
@@ -540,6 +591,7 @@ export async function DELETE(
     })
 
     try {
+      const { runAllAlerts } = await import('@/lib/services/alerts')
       await runAllAlerts(restaurantId)
     } catch (alertError) {
       logger.error('[DELETE /api/sales/[id]] runAllAlerts:', alertError)
@@ -547,6 +599,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Sale deleted successfully' })
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('Error deleting sale:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

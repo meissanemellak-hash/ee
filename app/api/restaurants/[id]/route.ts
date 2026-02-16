@@ -11,6 +11,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     let userId: string | null = null
     let authOrgId: string | null = null
     try {
@@ -200,6 +203,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     let userId: string | null = null
     let authOrgId: string | null = null
     try {

@@ -1,19 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { checkApiPermission } from '@/lib/auth-role'
-import { prisma } from '@/lib/db/prisma'
-import { getCurrentOrganization } from '@/lib/auth'
-import { generateReport, type ReportType, type ReportFilters } from '@/lib/services/reports'
-import { logger } from '@/lib/logger'
+import type { ReportType, ReportFilters } from '@/lib/services/reports'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, orgId: authOrgId } = auth()
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let userId: string | null = null
+    let authOrgId: string | null = null
+    try {
+      const { auth } = await import('@clerk/nextjs/server')
+      const authResult = auth()
+      userId = authResult.userId ?? null
+      authOrgId = authResult.orgId ?? null
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { checkApiPermission } = await import('@/lib/auth-role')
+    const { prisma } = await import('@/lib/db/prisma')
+    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { logger } = await import('@/lib/logger')
 
     const body = await request.json()
     const { reportType, filters, clerkOrgId } = body
@@ -97,10 +110,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const report = await generateReport(organization.id, reportType as ReportType, filters as ReportFilters || {})
+    const { generateReport } = await import('@/lib/services/reports')
+    const report = await generateReport(organization.id, reportType as ReportType, (filters as ReportFilters) || {})
 
     return NextResponse.json(report)
   } catch (error) {
+    const { logger } = await import('@/lib/logger')
     logger.error('[POST /api/reports/generate] Erreur:', error)
     return NextResponse.json(
       { 
