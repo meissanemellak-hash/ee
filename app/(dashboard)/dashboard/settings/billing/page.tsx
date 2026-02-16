@@ -1,26 +1,13 @@
 import { redirect } from 'next/navigation'
-import { auth, clerkClient, currentUser } from '@clerk/nextjs/server'
-import { getCurrentOrganization } from '@/lib/auth'
-import { getCurrentUserRole } from '@/lib/auth-role'
-import { can } from '@/lib/roles'
-import { prisma } from '@/lib/db/prisma'
-import { logger } from '@/lib/logger'
-import { syncStripeSubscriptionToOrg, refreshSubscriptionFromStripe } from '@/lib/sync-stripe-subscription'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { BillingClientSection } from './billing-client-section'
 import { SyncSubscriptionButton } from './sync-subscription-button'
-import { getPlanDisplayName } from '@/lib/stripe'
 import { CreditCard, ArrowLeft, CheckCircle2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
-
-function planDisplayName(plan: string | null): string {
-  const name = getPlanDisplayName(plan)
-  return name === 'Aucun plan' ? name : `Plan ${name}`
-}
 
 function statusLabel(sub: { status: string; cancelAtPeriodEnd: boolean }): string {
   if (sub.cancelAtPeriodEnd) return 'Annulé à la fin de la période'
@@ -29,14 +16,32 @@ function statusLabel(sub: { status: string; cancelAtPeriodEnd: boolean }): strin
 }
 
 export default async function BillingPage() {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-muted/25">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8">
+          <Card className="rounded-xl border shadow-sm bg-card">
+            <CardContent className="py-16 text-center">
+              <p className="text-muted-foreground">Chargement...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    )
+  }
+
+  const { auth } = await import('@clerk/nextjs/server')
   const { userId } = auth()
   if (!userId) redirect('/sign-in')
 
+  const { getCurrentOrganization } = await import('@/lib/auth')
   let organization = await getCurrentOrganization()
 
-  // Si pas d'org dans la session (ex. navigation client), utiliser la première org de l'utilisateur (comme la page Dashboard)
   if (!organization) {
     try {
+      const { clerkClient } = await import('@clerk/nextjs/server')
+      const { prisma } = await import('@/lib/db/prisma')
+      const { logger } = await import('@/lib/logger')
       const client = await clerkClient()
       const userMemberships = await client.users.getOrganizationMembershipList({ userId })
       if (userMemberships.data && userMemberships.data.length > 0) {
@@ -67,6 +72,7 @@ export default async function BillingPage() {
         }
       }
     } catch (error) {
+      const { logger } = await import('@/lib/logger')
       logger.error('[billing] Error syncing organization:', error)
     }
   }
@@ -90,18 +96,22 @@ export default async function BillingPage() {
 
   const clerkOrgId = organization.clerkOrgId
   if (clerkOrgId) {
+    const { getCurrentUserRole } = await import('@/lib/auth-role')
+    const { can } = await import('@/lib/roles')
     const role = await getCurrentUserRole(userId, clerkOrgId)
     if (!can(role, 'billing:view')) {
       redirect('/dashboard/settings')
     }
   }
 
+  const { prisma } = await import('@/lib/db/prisma')
   let subscription = await prisma.subscription.findUnique({
     where: { organizationId: organization.id },
   })
 
-  // Synchronisation automatique : si pas d'abonnement en base, tenter de le récupérer depuis Stripe (même email)
   if (!subscription) {
+    const { currentUser } = await import('@clerk/nextjs/server')
+    const { syncStripeSubscriptionToOrg } = await import('@/lib/sync-stripe-subscription')
     const user = await currentUser()
     const email = user?.emailAddresses?.[0]?.emailAddress?.trim()
     if (email) {
@@ -113,11 +123,17 @@ export default async function BillingPage() {
       }
     }
   } else {
-    // Rafraîchir depuis Stripe à chaque chargement (réactivation/annulation dans le portail)
+    const { refreshSubscriptionFromStripe } = await import('@/lib/sync-stripe-subscription')
     await refreshSubscriptionFromStripe(organization.id)
     subscription = await prisma.subscription.findUnique({
       where: { organizationId: organization.id },
     })
+  }
+
+  const { getPlanDisplayName } = await import('@/lib/stripe')
+  const planDisplayName = (plan: string | null): string => {
+    const name = getPlanDisplayName(plan)
+    return name === 'Aucun plan' ? name : `Plan ${name}`
   }
 
   const isActive =
