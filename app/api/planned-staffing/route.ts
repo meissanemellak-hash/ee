@@ -10,7 +10,7 @@ function toPlanDate(dateStr: string): Date {
   return d
 }
 
-type PrismaClient = Awaited<ReturnType<typeof import('@/lib/db/prisma')['prisma']>>
+type PrismaClient = (typeof import('@/lib/db/prisma'))['prisma']
 type GetCurrentOrg = () => Promise<{ id: string } | null>
 
 async function resolveOrganization(
