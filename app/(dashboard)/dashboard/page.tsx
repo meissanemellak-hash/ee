@@ -1,14 +1,9 @@
 import { redirect } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
-import { auth, clerkClient } from '@clerk/nextjs/server'
-import { getCurrentOrganization } from '@/lib/auth'
-import { prisma } from '@/lib/db/prisma'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { calculateExecutiveDashboardMetrics } from '@/lib/services/dashboard-metrics'
-import { logger } from '@/lib/logger'
 import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight } from 'lucide-react'
 import { DashboardRecommendationsList } from '@/components/dashboard/dashboard-recommendations-list'
 import { GaspillageEstimeCard } from '@/components/dashboard/gaspillage-estime-card'
@@ -55,6 +50,7 @@ export default async function DashboardPage(props: PageProps) {
     )
   }
 
+  const { auth } = await import('@clerk/nextjs/server')
   const { userId } = auth()
   const rawParams = props.searchParams
   const searchParams = rawParams && typeof (rawParams as Promise<unknown>).then === 'function'
@@ -66,28 +62,24 @@ export default async function DashboardPage(props: PageProps) {
     redirect('/sign-in')
   }
 
-  // SOLUTION RADICALE ET DÉFINITIVE :
-  // Si getCurrentOrganization() retourne null (orgId pas dans les cookies),
-  // on vérifie les organisations de l'utilisateur dans Clerk et on synchronise la première
+  const { getCurrentOrganization } = await import('@/lib/auth')
   let organization = await getCurrentOrganization()
   
   if (!organization) {
     try {
-      // Vérifier les organisations de l'utilisateur dans Clerk
+      const { clerkClient } = await import('@clerk/nextjs/server')
       const client = await clerkClient()
       const userMemberships = await client.users.getOrganizationMembershipList({ userId })
       
       if (userMemberships.data && userMemberships.data.length > 0) {
-        // Synchroniser la première organisation trouvée
         const firstOrg = userMemberships.data[0].organization
         const clerkOrgId = firstOrg.id
         
-        // Vérifier si l'organisation existe déjà dans la DB
+        const { prisma } = await import('@/lib/db/prisma')
         organization = await prisma.organization.findUnique({
           where: { clerkOrgId },
         })
         
-        // Si elle n'existe pas, la créer
         if (!organization) {
           try {
             organization = await prisma.organization.create({
@@ -97,9 +89,9 @@ export default async function DashboardPage(props: PageProps) {
                 shrinkPct: 0.1,
               },
             })
+            const { logger } = await import('@/lib/logger')
             logger.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk`)
           } catch (dbError) {
-            // Si erreur de contrainte unique, récupérer l'organisation existante
             if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
               organization = await prisma.organization.findUnique({
                 where: { clerkOrgId },
@@ -111,9 +103,8 @@ export default async function DashboardPage(props: PageProps) {
         }
       }
     } catch (error) {
+      const { logger } = await import('@/lib/logger')
       logger.error('Error syncing organization:', error)
-      // En cas d'erreur, afficher le message d'attente
-      // Le handler client fera la synchronisation
     }
   }
   
@@ -156,7 +147,7 @@ export default async function DashboardPage(props: PageProps) {
     )
   }
 
-  // Calculer les métriques du dashboard exécutif (filtrées par restaurant si ?restaurant=xxx)
+  const { calculateExecutiveDashboardMetrics } = await import('@/lib/services/dashboard-metrics')
   const metrics = await calculateExecutiveDashboardMetrics(organization.id, restaurantId)
 
   return (
