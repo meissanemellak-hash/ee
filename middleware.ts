@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
   '/demo/merci',
   '/api/webhooks(.*)',
   '/api/cron(.*)', // sécurisé par CRON_SECRET dans chaque route
+  '/api/test-sentry', // sécurisé par SENTRY_TEST_SECRET dans la route
 ])
 
 export default clerkMiddleware(async (auth, req) => {
