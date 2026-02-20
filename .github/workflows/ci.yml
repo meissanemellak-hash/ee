@@ -48,6 +48,7 @@ jobs:
         run: npm run test:e2e
         env:
           CI: true
+          NODE_OPTIONS: "--max-old-space-size=4096"
           DATABASE_URL: postgresql://user:pass@localhost:5432/test
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_placeholder
           CLERK_SECRET_KEY: sk_test_placeholder
