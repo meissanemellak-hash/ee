@@ -37,8 +37,9 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
           DATABASE_URL: postgresql://user:pass@localhost:5432/test
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_placeholder
-          CLERK_SECRET_KEY: sk_test_placeholder
+          # Clés Clerk de test (Dashboard → API Keys) : à ajouter en secrets GitHub pour que le build et les E2E passent
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           NEXT_PUBLIC_APP_URL: https://placeholder.com
 
       - name: Install Playwright browsers
@@ -50,8 +51,9 @@ jobs:
           CI: true
           NODE_OPTIONS: "--max-old-space-size=4096"
           DATABASE_URL: postgresql://user:pass@localhost:5432/test
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_placeholder
-          CLERK_SECRET_KEY: sk_test_placeholder
+          # Mêmes clés Clerk de test que le Build (obligatoire : Clerk refuse les placeholders)
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           # Optionnel : pour exécuter aussi les tests rôle employé (setup-staff + employee-role)
           STAFF_EMAIL: ${{ secrets.STAFF_EMAIL }}
