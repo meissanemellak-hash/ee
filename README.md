@@ -49,3 +49,5 @@ Voir `ARCHITECTURE.md` pour les détails d'architecture.
 ## 📝 License
 
 Propriétaire
+
+<!-- Dernière mise à jour doc -->
