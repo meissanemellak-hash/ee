@@ -8,7 +8,6 @@ import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight } from 'lucide-react
 import { DashboardRecommendationsList } from '@/components/dashboard/dashboard-recommendations-list'
 import { GaspillageEstimeCard } from '@/components/dashboard/gaspillage-estime-card'
 import { RuptureStockRiskCard } from '@/components/dashboard/rupture-stock-risk-card'
-import { ReloadButton } from '@/components/dashboard/reload-button'
 import { RecentActivityTable } from '@/components/dashboard/recent-activity-table'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -87,15 +86,17 @@ export default async function DashboardPage(props: PageProps) {
           <header className="pb-6 border-b border-border/60">
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground mt-1.5">
-              Synchronisation de l&apos;organisation en cours...
+              Chargement...
             </p>
           </header>
           <Card className="rounded-xl border shadow-sm bg-card">
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">
-                L&apos;organisation est en cours de synchronisation. Veuillez patienter quelques instants.
+                Préparation de votre espace en cours.
               </p>
-              <ReloadButton />
+              <div className="flex justify-center">
+                <Skeleton className="h-10 w-48 rounded-lg" />
+              </div>
             </CardContent>
           </Card>
         </div>

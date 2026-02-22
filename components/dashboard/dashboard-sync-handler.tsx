@@ -5,9 +5,9 @@ import { useEffect, useRef } from 'react'
 import { logger } from '@/lib/logger'
 
 /**
- * Si une organisation est active côté client mais le serveur a rendu "sync en cours",
+ * Si une organisation est active côté client mais le serveur a rendu l'écran de chargement,
  * on synchronise immédiatement (check-sync crée l'org en DB si besoin) puis on recharge une seule fois.
- * Throttle court (1,5 s) pour éviter les boucles tout en rendant l'accès quasi instantané.
+ * Tout est automatique : pas de bouton à cliquer, redirection systématique.
  */
 export function DashboardSyncHandler() {
   const { organization, isLoaded } = useOrganization()
@@ -16,11 +16,6 @@ export function DashboardSyncHandler() {
   useEffect(() => {
     if (!isLoaded || hasSynced.current || !organization?.id) return
 
-    const syncKey = `dashboard-sync-${organization.id}`
-    const lastSync = localStorage.getItem(syncKey)
-    const now = Date.now()
-    if (lastSync && now - parseInt(lastSync, 10) < 1500) return
-
     const urlParams = new URLSearchParams(window.location.search)
     if (urlParams.has('t')) {
       hasSynced.current = true
@@ -28,7 +23,16 @@ export function DashboardSyncHandler() {
     }
 
     hasSynced.current = true
+    const syncKey = `dashboard-sync-${organization.id}`
+    const now = Date.now()
+    const lastSync = localStorage.getItem(syncKey)
+    if (lastSync && now - parseInt(lastSync, 10) < 800) return
     localStorage.setItem(syncKey, now.toString())
+
+    const doRedirect = () => {
+      localStorage.removeItem(syncKey)
+      window.location.replace(`/dashboard?t=${Date.now()}`)
+    }
 
     fetch('/api/organizations/check-sync', {
       method: 'POST',
@@ -38,23 +42,21 @@ export function DashboardSyncHandler() {
       .then((res) => res.json())
       .then((data) => {
         if (data.synced && data.organization) {
-          localStorage.removeItem(syncKey)
-          window.location.replace(`/dashboard?t=${Date.now()}`)
-          return
+          doRedirect()
+          return null
         }
         return fetch('/api/organizations/force-sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-        })
+        }).then((r) => r.json())
       })
-      .then((res) => (res ? res.json() : null))
       .then((data) => {
-        if (data?.synced) localStorage.removeItem(syncKey)
-        window.location.replace(`/dashboard?t=${Date.now()}`)
+        if (data != null) doRedirect()
       })
       .catch((error) => {
         logger.error('❌ Erreur de synchronisation:', error)
         localStorage.removeItem(syncKey)
+        setTimeout(doRedirect, 1500)
       })
   }, [organization?.id, organization?.name, isLoaded])
 
