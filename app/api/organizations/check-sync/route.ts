@@ -90,13 +90,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const { logger } = await import('@/lib/logger')
     logger.error('Error checking organization sync:', error)
-    return NextResponse.json(
-      {
-        synced: false,
-        error: 'Error checking organization sync',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    return NextResponse.json({ synced: false, organization: null }, { status: 200 })
   }
 }

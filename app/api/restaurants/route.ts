@@ -75,6 +75,10 @@ export async function GET(request: NextRequest) {
     if (!organization) {
       organization = await getCurrentOrganization()
     }
+    if (!organization && userId) {
+      const { getOrganizationForDashboard } = await import('@/lib/auth')
+      organization = await getOrganizationForDashboard(userId)
+    }
     if (!organization) {
       return NextResponse.json([])
     }

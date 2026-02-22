@@ -107,10 +107,17 @@ export async function getCurrentOrganization() {
  * Récupère l'organisation pour le dashboard : essaie getCurrentOrganization(), puis si null
  * récupère la première organisation de l'utilisateur via Clerk et la crée en DB si besoin.
  * Évite l'écran "Synchronisation en cours" quand l'utilisateur a bien une org dans Clerk.
- * Un léger retry permet de réussir au premier chargement même en cas de latence Clerk/DB.
+ * Pas de délai au premier essai pour affichage instantané ; retries courts en cas d'échec.
  */
 export async function getOrganizationForDashboard(userId: string): Promise<Awaited<ReturnType<typeof getCurrentOrganization>>> {
-  for (let attempt = 0; attempt < 2; attempt++) {
+  const maxAttempts = 5
+  const delayMs = 150
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, delayMs))
+    }
+
     let organization = await getCurrentOrganization()
     if (organization) return organization
 
@@ -121,7 +128,9 @@ export async function getOrganizationForDashboard(userId: string): Promise<Await
     try {
       const client = await clerkClient()
       const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-      if (!userMemberships.data?.length) return null
+      if (!userMemberships.data?.length) {
+        continue
+      }
 
       const firstOrg = userMemberships.data[0].organization
       const clerkOrgId = firstOrg.id
@@ -157,8 +166,6 @@ export async function getOrganizationForDashboard(userId: string): Promise<Await
       }
     } catch (error) {
       logger.error('Error getOrganizationForDashboard:', error)
-      if (attempt === 1) return null
-      await new Promise((r) => setTimeout(r, 250))
     }
   }
   return null

@@ -89,31 +89,23 @@ export async function GET(request: NextRequest) {
         }
       }
     } else {
-      // Fallback : utiliser getCurrentOrganization()
       const { getCurrentOrganization } = await import('@/lib/auth')
       organization = await getCurrentOrganization()
-      
       if (!organization && authOrgId) {
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 300))
         organization = await getCurrentOrganization()
       }
     }
-    
-    if (!organization) {
-      logger.error('[GET /api/ingredients] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
-      
-      if (orgIdToUse) {
-        logger.error('[GET /api/ingredients] ERREUR: orgIdToUse était défini mais organisation non trouvée après synchronisation')
-      }
-      
-      return NextResponse.json({ 
-        error: 'Organization not found',
-        details: orgIdToUse 
-          ? 'L\'organisation existe dans Clerk mais n\'a pas pu être synchronisée dans la base de données. Veuillez rafraîchir la page.'
-          : 'Aucune organisation active. Veuillez sélectionner une organisation.'
-      }, { status: 404 })
+
+    if (!organization && userId) {
+      const { getOrganizationForDashboard } = await import('@/lib/auth')
+      organization = await getOrganizationForDashboard(userId)
     }
-    
+
+    if (!organization) {
+      return NextResponse.json({ ingredients: [], units: [] })
+    }
+
     logger.log('[GET /api/ingredients] Organisation trouvée:', organization.name, organization.id)
 
     // Récupérer les paramètres de recherche et filtres

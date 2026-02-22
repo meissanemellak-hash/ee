@@ -27,10 +27,10 @@ export function DashboardSyncHandler() {
       const lastSyncAttempt = localStorage.getItem(syncKey)
       const now = Date.now()
 
-      // Si on a tenté de synchroniser il y a moins de 10 secondes, ne pas réessayer
+      // Si on a tenté de synchroniser il y a moins de 3 secondes, ne pas réessayer
       if (lastSyncAttempt) {
         const timeSinceLastAttempt = now - parseInt(lastSyncAttempt, 10)
-        if (timeSinceLastAttempt < 10000) {
+        if (timeSinceLastAttempt < 3000) {
           logger.log('⏳ Synchronisation récente, pas de rechargement')
           return
         }
@@ -64,9 +64,7 @@ export function DashboardSyncHandler() {
           if (data.synced && data.organization) {
             logger.log('✅ Organisation synchronisée:', data.organization.name)
             localStorage.removeItem(syncKey)
-            setTimeout(() => {
-              window.location.replace(`/dashboard?t=${Date.now()}`)
-            }, 80)
+            window.location.replace(`/dashboard?t=${Date.now()}`)
             return
           }
 
@@ -89,14 +87,9 @@ export function DashboardSyncHandler() {
             logger.log('⚠️ Synchronisation échouée')
           }
           
-          // Nettoyer le flag avant le rechargement
           localStorage.removeItem(syncKey)
-          
-          // Rechargement court pour afficher le dashboard avec l'org synchronisée
-          setTimeout(() => {
-            logger.log('🔄 Rechargement pour afficher le dashboard')
-            window.location.replace(`/dashboard?t=${Date.now()}`)
-          }, 150)
+          logger.log('🔄 Rechargement pour afficher le dashboard')
+          window.location.replace(`/dashboard?t=${Date.now()}`)
         })
         .catch(error => {
           logger.error('❌ Erreur de synchronisation:', error)
