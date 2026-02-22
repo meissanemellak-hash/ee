@@ -5,9 +5,9 @@ import { useEffect, useRef } from 'react'
 import { logger } from '@/lib/logger'
 
 /**
- * Si une organisation est active côté client mais le serveur a rendu l'écran de chargement,
- * on synchronise immédiatement (check-sync crée l'org en DB si besoin) puis on recharge une seule fois.
- * Tout est automatique : pas de bouton à cliquer, redirection systématique.
+ * Uniquement quand le serveur a rendu l'écran "sync en cours" (data-dashboard-state="syncing") :
+ * on synchronise (check-sync crée l'org si besoin, sinon force-sync) puis on recharge une fois.
+ * Si le dashboard complet est affiché, on ne fait rien : pas de reload, comme en dev.
  */
 export function DashboardSyncHandler() {
   const { organization, isLoaded } = useOrganization()
@@ -15,6 +15,8 @@ export function DashboardSyncHandler() {
 
   useEffect(() => {
     if (!isLoaded || hasSynced.current || !organization?.id) return
+    if (typeof document === 'undefined') return
+    if (!document.querySelector('[data-dashboard-state="syncing"]')) return
 
     const urlParams = new URLSearchParams(window.location.search)
     if (urlParams.has('t')) {
@@ -22,11 +24,12 @@ export function DashboardSyncHandler() {
       return
     }
 
-    hasSynced.current = true
     const syncKey = `dashboard-sync-${organization.id}`
     const now = Date.now()
     const lastSync = localStorage.getItem(syncKey)
-    if (lastSync && now - parseInt(lastSync, 10) < 800) return
+    if (lastSync && now - parseInt(lastSync, 10) < 1500) return
+
+    hasSynced.current = true
     localStorage.setItem(syncKey, now.toString())
 
     const doRedirect = () => {
@@ -56,7 +59,6 @@ export function DashboardSyncHandler() {
       .catch((error) => {
         logger.error('❌ Erreur de synchronisation:', error)
         localStorage.removeItem(syncKey)
-        setTimeout(doRedirect, 1500)
       })
   }, [organization?.id, organization?.name, isLoaded])
 

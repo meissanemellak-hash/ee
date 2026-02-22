@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react'
 import { DashboardRecommendationsList } from '@/components/dashboard/dashboard-recommendations-list'
 import { GaspillageEstimeCard } from '@/components/dashboard/gaspillage-estime-card'
 import { RuptureStockRiskCard } from '@/components/dashboard/rupture-stock-risk-card'
@@ -82,21 +82,16 @@ export default async function DashboardPage(props: PageProps) {
   if (!organization) {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Dashboard">
+        <div data-dashboard-state="syncing" aria-hidden style={{ position: 'absolute', left: -9999 }} />
         <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
           <header className="pb-6 border-b border-border/60">
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1.5">
-              Chargement...
-            </p>
+            <p className="text-muted-foreground mt-1.5">Chargement du tableau de bord…</p>
           </header>
           <Card className="rounded-xl border shadow-sm bg-card">
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground mb-4">
-                Préparation de votre espace en cours.
-              </p>
-              <div className="flex justify-center">
-                <Skeleton className="h-10 w-48 rounded-lg" />
-              </div>
+            <CardContent className="py-12 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" aria-hidden />
+              <p className="text-sm text-muted-foreground">Chargement en cours, affichage automatique.</p>
             </CardContent>
           </Card>
         </div>
