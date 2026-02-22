@@ -104,38 +104,23 @@ export async function getCurrentOrganization() {
 }
 
 /**
- * Récupère l'organisation pour le dashboard : essaie getCurrentOrganization(), puis si null
- * récupère la première organisation de l'utilisateur via Clerk et la crée en DB si besoin.
- * Évite l'écran "Synchronisation en cours" quand l'utilisateur a bien une org dans Clerk.
- * Pas de délai au premier essai pour affichage instantané ; retries courts en cas d'échec.
+ * Récupère l'organisation pour le dashboard : priorité à la liste des membres Clerk (pas de dépendance à auth().orgId),
+ * puis getCurrentOrganization(). Crée l'org en DB si besoin. Affichage instantané sans délai.
  */
 export async function getOrganizationForDashboard(userId: string): Promise<Awaited<ReturnType<typeof getCurrentOrganization>>> {
-  const maxAttempts = 5
-  const delayMs = 150
+  const { clerkClient } = await import('@clerk/nextjs/server')
+  const { prisma } = await import('./db/prisma')
+  const { logger } = await import('./logger')
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, delayMs))
-    }
-
-    let organization = await getCurrentOrganization()
-    if (organization) return organization
-
-    const { clerkClient } = await import('@clerk/nextjs/server')
-    const { prisma } = await import('./db/prisma')
-    const { logger } = await import('./logger')
-
-    try {
-      const client = await clerkClient()
-      const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-      if (!userMemberships.data?.length) {
-        continue
-      }
-
+  // 1) Essayer d'abord via les membres Clerk (fonctionne même si auth().orgId n'est pas encore set)
+  try {
+    const client = await clerkClient()
+    const userMemberships = await client.users.getOrganizationMembershipList({ userId })
+    if (userMemberships.data?.length) {
       const firstOrg = userMemberships.data[0].organization
       const clerkOrgId = firstOrg.id
 
-      organization = await prisma.organization.findUnique({
+      let organization = await prisma.organization.findUnique({
         where: { clerkOrgId },
       })
       if (organization) return organization
@@ -164,11 +149,13 @@ export async function getOrganizationForDashboard(userId: string): Promise<Await
           if (organization) return organization
         }
       }
-    } catch (error) {
-      logger.error('Error getOrganizationForDashboard:', error)
     }
+  } catch (error) {
+    logger.error('Error getOrganizationForDashboard (memberships):', error)
   }
-  return null
+
+  // 2) Fallback : organisation active dans la session (auth().orgId)
+  return getCurrentOrganization()
 }
 
 /**
