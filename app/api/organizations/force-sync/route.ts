@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     let orgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       orgId = authResult.orgId ?? null
     } catch {
@@ -49,28 +49,24 @@ export async function POST(request: NextRequest) {
               shrinkPct: 0.1,
             },
           })
-
-          return NextResponse.json({
-            synced: true,
-            organization: {
-              id: organization.id,
-              name: organization.name,
-              clerkOrgId: organization.clerkOrgId,
-            },
-          })
         } catch (error) {
-          logger.error('Error syncing organization:', error)
-          return NextResponse.json({ synced: false, error: 'Error syncing organization' }, { status: 500 })
+          if (error instanceof Error && error.message.includes('Unique constraint')) {
+            organization = await prisma.organization.findUnique({
+              where: { clerkOrgId: orgId },
+            })
+          } else {
+            logger.error('Error syncing organization:', error)
+            return NextResponse.json({ synced: false, error: 'Error syncing organization' }, { status: 500 })
+          }
         }
       }
-
       return NextResponse.json({
-        synced: true,
-        organization: {
+        synced: !!organization,
+        organization: organization ? {
           id: organization.id,
           name: organization.name,
           clerkOrgId: organization.clerkOrgId,
-        },
+        } : null,
       })
     }
 

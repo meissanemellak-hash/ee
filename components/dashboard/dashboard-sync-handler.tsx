@@ -59,11 +59,14 @@ export function DashboardSyncHandler() {
         .then(data => {
           logger.log('📋 Vérification synchronisation:', data)
           
-          // Si l'organisation est déjà synchronisée, ne pas recharger
+          // Si l'organisation est synchronisée (côté serveur), recharger une fois pour afficher le dashboard
+          // (la page a pu être rendue avec "sync en cours" car le serveur n'avait pas encore l'org)
           if (data.synced && data.organization) {
-            logger.log('✅ Organisation déjà synchronisée:', data.organization.name)
-            // Nettoyer le flag de synchronisation
+            logger.log('✅ Organisation synchronisée:', data.organization.name)
             localStorage.removeItem(syncKey)
+            setTimeout(() => {
+              window.location.replace(`/dashboard?t=${Date.now()}`)
+            }, 80)
             return
           }
 
@@ -89,12 +92,11 @@ export function DashboardSyncHandler() {
           // Nettoyer le flag avant le rechargement
           localStorage.removeItem(syncKey)
           
-          // Forcer un rechargement UNIQUEMENT si nécessaire
-          // Attendre un peu pour laisser le temps au serveur de mettre à jour
+          // Rechargement court pour afficher le dashboard avec l'org synchronisée
           setTimeout(() => {
             logger.log('🔄 Rechargement pour afficher le dashboard')
             window.location.replace(`/dashboard?t=${Date.now()}`)
-          }, 500)
+          }, 150)
         })
         .catch(error => {
           logger.error('❌ Erreur de synchronisation:', error)

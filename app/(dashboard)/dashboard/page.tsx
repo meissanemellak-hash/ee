@@ -51,7 +51,7 @@ export default async function DashboardPage(props: PageProps) {
   }
 
   const { auth } = await import('@clerk/nextjs/server')
-  const { userId } = auth()
+  const { userId } = await auth()
   const rawParams = props.searchParams
   const searchParams = rawParams && typeof (rawParams as Promise<unknown>).then === 'function'
     ? await (rawParams as Promise<{ restaurant?: string }>)
@@ -62,54 +62,10 @@ export default async function DashboardPage(props: PageProps) {
     redirect('/sign-in')
   }
 
-  const { getCurrentOrganization } = await import('@/lib/auth')
-  let organization = await getCurrentOrganization()
-  
-  if (!organization) {
-    try {
-      const { clerkClient } = await import('@clerk/nextjs/server')
-      const client = await clerkClient()
-      const userMemberships = await client.users.getOrganizationMembershipList({ userId })
-      
-      if (userMemberships.data && userMemberships.data.length > 0) {
-        const firstOrg = userMemberships.data[0].organization
-        const clerkOrgId = firstOrg.id
-        
-        const { prisma } = await import('@/lib/db/prisma')
-        organization = await prisma.organization.findUnique({
-          where: { clerkOrgId },
-        })
-        
-        if (!organization) {
-          try {
-            organization = await prisma.organization.create({
-              data: {
-                name: firstOrg.name,
-                clerkOrgId,
-                shrinkPct: 0.1,
-              },
-            })
-            const { logger } = await import('@/lib/logger')
-            logger.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk`)
-          } catch (dbError) {
-            if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
-              organization = await prisma.organization.findUnique({
-                where: { clerkOrgId },
-              })
-            } else {
-              throw dbError
-            }
-          }
-        }
-      }
-    } catch (error) {
-      const { logger } = await import('@/lib/logger')
-      logger.error('Error syncing organization:', error)
-    }
-  }
-  
-  // Si toujours pas d'organisation, afficher le message d'attente
-  // Le DashboardSyncHandler dans le layout gérera la synchronisation côté client
+  const { getOrganizationForDashboard } = await import('@/lib/auth')
+  const organization = await getOrganizationForDashboard(userId)
+
+  // Si toujours pas d'organisation, le DashboardSyncHandler (layout) tentera une sync côté client puis rechargement
   const alertTypeLabels: Record<string, string> = {
     SHORTAGE: 'Rupture de stock',
     OVERSTOCK: 'Surstock',

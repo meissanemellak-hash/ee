@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
     let userId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      userId = auth().userId ?? null
+      const authResult = await auth()
+      userId = authResult.userId ?? null
     } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

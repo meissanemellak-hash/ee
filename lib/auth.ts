@@ -104,6 +104,67 @@ export async function getCurrentOrganization() {
 }
 
 /**
+ * Récupère l'organisation pour le dashboard : essaie getCurrentOrganization(), puis si null
+ * récupère la première organisation de l'utilisateur via Clerk et la crée en DB si besoin.
+ * Évite l'écran "Synchronisation en cours" quand l'utilisateur a bien une org dans Clerk.
+ * Un léger retry permet de réussir au premier chargement même en cas de latence Clerk/DB.
+ */
+export async function getOrganizationForDashboard(userId: string): Promise<Awaited<ReturnType<typeof getCurrentOrganization>>> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let organization = await getCurrentOrganization()
+    if (organization) return organization
+
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const { prisma } = await import('./db/prisma')
+    const { logger } = await import('./logger')
+
+    try {
+      const client = await clerkClient()
+      const userMemberships = await client.users.getOrganizationMembershipList({ userId })
+      if (!userMemberships.data?.length) return null
+
+      const firstOrg = userMemberships.data[0].organization
+      const clerkOrgId = firstOrg.id
+
+      organization = await prisma.organization.findUnique({
+        where: { clerkOrgId },
+      })
+      if (organization) return organization
+
+      try {
+        organization = await prisma.organization.create({
+          data: {
+            name: firstOrg.name,
+            clerkOrgId,
+            shrinkPct: 0.1,
+          },
+        })
+        logger.log(`✅ Organisation "${organization.name}" synchronisée depuis Clerk (dashboard)`)
+        return organization
+      } catch (dbError) {
+        if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
+          organization = await prisma.organization.findUnique({
+            where: { clerkOrgId },
+          })
+          if (organization) return organization
+        } else {
+          logger.error('Error creating organization (dashboard):', dbError)
+          organization = await prisma.organization.findUnique({
+            where: { clerkOrgId },
+          })
+          if (organization) return organization
+        }
+      }
+    } catch (error) {
+      logger.error('Error getOrganizationForDashboard:', error)
+      if (attempt === 1) return null
+      await new Promise((r) => setTimeout(r, 250))
+    }
+  }
+  return null
+}
+
+/**
  * Garantit qu'une organisation Clerk existe en base (pour le super-admin, ex. génération lien paiement).
  * À appeler avec un clerkOrgId : si l'org n'est pas en DB, on la crée depuis Clerk puis on la retourne.
  */
