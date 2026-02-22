@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     let userId: string | null = null
     let authOrgId: string | null = null
     try {
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       authOrgId = authResult.orgId ?? null
     } catch {
@@ -84,8 +84,15 @@ export async function GET(request: NextRequest) {
           logger.error('[GET /api/activity/recent] Erreur synchronisation:', error)
         }
       }
+    } else {
+      const { getCurrentOrganization } = await import('@/lib/auth')
+      organization = await getCurrentOrganization()
     }
 
+    if (!organization) {
+      const { getCurrentOrganization } = await import('@/lib/auth')
+      organization = await getCurrentOrganization()
+    }
     if (!organization) {
       return NextResponse.json(
         { error: 'Organization not found' },

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       authOrgId = authResult.orgId ?? null
     } catch {
@@ -72,6 +72,9 @@ export async function GET(request: NextRequest) {
       organization = await getCurrentOrganization()
     }
 
+    if (!organization) {
+      organization = await getCurrentOrganization()
+    }
     if (!organization) {
       return NextResponse.json([])
     }
@@ -195,7 +198,7 @@ export async function POST(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       authOrgId = authResult.orgId ?? null
     } catch {

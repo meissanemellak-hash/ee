@@ -70,12 +70,16 @@ export async function POST(request: NextRequest) {
       publicMetadata[APP_ROLE_METADATA_KEY] = 'staff'
     }
 
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ||
+      'https://ia-restaurant-manager.com'
     const invitation = await client.organizations.createOrganizationInvitation({
       organizationId: orgId,
       emailAddress: email,
       role: clerkRole,
       inviterUserId: userId,
       publicMetadata: Object.keys(publicMetadata).length > 0 ? publicMetadata : undefined,
+      redirectUrl: `${appUrl}/sign-in`,
     })
 
     return NextResponse.json({

@@ -62,6 +62,16 @@
 
 ---
 
+## Calendly (démo)
+
+La page `/demo/merci` affiche un bouton « Choisir un créneau » qui pointe vers l’URL Calendly. À faire avant prod (ou dès que tu proposes des démos) :
+
+- [ ] **Créer un événement Calendly** (ex. « Démo IA Restaurant Manager », 30 min) sur [calendly.com](https://calendly.com).
+- [ ] **Récupérer l’URL** de l’événement (ex. `https://calendly.com/ton-username/demo`).
+- [ ] **Variable d’environnement** : ajouter `NEXT_PUBLIC_CALENDLY_URL` avec cette URL dans `.env.local` (local) et dans **Vercel** (Production). Sans cette variable, le bouton utilise par défaut `https://calendly.com`.
+
+---
+
 ## À faire avant la prod (rappels)
 
 - [ ] **Nom de domaine** : avoir un domaine pour l’app (ex. app.tonnom.com ou tonnom.com) et le configurer sur l’hébergeur.
@@ -102,10 +112,12 @@ Une **même variable `CRON_SECRET`** sécurise les deux crons (voir section « V
 
 ## Documentation (Aide utilisateur)
 
-- [ ] Créer le workspace Notion avec les articles essentiels
-- [ ] Publier en lien public
-- [ ] Ajouter le lien « Aide » ou « Documentation » dans l’app (header ou paramètres)
-- [ ] Tester que le lien ouvre bien la doc
+**✅ Déjà fait en dev** – à ne plus inclure dans la suite de la checklist.
+
+- ~~Créer le workspace Notion avec les articles essentiels~~
+- ~~Publier en lien public~~
+- ~~Ajouter le lien « Aide » ou « Documentation » dans l’app (header ou paramètres)~~
+- ~~Tester que le lien ouvre bien la doc~~
 
 ---
 

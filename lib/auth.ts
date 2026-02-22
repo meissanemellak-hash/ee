@@ -9,7 +9,8 @@
  */
 export async function getCurrentOrganization() {
   const { auth } = await import('@clerk/nextjs/server')
-  const { orgId } = auth()
+  const authResult = await auth()
+  const orgId = authResult.orgId ?? null
   if (!orgId) return null
 
   const { prisma } = await import('./db/prisma')
@@ -26,15 +27,15 @@ export async function getCurrentOrganization() {
     // Réessayer jusqu'à 3 fois en cas d'erreur temporaire (rate limit, etc.)
     let attempts = 0
     const maxAttempts = 3
-    
+
     while (attempts < maxAttempts && !organization) {
       try {
         const { clerkClient } = await import('@clerk/nextjs/server')
         const client = await clerkClient()
-        
+
         // Récupérer les infos de l'organisation depuis Clerk
         const clerkOrg = await client.organizations.getOrganization({ organizationId: orgId })
-        
+
         // Créer l'organisation dans la DB
         try {
           organization = await prisma.organization.create({
@@ -57,20 +58,26 @@ export async function getCurrentOrganization() {
               break // Succès, sortir de la boucle
             }
           } else {
-            throw dbError
+            // Ne pas faire remonter l'erreur : log et tentative findUnique une dernière fois
+            logger.error('❌ Error creating organization in DB:', dbError)
+            organization = await prisma.organization.findUnique({
+              where: { clerkOrgId: orgId },
+            })
+            if (organization) break
+            return null
           }
         }
       } catch (error) {
         attempts++
-        
+
         // Vérifier si c'est un rate limit (erreur temporaire)
-        const isRateLimit = 
+        const isRateLimit =
           (error as any)?.status === 429 ||
           (error as any)?.statusCode === 429 ||
           (error instanceof Error && error.message?.includes('Too Many Requests')) ||
           (error instanceof Error && error.message?.includes('429')) ||
           (error as any)?.code === 'too_many_requests'
-        
+
         if (isRateLimit && attempts < maxAttempts) {
           // Attendre avant de réessayer (backoff exponentiel)
           const delay = Math.min(1000 * Math.pow(2, attempts - 1), 5000)
@@ -80,17 +87,13 @@ export async function getCurrentOrganization() {
         } else if (isRateLimit) {
           // Dernière tentative échouée à cause du rate limit
           logger.error('❌ Rate limit Clerk après', maxAttempts, 'tentatives')
-          // On retourne null mais l'organisation existe dans Clerk, donc le layout laissera passer
           return null
         } else {
           // Erreur non liée au rate limit
           logger.error('❌ Error syncing organization from Clerk:', error)
           if (attempts >= maxAttempts) {
-            // Après plusieurs tentatives, on retourne null
-            // Mais comme orgId existe, le layout laissera quand même passer
             return null
           }
-          // Attendre avant de réessayer
           await new Promise(resolve => setTimeout(resolve, 1000 * attempts))
         }
       }

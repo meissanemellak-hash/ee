@@ -5,6 +5,8 @@ export const metadata = {
   description: 'Contactez l\'équipe IA Restaurant Manager pour une démo ou un devis.',
 }
 
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'support@ia-restaurant-manager.com'
+
 export default function ContactPage() {
   return (
     <div className="min-h-screen bg-muted/25">
@@ -29,8 +31,8 @@ export default function ContactPage() {
           <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             <li>
               <strong className="text-foreground">Email :</strong>{' '}
-              <a href="mailto:contact@ai-operations.fr" className="text-teal-600 dark:text-teal-400 hover:underline">
-                contact@ai-operations.fr
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-teal-600 dark:text-teal-400 hover:underline">
+                {CONTACT_EMAIL}
               </a>
             </li>
             <li>
