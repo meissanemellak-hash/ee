@@ -21,31 +21,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { getOrganizationForDashboard, getCurrentOrganization } = await import('@/lib/auth')
     const { prisma } = await import('@/lib/db/prisma')
     const { logger } = await import('@/lib/logger')
 
-    // Accepter clerkOrgId depuis les paramètres de requête
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    let organization: any = null
-
-    if (orgIdToUse) {
+    // Priorité : getOrganizationForDashboard (memberships first, synchro instantanée) puis fallback classique
+    let organization: any = userId ? await getOrganizationForDashboard(userId) : null
+    if (!organization && orgIdToUse) {
       organization = await prisma.organization.findUnique({
         where: { clerkOrgId: orgIdToUse },
       })
-      
       if (!organization) {
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
-          
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
           const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
-          
           if (isMember) {
             try {
               organization = await prisma.organization.create({
@@ -64,48 +60,86 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          const { logger } = await import('@/lib/logger')
           logger.error('[GET /api/restaurants] Erreur synchronisation:', error)
         }
       }
-    } else {
-      organization = await getCurrentOrganization()
     }
-
     if (!organization) {
       organization = await getCurrentOrganization()
-    }
-    if (!organization && userId) {
-      const { getOrganizationForDashboard } = await import('@/lib/auth')
-      organization = await getOrganizationForDashboard(userId)
     }
     if (!organization) {
       return NextResponse.json([])
     }
 
-    // Support de la pagination (optionnel pour compatibilité)
     const pageParam = searchParams.get('page')
     const limitParam = searchParams.get('limit')
     const usePagination = pageParam !== null || limitParam !== null
 
-    if (usePagination) {
-      const page = parseInt(pageParam || '1')
-      const limit = parseInt(limitParam || '50') || 50
-      const skip = (page - 1) * limit
+    try {
+      if (usePagination) {
+        const page = parseInt(pageParam || '1')
+        const limit = parseInt(limitParam || '50') || 50
+        const skip = (page - 1) * limit
 
-      const [restaurants, total, activeAlertsByRestaurant] = await Promise.all([
+        const [restaurants, total, activeAlertsByRestaurant] = await Promise.all([
+          prisma.restaurant.findMany({
+            where: { organizationId: organization.id },
+            orderBy: { name: 'asc' },
+            skip,
+            take: limit,
+            select: {
+              id: true,
+              name: true,
+              address: true,
+              timezone: true,
+              createdAt: true,
+              updatedAt: true,
+              _count: {
+                select: {
+                  sales: true,
+                  alerts: true,
+                },
+              },
+            },
+          }),
+          prisma.restaurant.count({
+            where: { organizationId: organization.id },
+          }),
+          prisma.alert.groupBy({
+            by: ['restaurantId'],
+            where: {
+              resolved: false,
+              restaurant: { organizationId: organization.id },
+            },
+            _count: { id: true },
+          }),
+        ])
+
+        const activeCountMap = new Map(
+          activeAlertsByRestaurant.map((r) => [r.restaurantId, r._count.id])
+        )
+        const restaurantsWithActiveAlerts = restaurants.map((r) => ({
+          ...r,
+          _count: {
+            ...r._count,
+            alerts: activeCountMap.get(r.id) ?? 0,
+          },
+        }))
+
+        return NextResponse.json({
+          restaurants: restaurantsWithActiveAlerts,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        })
+      }
+
+      const [restaurants, activeAlertsByRestaurant] = await Promise.all([
         prisma.restaurant.findMany({
           where: { organizationId: organization.id },
           orderBy: { name: 'asc' },
-          skip,
-          take: limit,
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            timezone: true,
-            createdAt: true,
-            updatedAt: true,
+          include: {
             _count: {
               select: {
                 sales: true,
@@ -113,9 +147,6 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-        }),
-        prisma.restaurant.count({
-          where: { organizationId: organization.id },
         }),
         prisma.alert.groupBy({
           by: ['restaurantId'],
@@ -138,51 +169,20 @@ export async function GET(request: NextRequest) {
         },
       }))
 
-      return NextResponse.json({
-        restaurants: restaurantsWithActiveAlerts,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      })
+      return NextResponse.json(restaurantsWithActiveAlerts)
+    } catch (dbError) {
+      logger.error('[GET /api/restaurants] Erreur base de données:', dbError)
+      if (usePagination) {
+        return NextResponse.json({
+          restaurants: [],
+          total: 0,
+          page: 1,
+          limit: parseInt(limitParam || '50') || 50,
+          totalPages: 0,
+        })
+      }
+      return NextResponse.json([])
     }
-
-    // Format simple (compatibilité avec l'ancien code)
-    const [restaurants, activeAlertsByRestaurant] = await Promise.all([
-      prisma.restaurant.findMany({
-        where: { organizationId: organization.id },
-        orderBy: { name: 'asc' },
-        include: {
-          _count: {
-            select: {
-              sales: true,
-              alerts: true,
-            },
-          },
-        },
-      }),
-      prisma.alert.groupBy({
-        by: ['restaurantId'],
-        where: {
-          resolved: false,
-          restaurant: { organizationId: organization.id },
-        },
-        _count: { id: true },
-      }),
-    ])
-
-    const activeCountMap = new Map(
-      activeAlertsByRestaurant.map((r) => [r.restaurantId, r._count.id])
-    )
-    const restaurantsWithActiveAlerts = restaurants.map((r) => ({
-      ...r,
-      _count: {
-        ...r._count,
-        alerts: activeCountMap.get(r.id) ?? 0,
-      },
-    }))
-
-    return NextResponse.json(restaurantsWithActiveAlerts)
   } catch (error) {
     const { logger } = await import('@/lib/logger')
     logger.error('Error fetching restaurants:', error)
