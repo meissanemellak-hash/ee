@@ -20,7 +20,7 @@ export default async function DashboardLayout({
     redirect('/sign-in')
   }
 
-  // Si orgId absent, vérifier si l'utilisateur a des organisations dans Clerk (cas rare)
+  // Si orgId absent, vérifier si l'utilisateur a des organisations dans Clerk
   if (!orgId) {
     try {
       const client = await clerkClient()
@@ -34,7 +34,14 @@ export default async function DashboardLayout({
     }
   }
 
-  // Ne pas bloquer le rendu : la syncho org est faite à la demande dans les API (getCurrentOrganization crée l'org si besoin)
+  // Pré-synchroniser l'org en base (memberships first) pour que la page dashboard et les API trouvent l'org dès le premier rendu
+  try {
+    const { getOrganizationForDashboard } = await import('@/lib/auth')
+    await getOrganizationForDashboard(userId)
+  } catch (_) {
+    // Ne pas bloquer le rendu ; la page gérera l'état "pas d'org" si besoin
+  }
+
   return (
     <div className="flex min-h-screen">
       <NavProgress />
