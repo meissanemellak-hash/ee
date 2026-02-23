@@ -186,10 +186,19 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const { logger } = await import('@/lib/logger')
     logger.error('Error fetching restaurants:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    const pageParam = request.nextUrl.searchParams.get('page')
+    const limitParam = request.nextUrl.searchParams.get('limit')
+    const usePagination = pageParam !== null || limitParam !== null
+    if (usePagination) {
+      return NextResponse.json({
+        restaurants: [],
+        total: 0,
+        page: 1,
+        limit: parseInt(limitParam || '50') || 50,
+        totalPages: 0,
+      })
+    }
+    return NextResponse.json([])
   }
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useOrganization } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
@@ -38,9 +38,14 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const isInitialLoad = useRef(true)
+  const mountTime = useRef(Date.now())
+  const retryCount = useRef(0)
+  const retryScheduled = useRef(false)
 
   const fetchActivities = useCallback(async (isRefresh = false) => {
     if (!organization?.id) return
+    retryScheduled.current = false
     if (!isRefresh) setLoading(true)
     else setRefreshing(true)
     setError(null)
@@ -55,11 +60,19 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
         const errorData = await response.json().catch(() => ({}))
         const message = errorData.error || errorData.details || 'Impossible de charger les activités.'
         setError(message)
-        toast({
-          title: 'Erreur de chargement',
-          description: message,
-          variant: 'destructive',
-        })
+        const isFirstLoad = isInitialLoad.current && Date.now() - mountTime.current < 4000
+        const shouldRetry = isFirstLoad && retryCount.current < 2
+        if (shouldRetry) {
+          retryCount.current += 1
+          retryScheduled.current = true
+          setTimeout(() => fetchActivities(false), 1200)
+        } else if (!isFirstLoad) {
+          toast({
+            title: 'Erreur de chargement',
+            description: message,
+            variant: 'destructive',
+          })
+        }
         setActivities([])
         return
       }
@@ -73,15 +86,26 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Une erreur inattendue s\'est produite.'
       setError(message)
-      toast({
-        title: 'Erreur de chargement',
-        description: translateApiError(message),
-        variant: 'destructive',
-      })
+      const isFirstLoad = isInitialLoad.current && Date.now() - mountTime.current < 4000
+      const shouldRetry = isFirstLoad && retryCount.current < 2
+      if (shouldRetry) {
+        retryCount.current += 1
+        retryScheduled.current = true
+        setTimeout(() => fetchActivities(false), 1200)
+      } else if (!isFirstLoad) {
+        toast({
+          title: 'Erreur de chargement',
+          description: translateApiError(message),
+          variant: 'destructive',
+        })
+      }
       setActivities([])
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      if (isInitialLoad.current) isInitialLoad.current = false
+      if (!retryScheduled.current) {
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
   }, [organization?.id, restaurantId, toast])
 

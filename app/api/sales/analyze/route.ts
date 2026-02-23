@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       authOrgId = authResult.orgId ?? null
     } catch {
@@ -69,6 +69,10 @@ export async function GET(request: NextRequest) {
         }
       }
     } else {
+      const { getOrganizationForDashboard } = await import('@/lib/auth')
+      organization = await getOrganizationForDashboard(userId)
+    }
+    if (!organization) {
       organization = await getCurrentOrganization()
     }
 
@@ -199,9 +203,13 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const { logger } = await import('@/lib/logger')
     logger.error('Error analyzing sales:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({
+      totalSales: 0,
+      totalRevenue: 0,
+      averagePerDay: 0,
+      topProducts: [],
+      salesByHour: [],
+      salesByDay: [],
+    })
   }
 }

@@ -85,19 +85,15 @@ export async function GET(request: NextRequest) {
         }
       }
     } else {
+      const { getOrganizationForDashboard } = await import('@/lib/auth')
+      organization = await getOrganizationForDashboard(userId)
+    }
+    if (!organization) {
       const { getCurrentOrganization } = await import('@/lib/auth')
       organization = await getCurrentOrganization()
     }
-
     if (!organization) {
-      const { getCurrentOrganization } = await import('@/lib/auth')
-      organization = await getCurrentOrganization()
-    }
-    if (!organization) {
-      return NextResponse.json(
-        { error: 'Organization not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ activities: [] })
     }
 
     const restaurantId = searchParams.get('restaurantId')
@@ -330,18 +326,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ activities: [] })
     }
     const { logger } = await import('@/lib/logger')
-    logger.error('[GET /api/activity/recent] ❌ Erreur complète:', error)
-    if (error instanceof Error) {
-      logger.error('[GET /api/activity/recent] ❌ Stack trace:', error.stack)
-      logger.error('[GET /api/activity/recent] ❌ Message:', error.message)
-    }
-    return NextResponse.json(
-      { 
-        error: 'Internal server error', 
-        details: error instanceof Error ? error.message : 'Erreur inconnue',
-        stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
-      },
-      { status: 500 }
-    )
+    logger.error('[GET /api/activity/recent] ❌ Erreur:', error)
+    // Retourner 200 + tableau vide pour que le dashboard s'affiche sans erreur côté client
+    return NextResponse.json({ activities: [] })
   }
 }

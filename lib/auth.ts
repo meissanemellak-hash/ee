@@ -104,15 +104,15 @@ export async function getCurrentOrganization() {
 }
 
 /**
- * Récupère l'organisation pour le dashboard : priorité à la liste des membres Clerk (pas de dépendance à auth().orgId),
- * puis getCurrentOrganization(). Crée l'org en DB si besoin. Affichage instantané sans délai.
+ * Récupère l'organisation pour le dashboard : priorité à la liste des membres Clerk,
+ * puis getCurrentOrganization(). Crée l'org en DB si besoin.
+ * Un seul retry avec court délai pour aligner le comportement prod sur le dev (affichage automatique).
  */
-export async function getOrganizationForDashboard(userId: string): Promise<Awaited<ReturnType<typeof getCurrentOrganization>>> {
+async function tryGetOrganizationForDashboard(userId: string): Promise<Awaited<ReturnType<typeof getCurrentOrganization>>> {
   const { clerkClient } = await import('@clerk/nextjs/server')
   const { prisma } = await import('./db/prisma')
   const { logger } = await import('./logger')
 
-  // 1) Essayer d'abord via les membres Clerk (fonctionne même si auth().orgId n'est pas encore set)
   try {
     const client = await clerkClient()
     const userMemberships = await client.users.getOrganizationMembershipList({ userId })
@@ -154,8 +154,14 @@ export async function getOrganizationForDashboard(userId: string): Promise<Await
     logger.error('Error getOrganizationForDashboard (memberships):', error)
   }
 
-  // 2) Fallback : organisation active dans la session (auth().orgId)
   return getCurrentOrganization()
+}
+
+export async function getOrganizationForDashboard(userId: string): Promise<Awaited<ReturnType<typeof getCurrentOrganization>>> {
+  let organization = await tryGetOrganizationForDashboard(userId)
+  if (organization) return organization
+  await new Promise((r) => setTimeout(r, 400))
+  return tryGetOrganizationForDashboard(userId)
 }
 
 /**
