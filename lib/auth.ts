@@ -171,7 +171,7 @@ async function tryGetOrganizationForDashboard(userId: string): Promise<Awaited<R
 export async function getOrganizationForDashboard(userId: string): Promise<Awaited<ReturnType<typeof getCurrentOrganization>>> {
   let organization = await tryGetOrganizationForDashboard(userId)
   if (organization) return organization
-  await new Promise((r) => setTimeout(r, 400))
+  await new Promise((r) => setTimeout(r, 100))
   return tryGetOrganizationForDashboard(userId)
 }
 

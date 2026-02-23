@@ -88,9 +88,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Dernier recours si on n'a pas encore d'organisation (ex. sync a échoué mais org en session)
+    // Dernier recours : getCurrentOrganization puis getOrganizationForDashboard (memberships first)
     if (!organization) {
       organization = await getCurrentOrganization()
+    }
+    if (!organization && userId) {
+      try {
+        const { getOrganizationForDashboard } = await import('@/lib/auth')
+        organization = await getOrganizationForDashboard(userId)
+      } catch {
+        // ignore
+      }
     }
 
     if (!organization) {
