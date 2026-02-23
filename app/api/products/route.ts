@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const a = auth()
+      const a = await auth()
       userId = a.userId ?? null
       authOrgId = a.orgId ?? null
     } catch {
@@ -34,47 +34,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { getOrganizationForDashboard, getCurrentOrganization } = await import('@/lib/auth')
     const { prisma } = await import('@/lib/db/prisma')
     const { logger } = await import('@/lib/logger')
 
-    // Accepter clerkOrgId depuis les paramètres de requête si auth().orgId est undefined
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    logger.log('[GET /api/products] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
-
-    let organization: any = null
-
-    // Si orgIdToUse est défini, chercher directement dans la DB
-    if (orgIdToUse) {
+    // Priorité : getOrganizationForDashboard (memberships first) pour résolution org instantanée
+    let organization: any = userId ? await getOrganizationForDashboard(userId) : null
+    if (!organization && orgIdToUse) {
       organization = await prisma.organization.findUnique({
         where: { clerkOrgId: orgIdToUse },
       })
-      
-      // Si pas trouvée, essayer de synchroniser
       if (!organization) {
-        logger.log('[GET /api/products] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
-          
-          // Vérifier que l'utilisateur est membre
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
           const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
-          
           if (isMember) {
             try {
               organization = await prisma.organization.create({
-                data: {
-                  name: clerkOrg.name,
-                  clerkOrgId: orgIdToUse,
-                  shrinkPct: 0.1,
-                },
+                data: { name: clerkOrg.name, clerkOrgId: orgIdToUse, shrinkPct: 0.1 },
               })
-              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -87,33 +72,14 @@ export async function GET(request: NextRequest) {
           logger.error('[GET /api/products] Erreur synchronisation:', error)
         }
       }
-    } else {
-      // Fallback : utiliser getCurrentOrganization()
-      organization = await getCurrentOrganization()
-      
-      if (!organization && authOrgId) {
-        await new Promise(resolve => setTimeout(resolve, 500))
-        organization = await getCurrentOrganization()
-      }
     }
-    
     if (!organization) {
-      logger.error('[GET /api/products] Organisation non trouvée. authOrgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
-      
-      // Si orgIdToUse était défini mais l'organisation n'a pas pu être trouvée/créée, c'est un problème
-      if (orgIdToUse) {
-        logger.error('[GET /api/products] ERREUR: orgIdToUse était défini mais organisation non trouvée après synchronisation')
-      }
-      
-      return NextResponse.json({ 
-        error: 'Organization not found',
-        details: orgIdToUse 
-          ? 'L\'organisation existe dans Clerk mais n\'a pas pu être synchronisée dans la base de données. Veuillez rafraîchir la page.'
-          : 'Aucune organisation active. Veuillez sélectionner une organisation.'
-      }, { status: 404 })
+      organization = await getCurrentOrganization()
     }
-    
-    logger.log('[GET /api/products] Organisation trouvée:', organization.name, organization.id)
+
+    if (!organization) {
+      return NextResponse.json({ products: [], categories: [] })
+    }
 
     // Récupérer les paramètres de recherche et filtres
     const search = searchParams.get('search') || ''
@@ -228,10 +194,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const { logger } = await import('@/lib/logger')
     logger.error('Error fetching products:', error)
-    return NextResponse.json(
-      { error: 'Error fetching products', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ products: [], categories: [] })
   }
 }
 
@@ -248,7 +211,7 @@ export async function POST(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const a = auth()
+      const a = await auth()
       userId = a.userId ?? null
       authOrgId = a.orgId ?? null
     } catch {

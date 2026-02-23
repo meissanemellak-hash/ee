@@ -41,27 +41,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { getOrganizationForDashboard, getCurrentOrganization } = await import('@/lib/auth')
     const { prisma } = await import('@/lib/db/prisma')
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    let organization: any = null
-
-    if (orgIdToUse) {
+    let organization: any = userId ? await getOrganizationForDashboard(userId) : null
+    if (!organization && orgIdToUse) {
       organization = await prisma.organization.findUnique({
         where: { clerkOrgId: orgIdToUse },
       })
-      
       if (!organization) {
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
-          
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
           const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
-          
           if (isMember) {
             try {
               organization = await prisma.organization.create({
@@ -84,12 +81,8 @@ export async function GET(request: NextRequest) {
           logger.error('[GET /api/activity/recent] Erreur synchronisation:', error)
         }
       }
-    } else {
-      const { getOrganizationForDashboard } = await import('@/lib/auth')
-      organization = await getOrganizationForDashboard(userId)
     }
     if (!organization) {
-      const { getCurrentOrganization } = await import('@/lib/auth')
       organization = await getCurrentOrganization()
     }
     if (!organization) {
