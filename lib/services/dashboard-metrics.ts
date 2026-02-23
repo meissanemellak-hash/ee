@@ -37,6 +37,21 @@ export interface ExecutiveDashboardMetrics {
   }>
 }
 
+/** Métriques vides pour afficher le dashboard même si le calcul échoue (ex. DB temporairement indisponible). */
+export function getDefaultExecutiveDashboardMetrics(): ExecutiveDashboardMetrics {
+  return {
+    totalSavingsThisMonth: 0,
+    savingsChangePercent: null,
+    acceptedRecommendationsCount: 0,
+    acceptedRecommendationsSavings: 0,
+    criticalAlertsCount: 0,
+    criticalAlertsRisk: 0,
+    estimatedWaste: 0,
+    topActionableRecommendations: [],
+    criticalAlerts: [],
+  }
+}
+
 /**
  * Calcule les métriques du dashboard exécutif.
  * Si restaurantId est fourni, toutes les métriques sont filtrées pour ce restaurant uniquement.

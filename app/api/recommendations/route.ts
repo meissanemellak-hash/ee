@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       authOrgId = authResult.orgId ?? null
     } catch {
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { getCurrentOrganization, getOrganizationForDashboard } = await import('@/lib/auth')
     const { prisma } = await import('@/lib/db/prisma')
     const { logger } = await import('@/lib/logger')
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         }
       }
     } else {
-      organization = await getCurrentOrganization()
+      organization = (await getOrganizationForDashboard(userId)) ?? (await getCurrentOrganization())
     }
 
     if (!organization) {
@@ -121,10 +121,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const { logger } = await import('@/lib/logger')
     logger.error('Error fetching recommendations:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json([])
   }
 }
 
@@ -138,7 +135,7 @@ export async function POST(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       authOrgId = authResult.orgId ?? null
     } catch {

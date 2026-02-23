@@ -107,28 +107,13 @@ export default async function DashboardPage(props: PageProps) {
 
   let metrics: Awaited<ReturnType<typeof import('@/lib/services/dashboard-metrics').calculateExecutiveDashboardMetrics>>
   try {
-    const { calculateExecutiveDashboardMetrics } = await import('@/lib/services/dashboard-metrics')
+    const { calculateExecutiveDashboardMetrics, getDefaultExecutiveDashboardMetrics } = await import('@/lib/services/dashboard-metrics')
     metrics = await calculateExecutiveDashboardMetrics(organization.id, restaurantId)
   } catch (err) {
     const { logger } = await import('@/lib/logger')
     logger.error('[Dashboard] calculateExecutiveDashboardMetrics error:', err)
-    return (
-      <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Dashboard">
-        <div data-dashboard-state="syncing" aria-hidden style={{ position: 'absolute', left: -9999 }} />
-        <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
-          <header className="pb-6 border-b border-border/60">
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1.5">Chargement du tableau de bord…</p>
-          </header>
-          <Card className="rounded-xl border shadow-sm bg-card">
-            <CardContent className="py-12 flex flex-col items-center justify-center gap-4">
-              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" aria-hidden />
-              <p className="text-sm text-muted-foreground">Chargement en cours, affichage automatique.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    )
+    const { getDefaultExecutiveDashboardMetrics } = await import('@/lib/services/dashboard-metrics')
+    metrics = getDefaultExecutiveDashboardMetrics()
   }
 
   return (
