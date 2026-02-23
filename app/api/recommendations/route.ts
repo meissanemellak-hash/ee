@@ -68,7 +68,11 @@ export async function GET(request: NextRequest) {
         }
       }
     } else {
-      organization = (await getOrganizationForDashboard(userId)) ?? (await getCurrentOrganization())
+      try {
+        organization = (await getOrganizationForDashboard(userId)) ?? (await getCurrentOrganization())
+      } catch (err) {
+        logger.error('[GET /api/recommendations] Erreur getOrganization:', err)
+      }
     }
 
     if (!organization) {

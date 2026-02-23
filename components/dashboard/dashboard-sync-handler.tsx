@@ -32,7 +32,10 @@ export function DashboardSyncHandler() {
     hasSynced.current = true
     localStorage.setItem(syncKey, now.toString())
 
+    let didRedirect = false
     const doRedirect = () => {
+      if (didRedirect) return
+      didRedirect = true
       localStorage.removeItem(syncKey)
       window.location.replace(`/dashboard?t=${Date.now()}`)
     }
@@ -46,7 +49,7 @@ export function DashboardSyncHandler() {
       .then((data) => {
         if (data.synced && data.organization) {
           doRedirect()
-          return null
+          return
         }
         return fetch('/api/organizations/force-sync', {
           method: 'POST',
@@ -54,11 +57,19 @@ export function DashboardSyncHandler() {
         }).then((r) => r.json())
       })
       .then((data) => {
-        if (data != null) doRedirect()
+        if (data !== undefined) doRedirect()
       })
       .catch((error) => {
         logger.error('❌ Erreur de synchronisation:', error)
         localStorage.removeItem(syncKey)
+        doRedirect()
+      })
+      .finally(() => {
+        setTimeout(() => {
+          if (!didRedirect && document.querySelector('[data-dashboard-state="syncing"]')) {
+            window.location.replace(`/dashboard?t=${Date.now()}`)
+          }
+        }, 2500)
       })
   }, [organization?.id, organization?.name, isLoaded])
 

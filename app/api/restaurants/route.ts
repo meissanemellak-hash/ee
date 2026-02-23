@@ -30,7 +30,12 @@ export async function GET(request: NextRequest) {
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
     // Priorité : getOrganizationForDashboard (memberships first, synchro instantanée) puis fallback classique
-    let organization: any = userId ? await getOrganizationForDashboard(userId) : null
+    let organization: any = null
+    try {
+      organization = userId ? await getOrganizationForDashboard(userId) : null
+    } catch (err) {
+      logger.error('[GET /api/restaurants] Erreur getOrganizationForDashboard:', err)
+    }
     if (!organization && orgIdToUse) {
       organization = await prisma.organization.findUnique({
         where: { clerkOrgId: orgIdToUse },
@@ -65,7 +70,11 @@ export async function GET(request: NextRequest) {
       }
     }
     if (!organization) {
-      organization = await getCurrentOrganization()
+      try {
+        organization = await getCurrentOrganization()
+      } catch (err) {
+        logger.error('[GET /api/restaurants] Erreur getCurrentOrganization:', err)
+      }
     }
     if (!organization) {
       return NextResponse.json([])
