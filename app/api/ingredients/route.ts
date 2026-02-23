@@ -44,28 +44,21 @@ export async function GET(request: NextRequest) {
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    logger.log('[GET /api/ingredients] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
+    const { getOrganizationForDashboard, getCurrentOrganization } = await import('@/lib/auth')
 
-    let organization: any = null
-
-    // Si orgIdToUse est défini, chercher directement dans la DB
-    if (orgIdToUse) {
+    // Priorité : getOrganizationForDashboard (memberships first) pour résolution org instantanée
+    let organization: any = userId ? await getOrganizationForDashboard(userId) : null
+    if (!organization && orgIdToUse) {
       organization = await prisma.organization.findUnique({
         where: { clerkOrgId: orgIdToUse },
       })
-      
-      // Si pas trouvée, essayer de synchroniser
       if (!organization) {
-        logger.log('[GET /api/ingredients] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
-          
-          // Vérifier que l'utilisateur est membre
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
           const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
-          
           if (isMember) {
             try {
               organization = await prisma.organization.create({
@@ -75,7 +68,6 @@ export async function GET(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -88,18 +80,9 @@ export async function GET(request: NextRequest) {
           logger.error('[GET /api/ingredients] Erreur synchronisation:', error)
         }
       }
-    } else {
-      const { getCurrentOrganization } = await import('@/lib/auth')
-      organization = await getCurrentOrganization()
-      if (!organization && authOrgId) {
-        await new Promise(resolve => setTimeout(resolve, 300))
-        organization = await getCurrentOrganization()
-      }
     }
-
-    if (!organization && userId) {
-      const { getOrganizationForDashboard } = await import('@/lib/auth')
-      organization = await getOrganizationForDashboard(userId)
+    if (!organization) {
+      organization = await getCurrentOrganization()
     }
 
     if (!organization) {
@@ -171,10 +154,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const { logger } = await import('@/lib/logger')
     logger.error('Error fetching ingredients:', error)
-    return NextResponse.json(
-      { error: 'Error fetching ingredients', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ ingredients: [], units: [] })
   }
 }
 

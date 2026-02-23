@@ -8,16 +8,17 @@
  * Ne retourne jamais null si orgId existe (sauf en cas d'erreur vraiment critique)
  */
 export async function getCurrentOrganization() {
-  const { auth } = await import('@clerk/nextjs/server')
-  const authResult = await auth()
-  const orgId = authResult.orgId ?? null
-  if (!orgId) return null
+  try {
+    const { auth } = await import('@clerk/nextjs/server')
+    const authResult = await auth()
+    const orgId = authResult.orgId ?? null
+    if (!orgId) return null
 
-  const { prisma } = await import('./db/prisma')
-  const { logger } = await import('./logger')
+    const { prisma } = await import('./db/prisma')
+    const { logger } = await import('./logger')
 
-  // Chercher l'organisation dans la DB
-  let organization = await prisma.organization.findUnique({
+    // Chercher l'organisation dans la DB
+    let organization = await prisma.organization.findUnique({
     where: { clerkOrgId: orgId },
   })
 
@@ -101,6 +102,11 @@ export async function getCurrentOrganization() {
   }
 
   return organization
+  } catch (err) {
+    const { logger } = await import('./logger')
+    logger.error('getCurrentOrganization error:', err)
+    return null
+  }
 }
 
 /**
@@ -154,7 +160,12 @@ async function tryGetOrganizationForDashboard(userId: string): Promise<Awaited<R
     logger.error('Error getOrganizationForDashboard (memberships):', error)
   }
 
-  return getCurrentOrganization()
+  try {
+    return await getCurrentOrganization()
+  } catch (err) {
+    logger.error('Error getCurrentOrganization (fallback):', err)
+    return null
+  }
 }
 
 export async function getOrganizationForDashboard(userId: string): Promise<Awaited<ReturnType<typeof getCurrentOrganization>>> {

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       authOrgId = authResult.orgId ?? null
     } catch {
@@ -25,33 +25,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { getOrganizationForDashboard, getCurrentOrganization } = await import('@/lib/auth')
     const { prisma } = await import('@/lib/db/prisma')
-    const { getCurrentOrganization } = await import('@/lib/auth')
     const { logger } = await import('@/lib/logger')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
 
-    logger.log('[GET /api/forecasts] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
-
-    let organization: any = null
-
-    if (orgIdToUse) {
+    // Priorité : getOrganizationForDashboard (memberships first) pour résolution org instantanée
+    let organization: any = userId ? await getOrganizationForDashboard(userId) : null
+    if (!organization && orgIdToUse) {
       organization = await prisma.organization.findUnique({
         where: { clerkOrgId: orgIdToUse },
       })
-      
       if (!organization) {
-        logger.log('[GET /api/forecasts] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
-          
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
           const isMember = userMemberships.data?.some((m: { organization: { id: string } }) => m.organization.id === orgIdToUse)
-          
           if (isMember) {
             try {
               organization = await prisma.organization.create({
@@ -61,7 +55,6 @@ export async function GET(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -74,15 +67,13 @@ export async function GET(request: NextRequest) {
           logger.error('[GET /api/forecasts] Erreur synchronisation:', error)
         }
       }
-    } else {
+    }
+    if (!organization) {
       organization = await getCurrentOrganization()
     }
 
     if (!organization) {
-      return NextResponse.json(
-        { error: 'Organization not found' },
-        { status: 404 }
-      )
+      return NextResponse.json([])
     }
 
     // Récupérer les paramètres de filtrage
@@ -148,9 +139,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const { logger } = await import('@/lib/logger')
     logger.error('Error fetching forecasts:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json([])
   }
 }

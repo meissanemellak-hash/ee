@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       authOrgId = authResult.orgId ?? null
     } catch {
@@ -27,33 +27,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { getOrganizationForDashboard, getCurrentOrganization } = await import('@/lib/auth')
     const { prisma } = await import('@/lib/db/prisma')
     const { logger } = await import('@/lib/logger')
 
     const searchParams = request.nextUrl.searchParams
     const clerkOrgIdFromQuery = searchParams.get('clerkOrgId')
     const orgIdToUse = authOrgId || clerkOrgIdFromQuery
+    const pageParam = searchParams.get('page')
+    const limitParam = searchParams.get('limit')
+    const usePagination = pageParam !== null || limitParam !== null
 
-    logger.log('[GET /api/sales] userId:', userId, 'auth().orgId:', authOrgId, 'query.clerkOrgId:', clerkOrgIdFromQuery, 'orgIdToUse:', orgIdToUse)
-
-    let organization: any = null
-
-    if (orgIdToUse) {
+    // Priorité : getOrganizationForDashboard (memberships first) pour résolution org instantanée
+    let organization: any = userId ? await getOrganizationForDashboard(userId) : null
+    if (!organization && orgIdToUse) {
       organization = await prisma.organization.findUnique({
         where: { clerkOrgId: orgIdToUse },
       })
-      
       if (!organization) {
-        logger.log('[GET /api/sales] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
-          
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
           const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
-          
           if (isMember) {
             try {
               organization = await prisma.organization.create({
@@ -63,7 +60,6 @@ export async function GET(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -73,19 +69,27 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (error) {
-          const { logger } = await import('@/lib/logger')
           logger.error('[GET /api/sales] Erreur synchronisation:', error)
         }
       }
-    } else {
+    }
+    if (!organization) {
       organization = await getCurrentOrganization()
     }
 
     if (!organization) {
-      return NextResponse.json(
-        { error: 'Organization not found' },
-        { status: 404 }
-      )
+      if (usePagination) {
+        return NextResponse.json({
+          sales: [],
+          total: 0,
+          totalRevenue: 0,
+          totalQuantity: 0,
+          page: 1,
+          limit: parseInt(limitParam || '50') || 50,
+          totalPages: 0,
+        })
+      }
+      return NextResponse.json([])
     }
 
     // Récupérer les paramètres de filtrage
@@ -93,9 +97,6 @@ export async function GET(request: NextRequest) {
     const productId = searchParams.get('productId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
-    const pageParam = searchParams.get('page')
-    const limitParam = searchParams.get('limit')
-    const usePagination = pageParam !== null || limitParam !== null
 
     // Construire la clause where
     const where: any = {
@@ -234,10 +235,21 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const { logger } = await import('@/lib/logger')
     logger.error('Error fetching sales:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    const pageParam = request.nextUrl.searchParams.get('page')
+    const limitParam = request.nextUrl.searchParams.get('limit')
+    const usePagination = pageParam !== null || limitParam !== null
+    if (usePagination) {
+      return NextResponse.json({
+        sales: [],
+        total: 0,
+        totalRevenue: 0,
+        totalQuantity: 0,
+        page: 1,
+        limit: parseInt(limitParam || '50') || 50,
+        totalPages: 0,
+      })
+    }
+    return NextResponse.json([])
   }
 }
 
@@ -254,7 +266,7 @@ export async function POST(request: NextRequest) {
     let authOrgId: string | null = null
     try {
       const { auth } = await import('@clerk/nextjs/server')
-      const authResult = auth()
+      const authResult = await auth()
       userId = authResult.userId ?? null
       authOrgId = authResult.orgId ?? null
     } catch {
@@ -264,7 +276,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { getCurrentOrganization } = await import('@/lib/auth')
+    const { getOrganizationForDashboard, getCurrentOrganization } = await import('@/lib/auth')
     const { checkApiPermission } = await import('@/lib/auth-role')
     const { prisma } = await import('@/lib/db/prisma')
     const { logger } = await import('@/lib/logger')
@@ -273,25 +285,18 @@ export async function POST(request: NextRequest) {
     const validatedData = saleSchema.parse(body)
     const orgIdToUse = authOrgId || body.clerkOrgId
 
-    logger.log('[POST /api/sales] userId:', userId, 'auth().orgId:', authOrgId, 'body.clerkOrgId:', body.clerkOrgId, 'orgIdToUse:', orgIdToUse)
-
-    let organization: any = null
-
-    if (orgIdToUse) {
+    let organization: any = userId ? await getOrganizationForDashboard(userId) : null
+    if (!organization && orgIdToUse) {
       organization = await prisma.organization.findUnique({
         where: { clerkOrgId: orgIdToUse },
       })
-      
       if (!organization) {
-        logger.log('[POST /api/sales] Organisation non trouvée dans la DB, synchronisation depuis Clerk...')
         try {
           const { clerkClient } = await import('@clerk/nextjs/server')
           const client = await clerkClient()
           const clerkOrg = await client.organizations.getOrganization({ organizationId: orgIdToUse })
-          
           const userMemberships = await client.users.getOrganizationMembershipList({ userId })
           const isMember = userMemberships.data?.some(m => m.organization.id === orgIdToUse)
-          
           if (isMember) {
             try {
               organization = await prisma.organization.create({
@@ -301,7 +306,6 @@ export async function POST(request: NextRequest) {
                   shrinkPct: 0.1,
                 },
               })
-              logger.log(`✅ Organisation "${organization.name}" synchronisée`)
             } catch (dbError) {
               if (dbError instanceof Error && dbError.message.includes('Unique constraint')) {
                 organization = await prisma.organization.findUnique({
@@ -311,17 +315,17 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          const { logger } = await import('@/lib/logger')
           logger.error('[POST /api/sales] Erreur synchronisation:', error)
         }
       }
-    } else {
+    }
+    if (!organization) {
       organization = await getCurrentOrganization()
     }
 
     if (!organization) {
       return NextResponse.json(
-        { 
+        {
           error: 'Organization not found',
           details: 'L\'organisation n\'a pas pu être trouvée. Veuillez rafraîchir la page.'
         },
