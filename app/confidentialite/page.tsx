@@ -38,9 +38,9 @@ export default function ConfidentialitePage() {
               Le responsable du traitement des données personnelles est :
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
-              <li>Raison sociale : [À compléter]</li>
-              <li>Siège social : [Adresse complète]</li>
-              <li>Email contact / DPO : [contact@votredomaine.fr ou dpo@votredomaine.fr]</li>
+              <li>Raison sociale : IA Restaurant Manager SAAS</li>
+              <li>Siège social : 41 rue des Maronniers, 30000 Nîmes</li>
+              <li>Email contact / DPO : support@ia-restaurant-manager.com</li>
             </ul>
             <p className="mt-2">
               Pour toute question relative à vos données personnelles ou pour exercer vos droits : <Link href="/contact" className="text-teal-600 dark:text-teal-400 hover:underline">page Contact</Link>.
@@ -148,7 +148,7 @@ export default function ConfidentialitePage() {
           <section>
             <h2 className="text-lg font-semibold text-foreground mt-8">10. Contact</h2>
             <p>
-              Pour toute question relative à cette politique ou à vos données personnelles, pour exercer vos droits ou pour toute demande de convention de sous-traitance (DPA) : <Link href="/contact" className="text-teal-600 dark:text-teal-400 hover:underline">page Contact</Link> ou email à [contact@votredomaine.fr].
+              Pour toute question relative à cette politique ou à vos données personnelles, pour exercer vos droits ou pour toute demande de convention de sous-traitance (DPA) : <Link href="/contact" className="text-teal-600 dark:text-teal-400 hover:underline">page Contact</Link> ou email à support@ia-restaurant-manager.com.
             </p>
           </section>
         </div>

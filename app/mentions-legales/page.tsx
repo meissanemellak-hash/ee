@@ -38,14 +38,14 @@ export default function MentionsLegalesPage() {
               Le site et la plateforme <strong>IA Restaurant Manager</strong> sont édités par :
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
-              <li>Raison sociale : [À compléter]</li>
-              <li>Forme juridique : [À compléter]</li>
-              <li>Siège social : [Adresse complète]</li>
-              <li>RCS : [Ville et numéro RCS]</li>
-              <li>SIRET : [À compléter]</li>
-              <li>Capital social : [À compléter]</li>
-              <li>Numéro de TVA intracommunautaire : [À compléter]</li>
-              <li>Email : [contact@votredomaine.fr]</li>
+              <li>Raison sociale : IA Restaurant Manager SAAS</li>
+              <li>Forme juridique : Auto-entrepreneur</li>
+              <li>Siège social : 41 rue des Maronniers, 30000 Nîmes</li>
+              <li>RCS : RCS Nîmes 915 352 561</li>
+              <li>SIRET : 915 352 561 00012</li>
+              <li>Capital social : Non applicable</li>
+              <li>Numéro de TVA intracommunautaire : Non assujetti à la TVA (article 293 B du CGI)</li>
+              <li>Email : support@ia-restaurant-manager.com</li>
             </ul>
           </section>
 
@@ -55,16 +55,16 @@ export default function MentionsLegalesPage() {
               L&apos;hébergement du site et des services est assuré par :
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
-              <li>Raison sociale : [À compléter, ex. Vercel Inc., OVH, etc.]</li>
-              <li>Adresse : [Adresse complète de l&apos;hébergeur]</li>
-              <li>Site web : [URL de l&apos;hébergeur]</li>
+              <li>Raison sociale : Vercel Inc.</li>
+              <li>Adresse : 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis</li>
+              <li>Site web : https://vercel.com</li>
             </ul>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-foreground mt-8">3. Responsable de la publication</h2>
             <p>
-              Le responsable de la publication du site est <strong>[Nom et prénom du responsable]</strong>, en qualité de [fonction, ex. Président, Directeur général].
+              Le responsable de la publication du site est <strong>M. Mellak</strong>, en qualité de CEO.
             </p>
           </section>
 
@@ -109,7 +109,7 @@ export default function MentionsLegalesPage() {
           <section>
             <h2 className="text-lg font-semibold text-foreground mt-8">9. Contact</h2>
             <p>
-              Pour toute question relative aux mentions légales ou à l&apos;éditeur du site : <Link href="/contact" className="text-teal-600 dark:text-teal-400 hover:underline">page Contact</Link> ou par email à [contact@votredomaine.fr].
+              Pour toute question relative aux mentions légales ou à l&apos;éditeur du site : <Link href="/contact" className="text-teal-600 dark:text-teal-400 hover:underline">page Contact</Link> ou par email à support@ia-restaurant-manager.com.
             </p>
           </section>
         </div>
