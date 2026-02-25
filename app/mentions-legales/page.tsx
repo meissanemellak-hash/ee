@@ -71,7 +71,7 @@ export default function MentionsLegalesPage() {
           <section>
             <h2 className="text-lg font-semibold text-foreground mt-8">4. Objet des services</h2>
             <p>
-              IA Restaurant Manager propose une plateforme SaaS de pilotage opérationnel destinée aux groupes et chaînes de restaurants : centralisation des ventes, de l&apos;inventaire, des alertes et des prévisions sur un tableau de bord unifié. Les conditions générales de vente ou d&apos;utilisation du service sont communiquées lors de la souscription et font l&apos;objet d&apos;un contrat distinct.
+              IA Restaurant Manager propose une plateforme SaaS de pilotage opérationnel destinée aux groupes et chaînes de restaurants : centralisation des ventes, de l&apos;inventaire, des effectifs, des alertes et des prévisions sur un tableau de bord unifié. Les conditions générales de vente ou d&apos;utilisation du service sont communiquées lors de la souscription et font l&apos;objet d&apos;un contrat distinct.
             </p>
           </section>
 

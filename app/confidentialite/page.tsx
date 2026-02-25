@@ -67,7 +67,7 @@ export default function ConfidentialitePage() {
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
               <li><strong>Gestion des demandes de démo et de la relation commerciale</strong> : traitement de votre demande, prise de rendez-vous, suivi commercial. Base légale : exécution de mesures précontractuelles et intérêt légitime.</li>
-              <li><strong>Fourniture du service SaaS</strong> : création et gestion du compte, des organisations et des établissements, fonctionnalités de la plateforme (ventes, inventaire, alertes, prévisions, rapports). Base légale : exécution du contrat.</li>
+              <li><strong>Fourniture du service SaaS</strong> : création et gestion du compte, des organisations et des établissements, fonctionnalités de la plateforme (ventes, inventaire, effectifs, alertes, prévisions, rapports). Base légale : exécution du contrat.</li>
               <li><strong>Support et accompagnement</strong> : réponse à vos demandes, formation, assistance technique, onboarding. Base légale : exécution du contrat et intérêt légitime.</li>
               <li><strong>Amélioration du service</strong> : analyses agrégées et anonymisées pour améliorer la plateforme et la sécurité. Base légale : intérêt légitime.</li>
               <li><strong>Obligations légales et preuves</strong> : conservation de preuves, respect des obligations comptables et réglementaires. Base légale : obligation légale.</li>
