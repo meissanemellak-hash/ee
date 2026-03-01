@@ -274,9 +274,9 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
 
                   {/* Contenu */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1.5">
                           <h4 className={`font-semibold text-sm ${config.textColor}`}>
                             {activity.title}
                           </h4>
@@ -295,9 +295,9 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
                         </p>
                       </div>
 
-                      {/* Montant (si disponible) - Style Sequence */}
+                      {/* Montant (si disponible) — en dessous sur mobile, à droite sur desktop */}
                       {activity.amount !== undefined && activity.amount > 0 && (
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 pt-1 sm:pt-0 border-t border-border/50 sm:border-0 sm:border-none">
                           <span className={`text-base font-bold ${config.textColor}`}>
                             {formatCurrency(activity.amount)}
                           </span>
