@@ -328,10 +328,10 @@ export default function ForecastsPage() {
   return (
     <>
       <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Prévisions de ventes">
-        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
         <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Prévisions' }]} className="mb-4" />
         <header className="pb-6 border-b border-border/60">
-          <h1 className="text-3xl font-bold tracking-tight">Prévisions</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Prévisions</h1>
           <p className="text-muted-foreground mt-1.5">
             Prévisions de ventes et analyses prédictives
           </p>
@@ -721,34 +721,37 @@ export default function ForecastsPage() {
                 {displayedForecasts.map((forecast) => (
                   <li
                     key={forecast.id}
-                    className="flex items-center justify-between p-4 rounded-xl border bg-muted/30 dark:bg-gray-800/30 border-border hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 rounded-xl border bg-muted/30 dark:bg-gray-800/30 border-border hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start sm:items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                           <TrendingUp className="h-5 w-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm truncate">{forecast.product.name}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Store className="h-3 w-3" />
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1 min-w-0">
+                              <Store className="h-3 w-3 shrink-0" />
                               <span className="truncate">{forecast.restaurant.name}</span>
-                            </div>
-                            <span className="text-muted-foreground">•</span>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
+                            </span>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 shrink-0" />
                               <span>{formatDate(new Date(forecast.forecastDate))}</span>
-                            </div>
+                            </span>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Méthode: {forecast.method === 'moving_average' ? 'Prévisions 7 jours (tous les jours)' : 'Prévisions pour un jour précis'} • Confiance: {forecast.confidence != null ? `${Math.max(forecast.confidence * 100, 60).toFixed(0)}%` : 'N/A'}
+                          <p className="text-xs text-muted-foreground mt-1.5 break-words">
+                            Méthode: {forecast.method === 'moving_average' ? 'Prévisions 7 jours (tous les jours)' : 'Prévisions pour un jour précis'}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Confiance: {forecast.confidence != null ? `${Math.max(forecast.confidence * 100, 60).toFixed(0)}%` : 'N/A'}
                           </p>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 ml-4">
-                      <div className="text-right">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 border-t border-border/50 pt-3 sm:border-0 sm:pt-0">
+                      <div className="text-left sm:text-right">
                         {forecast.forecastedQuantity === 0 ? (
                           <p className="text-sm text-muted-foreground italic" title="Pas assez de ventes historiques pour ce produit à cette date">
                             Données insuffisantes
@@ -768,7 +771,7 @@ export default function ForecastsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
                           onClick={() => {
                             setForecastToDelete(forecast)
                             setDeleteDialogOpen(true)

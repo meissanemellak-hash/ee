@@ -377,11 +377,11 @@ export default function EditSalePage() {
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-wrap items-center gap-4 pt-4">
                 <Button
                   type="submit"
                   disabled={updateSale.isPending || loadingData}
-                  className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0"
+                  className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 h-10"
                 >
                   {updateSale.isPending ? (
                     <>
@@ -400,7 +400,7 @@ export default function EditSalePage() {
                   variant="outline"
                   onClick={() => router.back()}
                   disabled={updateSale.isPending || loadingData}
-                  className="shadow-sm"
+                  className="shadow-sm h-10"
                 >
                   Annuler
                 </Button>

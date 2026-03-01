@@ -258,7 +258,7 @@ export default function IngredientDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm" role="table" aria-label="Stock de l'ingrédient par restaurant">
                       <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>

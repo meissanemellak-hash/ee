@@ -364,15 +364,15 @@ export default function InventoryPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Boutons en haut à droite du tableau */}
+          {/* Boutons en haut à droite du tableau — compacts et empilés sur mobile */}
           {!showAddForm && (
-            <div className="flex justify-end gap-2 mb-4">
+            <div className="flex flex-col-reverse sm:flex-row flex-wrap justify-end gap-2 mb-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="shadow-sm" aria-label="Import et export">
-                    <Download className="h-4 w-4 mr-2" />
-                    Import / export
-                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  <Button variant="outline" size="sm" className="shadow-sm w-full sm:w-auto h-9 text-xs sm:text-sm" aria-label="Import et export">
+                    <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 shrink-0" />
+                    <span className="truncate">Import / export</span>
+                    <ChevronDown className="ml-1.5 sm:ml-2 h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-50 shrink-0" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -391,9 +391,9 @@ export default function InventoryPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
               {canEdit && (
-              <Button onClick={() => setShowAddForm(true)} className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0" aria-label="Ajouter un ingrédient à l'inventaire">
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter un ingrédient
+              <Button onClick={() => setShowAddForm(true)} size="sm" className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 w-full sm:w-auto h-9 text-xs sm:text-sm" aria-label="Ajouter un ingrédient à l'inventaire">
+                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 shrink-0" />
+                <span className="truncate">Ajouter un ingrédient</span>
               </Button>
               )}
             </div>

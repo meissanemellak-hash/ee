@@ -39,7 +39,7 @@ export default async function DashboardPage(props: PageProps) {
   if (process.env.NEXT_PHASE === 'phase-production-build') {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Dashboard">
-        <div className="max-w-7xl mx-auto p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
           <header className="pb-6 border-b border-border/60">
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground mt-1.5">Chargement...</p>
@@ -118,9 +118,9 @@ export default async function DashboardPage(props: PageProps) {
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" role="main" aria-label="Dashboard">
-      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
         <header className="pb-6 border-b border-border/60">
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-1.5">
             Vue d&apos;ensemble de vos économies, alertes et recommandations
           </p>
@@ -128,14 +128,14 @@ export default async function DashboardPage(props: PageProps) {
 
         {/* Zone 1 - Hero Metric Card */}
         <Card className="rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 border-0 shadow-lg">
-          <CardContent className="p-8">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
+          <CardContent className="p-4 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-teal-50/90 uppercase tracking-wide mb-2">
                 Économies générées ce mois-ci
               </p>
               <div className="mt-2">
-                <div className="text-5xl font-bold text-white">
+                <div className="text-3xl sm:text-5xl font-bold text-white break-words">
                   {formatCurrency(metrics.totalSavingsThisMonth)}
                 </div>
                 {metrics.savingsChangePercent !== null && (
@@ -162,7 +162,7 @@ export default async function DashboardPage(props: PageProps) {
                 Basé sur recommandations appliquées
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Button 
                 variant="secondary" 
                 size="sm"
@@ -218,14 +218,14 @@ export default async function DashboardPage(props: PageProps) {
 
         {/* Zone 3 - Recommandations Actionnables */}
         <section aria-labelledby="rec-title">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 id="rec-title" className="text-2xl font-bold">Recommandations actionnables</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="min-w-0">
+              <h2 id="rec-title" className="text-xl sm:text-2xl font-bold">Recommandations actionnables</h2>
               <p className="text-sm text-muted-foreground">
                 Actions prioritaires pour optimiser vos opérations
               </p>
             </div>
-            <Button variant="outline" asChild aria-label="Voir toutes les recommandations">
+            <Button variant="outline" asChild aria-label="Voir toutes les recommandations" className="shrink-0">
               <Link href="/dashboard/recommendations">
                 Voir toutes <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
               </Link>

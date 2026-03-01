@@ -43,7 +43,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen overflow-x-hidden">
       <NavProgress />
       <Suspense fallback={null}>
         <DashboardSyncWrapper />
@@ -53,7 +53,7 @@ export default async function DashboardLayout({
       </div>
       <div className="flex flex-1 flex-col min-w-0 lg:ml-64">
         <Header />
-        <main className="flex-1 bg-muted/40">
+        <main className="flex-1 bg-muted/40 overflow-x-hidden min-w-0">
           {children}
         </main>
       </div>

@@ -220,14 +220,14 @@ export function RecentActivityTable({ restaurantId }: RecentActivityTableProps) 
   return (
     <Card className="border shadow-sm">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
             <CardTitle className="text-lg font-semibold">Activité récente</CardTitle>
             <CardDescription className="mt-1">
               Dernières actions et événements de votre organisation
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"

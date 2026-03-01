@@ -478,7 +478,7 @@ export default function ReportsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Top produits</h3>
-                  <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm" role="table" aria-label="Top produits du rapport ventes">
                       <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
@@ -504,7 +504,7 @@ export default function ReportsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Ventes par jour</h3>
-                  <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm" role="table" aria-label="Ventes par jour">
                       <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
@@ -567,7 +567,7 @@ export default function ReportsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Performance par restaurant</h3>
-                  <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm" role="table" aria-label="Performance par restaurant">
                       <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
@@ -615,7 +615,7 @@ export default function ReportsPage() {
                         <p className="text-sm mt-2">Créez des ingrédients dans la section &quot;Ingrédients&quot; pour les voir apparaître ici.</p>
                       </div>
                     ) : (
-                      <div className="rounded-xl border border-border overflow-hidden">
+                      <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                         <table className="w-full text-sm" role="table" aria-label="Inventaire par ingrédient">
                           <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                             <tr>
@@ -735,7 +735,7 @@ export default function ReportsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Recommandations</h3>
-                  <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm" role="table" aria-label="Liste des recommandations">
                       <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
@@ -846,7 +846,7 @@ export default function ReportsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Alertes</h3>
-                  <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm" role="table" aria-label="Liste des alertes">
                       <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>
@@ -967,7 +967,7 @@ export default function ReportsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Top produits</h3>
-                  <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm" role="table" aria-label="Top produits du rapport récapitulatif">
                       <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>

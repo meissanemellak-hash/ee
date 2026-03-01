@@ -50,7 +50,7 @@ export function InventoryTable({
   canEdit,
 }: InventoryTableProps) {
   return (
-    <div className="rounded-xl border border-border overflow-hidden" role="region" aria-labelledby="inventory-title">
+    <div className="rounded-xl border border-border overflow-hidden overflow-x-auto" role="region" aria-labelledby="inventory-title">
       <div className="overflow-x-auto">
         <table className="w-full text-sm" role="table" aria-label="Liste des stocks d'inventaire">
           <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">

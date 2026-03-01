@@ -713,7 +713,7 @@ export default function RecommendationsPage() {
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          <div className="rounded-xl border border-border overflow-hidden">
+                          <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                             <table className="w-full text-sm" role="table" aria-label="Détail des ingrédients à commander">
                               <thead className="bg-muted">
                                 <tr>
@@ -867,7 +867,7 @@ export default function RecommendationsPage() {
                         ) : null
                       })() : null}
                       {Array.isArray(details) ? (
-                        <div className="rounded-xl border border-border overflow-hidden">
+                        <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">

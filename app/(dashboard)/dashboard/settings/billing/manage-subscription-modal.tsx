@@ -143,7 +143,7 @@ export function ManageSubscriptionModal({
               <p className="text-sm text-muted-foreground">Aucune facture pour le moment.</p>
             ) : (
               <>
-                <div className="border rounded-md overflow-hidden">
+                <div className="border rounded-md overflow-hidden overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-muted/50 border-b">

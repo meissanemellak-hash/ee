@@ -374,7 +374,7 @@ export default function ImportSalesPage() {
             <CardContent>
               {preview.length > 0 ? (
                 <div className="space-y-2">
-                  <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
                     <table className="w-full text-sm" role="table" aria-label="Aperçu des données CSV">
                       <thead className="bg-muted/50 dark:bg-gray-800/50 border-b border-border">
                         <tr>

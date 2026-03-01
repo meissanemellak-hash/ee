@@ -90,7 +90,7 @@ export default function RestaurantsPage() {
   if (!isLoaded) {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Liste des restaurants en cours de chargement">
-        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
           <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Restaurants' }]} className="mb-4" />
           <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
             <div>
@@ -108,7 +108,7 @@ export default function RestaurantsPage() {
   if (!organization?.id) {
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
-        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
           <header className="pb-6 border-b border-border/60">
             <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
             <p className="text-muted-foreground mt-1.5">
@@ -134,7 +134,7 @@ export default function RestaurantsPage() {
   if (isLoading) {
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
-        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
           <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
@@ -158,7 +158,7 @@ export default function RestaurantsPage() {
   if (error) {
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
-        <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
           <header className="pb-6 border-b border-border/60">
             <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
             <p className="text-muted-foreground mt-1.5">
@@ -186,12 +186,12 @@ export default function RestaurantsPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-muted/25">
-      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
         <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Restaurants' }]} className="mb-4" />
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               Restaurants
             </h1>
             <p className="text-muted-foreground mt-1.5 text-sm sm:text-base">

@@ -28,10 +28,10 @@ export function LandingPage() {
     <div className="min-h-screen bg-muted/25">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
-              <span className="text-xl">IA Restaurant Manager</span>
+            <Link href="/" className="flex items-center gap-2 font-semibold text-foreground min-w-0">
+              <span className="text-base sm:text-xl truncate">IA Restaurant Manager</span>
             </Link>
             <nav className="flex items-center gap-2 sm:gap-4" aria-label="Navigation principale">
               <Button variant="ghost" asChild>
@@ -47,13 +47,13 @@ export function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="relative py-20 lg:py-28">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+        <section className="relative py-12 sm:py-20 lg:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
               Pilotez vos restaurants sur
               <span className="block mt-2 text-teal-600 dark:text-teal-400">une seule plate-forme</span>
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="mt-6 text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
               Gaspillage, ruptures de stocks, Excel partout : vous perdez du temps et de l&apos;argent. 
               Reprenez la main : ventes, inventaire et alertes en un endroit, des économies concrètes et des stocks maîtrisés.
             </p>
@@ -73,8 +73,8 @@ export function LandingPage() {
         </section>
 
         {/* Aperçu du produit */}
-        <section id="apercu" className="py-16 lg:py-20 border-t border-border/60 bg-background/50" aria-labelledby="apercu-titre">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <section id="apercu" className="py-12 sm:py-16 lg:py-20 border-t border-border/60 bg-background/50" aria-labelledby="apercu-titre">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 id="apercu-titre" className="text-2xl font-bold text-center text-foreground sm:text-3xl">
               Aperçu du produit
             </h2>
@@ -104,7 +104,7 @@ export function LandingPage() {
                   <p className="text-xs text-teal-100/90">Basé sur recommandations appliquées</p>
                 </div>
                 <div className="flex flex-wrap gap-4">
-                  <div className="flex-1 min-w-[160px] rounded-xl border border-border bg-card p-4 shadow-sm">
+                  <div className="flex-1 min-w-0 sm:min-w-[160px] rounded-xl border border-border bg-card p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
                       <CheckCircle2 className="h-5 w-5" />
                       <span className="font-medium text-sm">Recommandations appliquées</span>
@@ -116,7 +116,7 @@ export function LandingPage() {
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">vs. 2 890 € période précédente</p>
                   </div>
-                  <div className="flex-1 min-w-[160px] rounded-xl border border-border bg-card p-4 shadow-sm">
+                  <div className="flex-1 min-w-0 sm:min-w-[160px] rounded-xl border border-border bg-card p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="h-5 w-5" />
                       <span className="font-medium text-sm">Risque de rupture de stock (7j)</span>
@@ -124,7 +124,7 @@ export function LandingPage() {
                     <p className="mt-2 text-xl font-bold text-foreground">1 restaurant</p>
                     <p className="text-xs text-muted-foreground">concerné</p>
                   </div>
-                  <div className="flex-1 min-w-[160px] rounded-xl border border-border bg-card p-4 shadow-sm">
+                  <div className="flex-1 min-w-0 sm:min-w-[160px] rounded-xl border border-border bg-card p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
                       <Package className="h-5 w-5" />
                       <span className="font-medium text-sm">Gaspillage estimé</span>
@@ -163,7 +163,7 @@ export function LandingPage() {
 
         {/* Effectif prévu et alertes */}
         <section id="effectif" className="py-16 lg:py-20 border-t border-border/60 bg-background/50" aria-labelledby="effectif-titre">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 id="effectif-titre" className="text-2xl font-bold text-center text-foreground sm:text-3xl">
               Anticipez vos besoins en personnel
             </h2>
@@ -207,7 +207,7 @@ export function LandingPage() {
 
         {/* Preuve sociale */}
         <section className="py-16 lg:py-20 border-t border-border/60 bg-background/50">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-bold text-center text-foreground sm:text-3xl">
               Ils nous font déjà confiance
             </h2>
@@ -280,7 +280,7 @@ export function LandingPage() {
 
         {/* Douleurs */}
         <section className="py-16 lg:py-20 border-t border-border/60 bg-background/50">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-bold text-center text-foreground sm:text-3xl">
               Ces problèmes vous parlent ?
             </h2>
@@ -339,7 +339,7 @@ export function LandingPage() {
 
         {/* Solution */}
         <section className="py-16 lg:py-20">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-bold text-center text-foreground sm:text-3xl">
               Une seule plateforme pour tout piloter
             </h2>
@@ -398,7 +398,7 @@ export function LandingPage() {
 
         {/* Pricing / Offres */}
         <section id="tarifs" className="py-16 lg:py-20 border-t border-border/60 bg-background/50" aria-labelledby="tarifs-titre">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 id="tarifs-titre" className="text-2xl font-bold text-center text-foreground sm:text-3xl">
               Des formules adaptées à votre périmètre
             </h2>
@@ -449,7 +449,7 @@ export function LandingPage() {
 
         {/* Confiance : sécurité, support */}
         <section id="confiance" className="py-16 lg:py-20 border-t border-border/60 bg-background/50" aria-labelledby="confiance-titre">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 id="confiance-titre" className="text-2xl font-bold text-center text-foreground sm:text-3xl">
               Sécurité et support
             </h2>
@@ -498,7 +498,7 @@ export function LandingPage() {
 
         {/* FAQ */}
         <section id="faq" className="py-16 lg:py-20 border-t border-border/60 bg-background/50" aria-labelledby="faq-titre">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 id="faq-titre" className="text-2xl font-bold text-center text-foreground sm:text-3xl">
               Questions fréquentes
             </h2>
@@ -528,15 +528,15 @@ export function LandingPage() {
                   key={i}
                   className="group rounded-xl border border-border bg-card shadow-sm overflow-hidden"
                 >
-                  <summary className="flex items-center justify-between gap-4 px-6 py-4 font-semibold text-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                    <span>{item.q}</span>
+                  <summary className="flex items-center justify-between gap-4 px-4 sm:px-6 py-4 font-semibold text-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden text-left">
+                    <span className="min-w-0 pr-2">{item.q}</span>
                     <span className="shrink-0 text-teal-600 dark:text-teal-400 transition-transform group-open:rotate-180" aria-hidden>
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                       </svg>
                     </span>
                   </summary>
-                  <div className="px-6 pb-4 pt-0">
+                  <div className="px-4 sm:px-6 pb-4 pt-0">
                     <p className="text-sm text-muted-foreground">{item.a}</p>
                   </div>
                 </details>
@@ -547,7 +547,7 @@ export function LandingPage() {
 
         {/* Footer */}
         <footer className="border-t border-border/60 py-10 bg-background/50" role="contentinfo">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <p className="text-sm text-muted-foreground">
                 © {new Date().getFullYear()} IA Restaurant Manager. Tous droits réservés.

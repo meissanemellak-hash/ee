@@ -246,11 +246,11 @@ export default function SalesPage() {
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/25" aria-label="Liste des ventes">
-      <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
         <Breadcrumbs items={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Ventes & Analyse' }]} className="mb-4" />
         <header className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border/60">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Ventes</h1>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Ventes</h1>
             <p className="text-muted-foreground mt-1.5">
               Gérez et consultez toutes vos ventes
             </p>
@@ -261,7 +261,7 @@ export default function SalesPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            <Button variant="outline" className="shadow-sm" asChild aria-label="Voir l'analyse">
+            <Button variant="outline" size="sm" className="shadow-sm h-9 sm:h-10" asChild aria-label="Voir l'analyse">
               <Link href="/dashboard/sales/analyze">
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Voir l&apos;analyse
@@ -269,7 +269,7 @@ export default function SalesPage() {
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="shadow-sm" aria-label="Import et export">
+                <Button variant="outline" size="sm" className="shadow-sm h-9 sm:h-10" aria-label="Import et export">
                   <Download className="h-4 w-4 mr-2" />
                   Import / export
                   <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
@@ -291,7 +291,7 @@ export default function SalesPage() {
               </DropdownMenuContent>
             </DropdownMenu>
             {canCreate && (
-              <Button asChild className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0">
+              <Button asChild size="sm" className="shadow-md bg-teal-600 hover:bg-teal-700 text-white border-0 h-9 sm:h-10">
                 <Link href="/dashboard/sales/new">
                   <Plus className="h-4 w-4 mr-2" />
                   Nouvelle vente
@@ -446,39 +446,39 @@ export default function SalesPage() {
                 {sales.map((sale) => (
                   <li
                     key={sale.id}
-                    className="flex items-center justify-between p-4 rounded-xl border bg-muted/30 dark:bg-gray-800/30 border-border hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 rounded-xl border bg-muted/30 dark:bg-gray-800/30 border-border hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start sm:items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                           <ShoppingCart className="h-5 w-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm truncate">{sale.product.name}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Store className="h-3 w-3" />
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1 min-w-0">
+                              <Store className="h-3 w-3 shrink-0" />
                               <span className="truncate">{sale.restaurant.name}</span>
-                            </div>
-                            <span className="text-muted-foreground">•</span>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              <span>{formatDate(new Date(sale.saleDate))} à {sale.saleHour}h</span>
-                            </div>
+                            </span>
+                            <span className="hidden sm:inline text-muted-foreground">•</span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{formatDate(new Date(sale.saleDate))} à {sale.saleHour}h</span>
+                            </span>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 ml-4">
-                      <div className="text-right">
-                        <p className="font-bold text-teal-700 dark:text-teal-400">{formatCurrency(sale.amount)}</p>
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 border-t border-border/50 pt-3 sm:border-0 sm:pt-0">
+                      <div className="text-left sm:text-right">
+                        <p className="font-bold text-teal-700 dark:text-teal-400 text-sm sm:text-base">{formatCurrency(sale.amount)}</p>
                         <p className="text-xs text-muted-foreground">
                           {sale.quantity} unité{sale.quantity > 1 ? 's' : ''}
                         </p>
                       </div>
                       <div className="flex gap-1">
                         {canEdit && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Modifier la vente ${sale.product.name}`}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild aria-label={`Modifier la vente ${sale.product.name}`}>
                             <Link
                               href={`/dashboard/sales/${sale.id}/edit`}
                               onMouseEnter={() => organization?.id && queryClient.prefetchQuery(getSaleQueryOptions(organization.id, sale.id))}
@@ -491,7 +491,7 @@ export default function SalesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
                             onClick={() => {
                               setSaleToDelete(sale)
                               setDeleteDialogOpen(true)
